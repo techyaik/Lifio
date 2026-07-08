@@ -17,7 +17,7 @@ import { showToast } from '../utils/feedback';
 import { WALKTHROUGH_STEPS } from '../constants/walkthroughs';
 
 export default function Home({ navigation }) {
-  const { colors } = useTheme();
+  const { colors, profileName } = useTheme();
   const { width } = useWindowDimensions();
   const isCompact = width < 390;
   const isNarrow = width < 360;
@@ -48,6 +48,7 @@ export default function Home({ navigation }) {
   const habitsCompletionPercent = getDayCompletionPercent(todayKey());
 
   const currentNote = notes[0];
+  const firstName = profileName ? profileName.split(/\s+/)[0] : '';
   const totalWalletBalance = useMemo(
     () => wallets.reduce((sum, wallet) => sum + (wallet.balance ?? 0), 0),
     [wallets]
@@ -80,7 +81,7 @@ export default function Home({ navigation }) {
             {displayDate(todayKey(), 'EEEE, MMMM d')}
           </Text>
           <Text style={[styles.welcomeTitle, { color: colors.textPrimary }]}>
-            Mindful Momentum
+            {firstName ? `Welcome, ${firstName}` : 'Mindful Momentum'}
           </Text>
         </View>
       </View>

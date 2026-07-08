@@ -61,13 +61,6 @@ export const WALKTHROUGH_STEPS = {
       icon: 'pricetags-outline',
     },
   ],
-  profile: [
-    {
-      title: 'Your activity profile',
-      body: 'Profile summarizes your saved habits, check-ins, health logs, wallet transactions, and notes.',
-      icon: 'person-outline',
-    },
-  ],
   myPlan: [
     {
       title: 'Your personal blueprint',

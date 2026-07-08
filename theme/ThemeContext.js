@@ -6,6 +6,7 @@ import { LIGHT_COLORS, DARK_COLORS } from '../constants/colors';
 const ThemeContext = createContext();
 
 export const THEME_KEY = 'lifio_theme_mode_v2';
+export const PROFILE_NAME_KEY = 'lifio_profile_name_v1';
 
 export const resolveColor = (colorStr, colors) => {
   if (!colorStr) return colorStr;
@@ -44,14 +45,21 @@ export const resolveColor = (colorStr, colors) => {
 export function ThemeProvider({ children }) {
   const systemColorScheme = useColorScheme();
   const [themeMode, setThemeModeState] = useState('system'); // 'light' | 'dark' | 'system'
+  const [profileName, setProfileNameState] = useState('');
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
     const loadTheme = async () => {
       try {
-        const stored = await AsyncStorage.getItem(THEME_KEY);
-        if (stored) {
-          setThemeModeState(stored);
+        const [storedTheme, storedProfileName] = await Promise.all([
+          AsyncStorage.getItem(THEME_KEY),
+          AsyncStorage.getItem(PROFILE_NAME_KEY),
+        ]);
+        if (storedTheme) {
+          setThemeModeState(storedTheme);
+        }
+        if (storedProfileName) {
+          setProfileNameState(storedProfileName.trim());
         }
       } catch (e) {
         console.error('Error loading theme:', e);
@@ -77,6 +85,21 @@ export function ThemeProvider({ children }) {
     }
   };
 
+  const setProfileName = async (value) => {
+    const nextName = String(value || '').trim().replace(/\s+/g, ' ');
+    setProfileNameState(nextName);
+    try {
+      if (nextName) {
+        await AsyncStorage.setItem(PROFILE_NAME_KEY, nextName);
+      } else {
+        await AsyncStorage.removeItem(PROFILE_NAME_KEY);
+      }
+    } catch (e) {
+      console.error('Error saving profile name:', e);
+      throw e;
+    }
+  };
+
   const theme = themeMode === 'system' ? (systemColorScheme || 'light') : themeMode;
   const colors = theme === 'dark' ? DARK_COLORS : LIGHT_COLORS;
 
@@ -95,6 +118,8 @@ export function ThemeProvider({ children }) {
     colors,
     gradients,
     ready,
+    profileName,
+    setProfileName,
     resolveThemeColor: (colorStr) => resolveColor(colorStr, colors),
     dataVersion,
     triggerDataRefresh,

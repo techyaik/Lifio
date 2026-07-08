@@ -6,17 +6,15 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createDrawerNavigator, DrawerContentScrollView } from '@react-navigation/drawer';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme, ThemeProvider } from '../theme/ThemeContext';
-import { useAuthUser } from '../hooks/useAuthUser';
 import { RADIUS, SHADOWS } from '../constants/theme';
 import { HealthStack } from './HealthStack';
 import { HabitsStack } from './HabitsStack';
 import { NotesStack } from './NotesStack';
 import { WalletStack } from './WalletStack';
 import Onboarding from '../screens/Onboarding';
+import EnterName from '../screens/EnterName';
 import Settings from '../screens/Settings';
 import Home from '../screens/Home';
-import Profile from '../screens/Profile';
-import Login from '../screens/Login';
 import MyPlan from '../screens/MyPlan';
 import PrivacyManagement from '../screens/PrivacyManagement';
 import Help from '../screens/Help';
@@ -79,8 +77,7 @@ function MainTabs() {
 
 function CustomDrawerContent(props) {
   const { state, navigation } = props;
-  const { colors } = useTheme();
-  const authUser = useAuthUser();
+  const { colors, profileName } = useTheme();
 
   const activeRoute = state.routes[state.index];
   const activeName = activeRoute.name;
@@ -96,8 +93,6 @@ function CustomDrawerContent(props) {
   };
 
   const menuItems = [
-    { name: 'Profile', label: 'Profile', icon: 'person-outline', activeIcon: 'person' },
-    { name: 'Login', label: 'Login', icon: 'log-in-outline', activeIcon: 'log-in' },
     { name: 'MyPlan', label: 'My Plan', icon: 'calendar-outline', activeIcon: 'calendar' },
     { name: 'Settings', label: 'Settings', icon: 'settings-outline', activeIcon: 'settings' },
     { name: 'PrivacyManagement', label: 'Privacy Management', icon: 'shield-checkmark-outline', activeIcon: 'shield-checkmark' },
@@ -111,10 +106,10 @@ function CustomDrawerContent(props) {
       <View style={[styles.drawerHeader, { borderBottomColor: colors.borderLight }]}>
         <Image source={LOGO} style={styles.drawerLogo} />
         <Text style={[styles.appName, { color: colors.textPrimary }]} numberOfLines={1}>
-          {authUser.name}
+          Lifio
         </Text>
         <Text style={[styles.appSubtitle, { color: colors.textSecondary }]} numberOfLines={1}>
-          {authUser.email || 'Lifio Profile'}
+          {profileName ? `Welcome, ${profileName}` : 'Personal Tracker'}
         </Text>
       </View>
 
@@ -124,7 +119,9 @@ function CustomDrawerContent(props) {
           return (
             <Pressable
               key={item.name}
-              onPress={() => navigation.navigate(item.name)}
+              onPress={() => {
+                navigation.navigate(item.name);
+              }}
               style={[
                 styles.drawerItem,
                 isActive && { backgroundColor: colors.accentLight.health }
@@ -162,7 +159,7 @@ function CustomDrawerContent(props) {
 function NavigatorContent() {
   const [ready, setReady] = useState(false);
   const [onboarded, setOnboarded] = useState(false);
-  const { colors, ready: themeReady } = useTheme();
+  const { colors, ready: themeReady, profileName, setProfileName } = useTheme();
 
   useEffect(() => {
     let mounted = true;
@@ -181,6 +178,10 @@ function NavigatorContent() {
     await AsyncStorage.setItem(ONBOARDING_KEY, 'true');
   };
 
+  const completeNameSetup = async (name) => {
+    await setProfileName(name);
+  };
+
   if (!ready || !themeReady) {
     return (
       <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.bg }}>
@@ -192,23 +193,25 @@ function NavigatorContent() {
   return (
     <NavigationContainer>
       {onboarded ? (
-        <Drawer.Navigator
-          id="RootDrawer"
-          drawerContent={(props) => <CustomDrawerContent {...props} />}
-          screenOptions={{
-            headerShown: false,
-            drawerStyle: [styles.drawer, { backgroundColor: colors.bgWarm }],
-          }}
-        >
-          <Drawer.Screen name="Main" component={MainTabs} />
-          <Drawer.Screen name="Profile" component={Profile} />
-          <Drawer.Screen name="Login" component={Login} />
-          <Drawer.Screen name="MyPlan" component={MyPlan} />
-          <Drawer.Screen name="Settings" component={Settings} />
-          <Drawer.Screen name="PrivacyManagement" component={PrivacyManagement} />
-          <Drawer.Screen name="Help" component={Help} />
-          <Drawer.Screen name="About" component={About} />
-        </Drawer.Navigator>
+        profileName ? (
+          <Drawer.Navigator
+            id="RootDrawer"
+            drawerContent={(props) => <CustomDrawerContent {...props} />}
+            screenOptions={{
+              headerShown: false,
+              drawerStyle: [styles.drawer, { backgroundColor: colors.bgWarm }],
+            }}
+          >
+            <Drawer.Screen name="Main" component={MainTabs} />
+            <Drawer.Screen name="MyPlan" component={MyPlan} />
+            <Drawer.Screen name="Settings" component={Settings} />
+            <Drawer.Screen name="PrivacyManagement" component={PrivacyManagement} />
+            <Drawer.Screen name="Help" component={Help} />
+            <Drawer.Screen name="About" component={About} />
+          </Drawer.Navigator>
+        ) : (
+          <EnterName onSave={completeNameSetup} />
+        )
       ) : (
         <Onboarding onGetStarted={completeOnboarding} />
       )}

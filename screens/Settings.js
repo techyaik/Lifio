@@ -264,7 +264,7 @@ async function eraseDummyData() {
 
 export default function Settings() {
   const navigation = useNavigation();
-  const { colors, themeMode, setThemeMode, triggerDataRefresh } = useTheme();
+  const { colors, themeMode, setThemeMode, triggerDataRefresh, profileName, setProfileName } = useTheme();
   const { watchConfig, disconnectWatch } = useHealth();
 
   // Settings keys
@@ -290,6 +290,9 @@ export default function Settings() {
   const [passcode, setPasscode] = useState('');
   const [passcodeError, setPasscodeError] = useState('');
   const [versionTapCount, setVersionTapCount] = useState(0);
+  const [nameModalVisible, setNameModalVisible] = useState(false);
+  const [nameDraft, setNameDraft] = useState(profileName || '');
+  const [nameError, setNameError] = useState('');
 
   useEffect(() => {
     const loadSettings = async () => {
@@ -323,6 +326,10 @@ export default function Settings() {
     };
     loadSettings();
   }, []);
+
+  useEffect(() => {
+    setNameDraft(profileName || '');
+  }, [profileName]);
 
   const updateNotifications = async (val) => {
     setNotifications(val);
@@ -392,6 +399,34 @@ export default function Settings() {
       return;
     }
     setVersionTapCount(nextCount);
+  };
+
+  const openNameModal = () => {
+    setNameDraft(profileName || '');
+    setNameError('');
+    setNameModalVisible(true);
+  };
+
+  const saveProfileDisplayName = async () => {
+    const trimmed = String(nameDraft || '').trim().replace(/\s+/g, ' ');
+    if (!trimmed) {
+      setNameError('Enter your name to continue.');
+      return;
+    }
+    if (trimmed.length < 2) {
+      setNameError('Use at least 2 characters.');
+      return;
+    }
+
+    try {
+      await setProfileName(trimmed);
+      setNameModalVisible(false);
+      setNameError('');
+      showToast('Name updated successfully ✓');
+    } catch (error) {
+      console.error('[Settings] Error saving profile name:', error);
+      setNameError('Could not save your name. Please try again.');
+    }
   };
 
   const confirmFill = () => {
@@ -494,6 +529,28 @@ export default function Settings() {
                 </Pressable>
               );
             })}
+          </View>
+        </View>
+      </View>
+
+      <View style={styles.section}>
+        <SectionHeader>Personalization</SectionHeader>
+        <View style={[styles.card, { backgroundColor: colors.white, borderColor: colors.borderLight }]}>
+          <View style={styles.optionRow}>
+            <View style={styles.optionInfo}>
+              <Text style={[styles.optionTitle, { color: colors.textPrimary }]}>Display Name</Text>
+              <Text style={[styles.optionDesc, { color: colors.textSecondary }]}>
+                {profileName || 'Set the name Lifio uses across the app.'}
+              </Text>
+            </View>
+            <Pressable
+              onPress={openNameModal}
+              style={[styles.settingsConnectLink, { backgroundColor: colors.accentLight.health, borderColor: colors.health }]}
+            >
+              <Text style={[styles.settingsConnectLinkText, { color: colors.health }]}>
+                {profileName ? 'Change' : 'Set Name'}
+              </Text>
+            </Pressable>
           </View>
         </View>
       </View>
@@ -750,6 +807,56 @@ export default function Settings() {
                   style={[styles.actionButton, { backgroundColor: colors.accentLight.health, borderColor: colors.health }]}
                 >
                   <Text style={[styles.actionButtonText, { color: colors.health }]}>Enable</Text>
+                </Pressable>
+              </View>
+            </View>
+          </View>
+        </Modal>
+      )}
+
+      {nameModalVisible && (
+        <Modal visible={nameModalVisible} transparent animationType="fade" onRequestClose={() => setNameModalVisible(false)}>
+          <View style={[styles.modalBackdrop, { backgroundColor: colors.overlay }]}>
+            <View style={[styles.modalCard, { backgroundColor: colors.white, borderColor: colors.borderLight }]}>
+              <View style={styles.headerRow}>
+                <View style={[styles.iconWrap, { backgroundColor: colors.accentLight.health }]}>
+                  <Ionicons name="person-outline" size={22} color={colors.health} />
+                </View>
+                <View style={styles.titleColumn}>
+                  <Text style={[styles.title, { color: colors.textPrimary }]}>Update your name</Text>
+                  <Text style={[styles.cardDesc, { color: colors.textSecondary }]}>
+                    Lifio uses this name for simple, local personalization.
+                  </Text>
+                </View>
+              </View>
+              <InputField
+                value={nameDraft}
+                onChangeText={(value) => {
+                  setNameDraft(value);
+                  if (nameError) setNameError('');
+                }}
+                placeholder="Your name"
+                autoCapitalize="words"
+                autoCorrect={false}
+                maxLength={40}
+              />
+              {nameError ? <Text style={[styles.errorText, { color: colors.danger }]}>{nameError}</Text> : null}
+              <View style={styles.buttonRow}>
+                <Pressable
+                  onPress={() => {
+                    setNameModalVisible(false);
+                    setNameError('');
+                    setNameDraft(profileName || '');
+                  }}
+                  style={[styles.actionButton, { backgroundColor: colors.surface, borderColor: colors.borderLight }]}
+                >
+                  <Text style={[styles.actionButtonText, { color: colors.textSecondary }]}>Cancel</Text>
+                </Pressable>
+                <Pressable
+                  onPress={saveProfileDisplayName}
+                  style={[styles.actionButton, { backgroundColor: colors.accentLight.health, borderColor: colors.health }]}
+                >
+                  <Text style={[styles.actionButtonText, { color: colors.health }]}>Save Name</Text>
                 </Pressable>
               </View>
             </View>
