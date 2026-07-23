@@ -103,7 +103,7 @@ export function WalletModal({ visible, onClose, wallet, onSave, onDelete, curren
     <Modal visible={visible} animationType="slide" transparent={true} onRequestClose={onClose}>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        style={styles.overlay}
+        style={[styles.overlay, { backgroundColor: colors.overlay }]}
       >
         <Pressable style={styles.dismissArea} onPress={onClose} />
         <View style={[styles.sheet, { backgroundColor: colors.white }]}>
@@ -214,7 +214,6 @@ export function WalletModal({ visible, onClose, wallet, onSave, onDelete, curren
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(26,26,26,0.4)',
     justifyContent: 'flex-end',
   },
   dismissArea: {

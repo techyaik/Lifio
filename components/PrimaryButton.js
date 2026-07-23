@@ -5,10 +5,10 @@ import { useTheme } from '../theme/ThemeContext';
 import { RADIUS, SHADOWS } from '../constants/theme';
 
 export function PrimaryButton({ title, onPress, color, disabled = false, icon, style }) {
-  const { colors, gradients, resolveThemeColor, theme } = useTheme();
+  const { colors, gradients, resolveThemeColor } = useTheme();
 
   const activeColor = color ? resolveThemeColor(color) : colors.health;
-  const buttonTextColor = colors.onAccent || '#FFFFFF';
+  const buttonTextColor = colors.onAccent;
   const buttonIcon = React.isValidElement(icon)
     ? React.cloneElement(icon, { color: buttonTextColor })
     : icon;
@@ -17,7 +17,7 @@ export function PrimaryButton({ title, onPress, color, disabled = false, icon, s
     if (activeColor === colors.habits) return gradients.habits;
     if (activeColor === colors.notes) return gradients.notes;
     if (activeColor === colors.wallet) return gradients.wallet;
-    if (activeColor === colors.danger) return [theme === 'dark' ? '#7A3D39' : '#D95D35', colors.danger];
+    if (activeColor === colors.danger) return [colors.gradientDangerStart, colors.danger];
     return gradients.health;
   };
 

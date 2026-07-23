@@ -20,6 +20,8 @@ import { PrimaryButton } from '../../components/PrimaryButton';
 import { Screen } from '../../components/Screen';
 import { SectionHeader } from '../../components/SectionHeader';
 import { useHealth } from '../../hooks/useHealth';
+import { useMedicineReminders } from '../../hooks/useMedicineReminders';
+import { useHealthUnits } from '../../hooks/useHealthUnits';
 import { displayDate, todayKey } from '../../utils/dates';
 import { showToast } from '../../utils/feedback';
 import { RADIUS, SHADOWS } from '../../constants/theme';
@@ -130,7 +132,10 @@ export default function HealthDashboard({ navigation }) {
     refresh,
   } = useHealth();
   const { colors, triggerDataRefresh } = useTheme();
+  const { weightUnit, formatWeight } = useHealthUnits();
+  const { reminders: medicineReminders, getUpcomingReminders, markTaken } = useMedicineReminders();
   const today = getTodayLog();
+  const upcomingMedicineReminders = useMemo(() => getUpcomingReminders(3), [getUpcomingReminders]);
 
   const [permissionModalVisible, setPermissionModalVisible] = useState(false);
   const [permissions, setPermissions] = useState({
@@ -411,6 +416,15 @@ export default function HealthDashboard({ navigation }) {
     navigation.navigate('HealthLogEntry', { date: todayKey() });
   };
 
+  const handleMedicineTaken = async (reminder) => {
+    try {
+      await markTaken(reminder.id);
+      showToast(`${reminder.name} marked as taken ✓`);
+    } catch (error) {
+      Alert.alert('Could not update reminder', error.message || 'Please try again.');
+    }
+  };
+
   return (
     <Screen loading={loading} contentStyle={styles.screenContent}>
       <AppHeader title="Health" />
@@ -544,17 +558,17 @@ export default function HealthDashboard({ navigation }) {
 
             {/* Sleep Stages Bar */}
             <View style={styles.sleepStagesBar}>
-              <View style={[styles.sleepStageSegment, { flex: 1.5, backgroundColor: '#3A2E8B' }]}><Text style={styles.sleepStageLetter}>W</Text></View>
-              <View style={[styles.sleepStageSegment, { flex: 3, backgroundColor: '#4C3FAF' }]}><Text style={styles.sleepStageLetter}>D</Text></View>
-              <View style={[styles.sleepStageSegment, { flex: 2, backgroundColor: colors.tealMid }]}><Text style={styles.sleepStageLetter}>R</Text></View>
-              <View style={[styles.sleepStageSegment, { flex: 2.5, backgroundColor: colors.health }]}><Text style={styles.sleepStageLetter}>L</Text></View>
-              <View style={[styles.sleepStageSegment, { flex: 1, backgroundColor: '#3A2E8B' }]}><Text style={styles.sleepStageLetter}>D</Text></View>
+              <View style={[styles.sleepStageSegment, { flex: 1.5, backgroundColor: colors.chartSleepDeep }]}><Text style={[styles.sleepStageLetter, { color: colors.onAccent }]}>W</Text></View>
+              <View style={[styles.sleepStageSegment, { flex: 3, backgroundColor: colors.chartSleepAwake }]}><Text style={[styles.sleepStageLetter, { color: colors.onAccent }]}>D</Text></View>
+              <View style={[styles.sleepStageSegment, { flex: 2, backgroundColor: colors.tealMid }]}><Text style={[styles.sleepStageLetter, { color: colors.onAccent }]}>R</Text></View>
+              <View style={[styles.sleepStageSegment, { flex: 2.5, backgroundColor: colors.health }]}><Text style={[styles.sleepStageLetter, { color: colors.onAccent }]}>L</Text></View>
+              <View style={[styles.sleepStageSegment, { flex: 1, backgroundColor: colors.chartSleepDeep }]}><Text style={[styles.sleepStageLetter, { color: colors.onAccent }]}>D</Text></View>
             </View>
 
             {/* Legends */}
             <View style={styles.sleepLegends}>
               <View style={styles.legendItem}>
-                <View style={[styles.legendDot, { backgroundColor: '#3A2E8B' }]} />
+                <View style={[styles.legendDot, { backgroundColor: colors.chartSleepDeep }]} />
                 <Text style={[styles.legendText, { color: colors.textSecondary }]}>Deep {sleepVal.deep}</Text>
               </View>
               <View style={styles.legendItem}>
@@ -566,7 +580,7 @@ export default function HealthDashboard({ navigation }) {
                 <Text style={[styles.legendText, { color: colors.textSecondary }]}>REM {sleepVal.rem}</Text>
               </View>
               <View style={styles.legendItem}>
-                <View style={[styles.legendDot, { backgroundColor: '#4C3FAF' }]} />
+                <View style={[styles.legendDot, { backgroundColor: colors.chartSleepAwake }]} />
                 <Text style={[styles.legendText, { color: colors.textSecondary }]}>Awake {sleepVal.awake}</Text>
               </View>
             </View>
@@ -611,23 +625,23 @@ export default function HealthDashboard({ navigation }) {
             </View>
             <View style={styles.ringsHeader}>
               <View style={styles.ringsContainer}>
-                <View style={[styles.ring, { width: 90, height: 90, borderRadius: 45, borderColor: '#129a7d' }]} />
-                <View style={[styles.ring, { width: 70, height: 70, borderRadius: 35, borderColor: '#2E7BBE', position: 'absolute' }]} />
-                <View style={[styles.ring, { width: 50, height: 50, borderRadius: 25, borderColor: '#e35885', position: 'absolute' }]} />
+                <View style={[styles.ring, { width: 90, height: 90, borderRadius: 45, borderColor: colors.chartRingMove }]} />
+                <View style={[styles.ring, { width: 70, height: 70, borderRadius: 35, borderColor: colors.health, position: 'absolute' }]} />
+                <View style={[styles.ring, { width: 50, height: 50, borderRadius: 25, borderColor: colors.chartRingStand, position: 'absolute' }]} />
               </View>
               <View style={styles.ringsLegends}>
                 <View style={styles.ringLegendRow}>
-                  <View style={[styles.ringLegendDot, { backgroundColor: '#129a7d' }]} />
+                  <View style={[styles.ringLegendDot, { backgroundColor: colors.chartRingMove }]} />
                   <Text style={[styles.ringLegendLabel, { color: colors.textSecondary }]}>Move</Text>
                   <Text style={[styles.ringLegendValue, { color: colors.textPrimary }]}>376 / 500 cal</Text>
                 </View>
                 <View style={styles.ringLegendRow}>
-                  <View style={[styles.ringLegendDot, { backgroundColor: '#2E7BBE' }]} />
+                  <View style={[styles.ringLegendDot, { backgroundColor: colors.health }]} />
                   <Text style={[styles.ringLegendLabel, { color: colors.textSecondary }]}>Steps</Text>
                   <Text style={[styles.ringLegendValue, { color: colors.textPrimary }]}>{formatSteps(today?.steps || today?.watchData?.steps || 6241)} / {formatStepsGoal(goals.steps)}</Text>
                 </View>
                 <View style={styles.ringLegendRow}>
-                  <View style={[styles.ringLegendDot, { backgroundColor: '#e35885' }]} />
+                  <View style={[styles.ringLegendDot, { backgroundColor: colors.chartRingStand }]} />
                   <Text style={[styles.ringLegendLabel, { color: colors.textSecondary }]}>Stand</Text>
                   <Text style={[styles.ringLegendValue, { color: colors.textPrimary }]}>7 / 12 hrs</Text>
                 </View>
@@ -637,11 +651,11 @@ export default function HealthDashboard({ navigation }) {
         </View>
 
         {/* Row 4: Today's Insight Card (Wide) */}
-        <View style={[styles.insightCard, { backgroundColor: '#E1EDFF', borderColor: '#B3D4FF' }]}>
-          <Ionicons name="bulb" size={20} color="#0052CC" style={{ marginRight: 10, marginTop: 2 }} />
+        <View style={[styles.insightCard, { backgroundColor: colors.infoBg, borderColor: colors.infoBorder }]}>
+          <Ionicons name="bulb" size={20} color={colors.info} style={{ marginRight: 10, marginTop: 2 }} />
           <View style={styles.flexOne}>
-            <Text style={[styles.insightTitle, { color: '#0052CC' }]}>Today's insight</Text>
-            <Text style={[styles.insightDesc, { color: '#0747A6' }]}>
+            <Text style={[styles.insightTitle, { color: colors.info }]}>Today's insight</Text>
+            <Text style={[styles.insightDesc, { color: colors.textPrimary }]}>
               Your HRV is lower than usual — on high-HRV days you average 2,100 more steps. Consider a lighter session today.
             </Text>
           </View>
@@ -666,7 +680,8 @@ export default function HealthDashboard({ navigation }) {
                     onPress={() => handleMoodSelect(moodMap[idx])}
                     style={[
                       styles.emojiBtn,
-                      isSelected && { backgroundColor: '#E1EDFF', borderColor: '#0052CC', borderWidth: 2 }
+                      { borderColor: colors.borderLight, backgroundColor: colors.surface },
+                      isSelected && { backgroundColor: colors.infoBg, borderColor: colors.info, borderWidth: 2 }
                     ]}
                   >
                     <Text style={styles.emojiText}>{emoji}</Text>
@@ -692,7 +707,7 @@ export default function HealthDashboard({ navigation }) {
                   <Ionicons
                     name={item.checked ? "checkmark-circle" : "remove-circle-outline"}
                     size={16}
-                    color={item.checked ? '#129a7d' : colors.textHint}
+                    color={item.checked ? colors.chartRingMove : colors.textHint}
                     style={{ marginRight: 8 }}
                   />
                   <Text style={[styles.supplementName, { color: colors.textPrimary }]}>{item.name}</Text>
@@ -715,7 +730,7 @@ export default function HealthDashboard({ navigation }) {
             </View>
           </View>
           <View style={styles.statRow}>
-            <Text style={[styles.statText, { color: colors.textSecondary }]}>Avg weight <Text style={{ color: colors.textPrimary }}>{summary.avgWeight ? `${summary.avgWeight.toFixed(1)} kg` : '—'}</Text></Text>
+            <Text style={[styles.statText, { color: colors.textSecondary }]}>Avg weight <Text style={{ color: colors.textPrimary }}>{summary.avgWeight ? (formatWeight(summary.avgWeight) || `${summary.avgWeight.toFixed(1)} kg`) : '—'}</Text></Text>
             <Text style={[styles.statText, { color: colors.textSecondary }]}>Avg sleep <Text style={{ color: colors.textPrimary }}>{summary.avgSleep ? `${summary.avgSleep.toFixed(1)} hrs` : '—'}</Text></Text>
             <Text style={[styles.statText, { color: colors.textSecondary }]}>Month logs <Text style={{ color: colors.textPrimary }}>{summary.monthLogs.length}</Text></Text>
           </View>
@@ -747,6 +762,55 @@ export default function HealthDashboard({ navigation }) {
             </Text>
           </BentoCard>
         </View>
+
+        <BentoCard style={styles.summaryCard}>
+          <View style={styles.sectionTitleRow}>
+            <SectionHeader>Medicine reminders</SectionHeader>
+            <Pressable onPress={() => navigation.navigate('MedicineReminders')} style={styles.historyButton}>
+              <Text style={[styles.historyText, { color: colors.health }]}>Manage</Text>
+              <Ionicons name="chevron-forward" size={14} color={colors.health} />
+            </Pressable>
+          </View>
+          {upcomingMedicineReminders.length ? (
+            <View style={styles.medicineList}>
+              {upcomingMedicineReminders.map((reminder) => (
+                <View key={reminder.id} style={[styles.medicineRow, { borderBottomColor: colors.borderLight }]}>
+                  <View style={styles.flexOne}>
+                    <Text style={[styles.medicineName, { color: colors.textPrimary }]} numberOfLines={1}>
+                      {reminder.name}
+                    </Text>
+                    <Text style={[styles.meta, { color: colors.textSecondary }]} numberOfLines={1}>
+                      {reminder.dosage || 'Dosage optional'} · {reminder.nextOccurrence?.label || reminder.time}
+                    </Text>
+                  </View>
+                  <Pressable
+                    onPress={() => handleMedicineTaken(reminder)}
+                    disabled={reminder.takenToday}
+                    style={[
+                      styles.medicineTakenButton,
+                      {
+                        backgroundColor: reminder.takenToday ? colors.accentLight.health : colors.surface,
+                        borderColor: reminder.takenToday ? colors.health : colors.borderLight,
+                      },
+                    ]}
+                  >
+                    <Text style={[styles.medicineTakenText, { color: reminder.takenToday ? colors.health : colors.textPrimary }]}>
+                      {reminder.takenToday ? 'Taken' : 'Take'}
+                    </Text>
+                  </Pressable>
+                </View>
+              ))}
+            </View>
+          ) : (
+            <EmptyState
+              icon="medkit-outline"
+              message="No medicine reminders yet."
+              actionLabel="+ Add reminder"
+              action={() => navigation.navigate('MedicineReminders')}
+              accent={colors.health}
+            />
+          )}
+        </BentoCard>
       </View>
 
       <View style={styles.section}>
@@ -764,7 +828,7 @@ export default function HealthDashboard({ navigation }) {
             <ListRow
               key={log.id}
               title={displayDate(log.date)}
-              subtitle={`${log.weight || '—'} kg · ${log.sleep || '—'} hrs · ${formatSteps(log.steps)} steps${log.mood ? ` · ${log.mood}` : ''}`}
+              subtitle={`${log.weight ? (formatWeight(log.weight) || `${log.weight} kg`) : '—'} · ${log.sleep || '—'} hrs · ${formatSteps(log.steps)} steps${log.mood ? ` · ${log.mood}` : ''}`}
               onPress={() => navigation.navigate('HealthDayDetail', { entryId: log.id })}
               right={
                 <View style={styles.logActions}>
@@ -1072,6 +1136,34 @@ const styles = StyleSheet.create({
     flexGrow: 0,
     width: '100%',
   },
+  medicineList: {
+    gap: 4,
+    marginTop: 6,
+  },
+  medicineRow: {
+    alignItems: 'center',
+    borderBottomWidth: 1,
+    flexDirection: 'row',
+    gap: 10,
+    paddingVertical: 10,
+  },
+  medicineName: {
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  medicineTakenButton: {
+    alignItems: 'center',
+    borderRadius: RADIUS.pill,
+    borderWidth: 1,
+    justifyContent: 'center',
+    minHeight: 32,
+    minWidth: 62,
+    paddingHorizontal: 12,
+  },
+  medicineTakenText: {
+    fontSize: 11,
+    fontWeight: '800',
+  },
   cardHeader: { alignItems: 'flex-start', flexDirection: 'row', gap: 12, justifyContent: 'space-between' },
   cardTitle: { fontSize: 15, fontWeight: '800', lineHeight: 20 },
   largeValue: { fontSize: 24, fontWeight: '900' },
@@ -1268,7 +1360,6 @@ const styles = StyleSheet.create({
   },
   sleepStageLetter: {
     fontSize: 8,
-    color: '#fff',
     fontWeight: '800',
   },
   sleepLegends: {
@@ -1364,7 +1455,6 @@ const styles = StyleSheet.create({
     height: 34,
     borderRadius: 17,
     borderWidth: 1,
-    borderColor: '#eee',
     justifyContent: 'center',
     alignItems: 'center',
   },

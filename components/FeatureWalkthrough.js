@@ -127,7 +127,7 @@ export function FeatureWalkthrough({ screenKey, steps = [] }) {
                 }}
                 style={[styles.primaryButton, { backgroundColor: colors.health }]}
               >
-                <Text style={[styles.primaryButtonText, { color: colors.onAccent || '#FFFFFF' }]}>
+                <Text style={[styles.primaryButtonText, { color: colors.onAccent }]}>
                   {isLast ? 'Done' : 'Next'}
                 </Text>
               </Pressable>

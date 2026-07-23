@@ -11,10 +11,10 @@ import { HealthStack } from './HealthStack';
 import { HabitsStack } from './HabitsStack';
 import { NotesStack } from './NotesStack';
 import { WalletStack } from './WalletStack';
+import { HomeStack } from './HomeStack';
 import Onboarding from '../screens/Onboarding';
 import EnterName from '../screens/EnterName';
 import Settings from '../screens/Settings';
-import Home from '../screens/Home';
 import MyPlan from '../screens/MyPlan';
 import PrivacyManagement from '../screens/PrivacyManagement';
 import Help from '../screens/Help';
@@ -68,7 +68,7 @@ function MainTabs() {
     >
       <Tab.Screen name="HealthTab" component={HealthStack} />
       <Tab.Screen name="HabitsTab" component={HabitsStack} />
-      <Tab.Screen name="HomeTab" component={Home} />
+      <Tab.Screen name="HomeTab" component={HomeStack} />
       <Tab.Screen name="NotesTab" component={NotesStack} />
       <Tab.Screen name="JournalTab" component={WalletStack} />
     </Tab.Navigator>

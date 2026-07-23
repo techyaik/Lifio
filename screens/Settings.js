@@ -1,6 +1,18 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import AsyncStorage from '../storage/safeAsyncStorage';
-import { Alert, Modal, StyleSheet, Text, View, Switch, Pressable, Platform } from 'react-native';
+import {
+  AccessibilityInfo,
+  Alert,
+  Animated,
+  Easing,
+  Modal,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+  useWindowDimensions,
+} from 'react-native';
 import { addDays, format, subDays } from 'date-fns';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
@@ -13,7 +25,9 @@ import { InputField } from '../components/InputField';
 import { getData, setData } from '../storage/storage';
 import { showToast, safeConfirm } from '../utils/feedback';
 import { clearMemoryCache } from '../hooks/useStoredList';
-import { useHealth } from '../hooks/useHealth';
+import { useWallet } from '../hooks/useWallet';
+import { useHealthUnits, WEIGHT_UNITS, WATER_UNITS } from '../hooks/useHealthUnits';
+import { WALKTHROUGH_STORAGE_PREFIX } from '../constants/walkthroughs';
 
 const DUMMY_PREFIX = 'lifio_dummy_';
 const DEVELOPER_PASSCODE = '8080';
@@ -262,29 +276,99 @@ async function eraseDummyData() {
   ]);
 }
 
+// ─── Sub-components ─────────────────────────────────────────────────────────
+
+function SegmentedPicker({ options, value, onSelect, colors }) {
+  return (
+    <View style={styles.segmentedRow}>
+      {options.map((option) => {
+        const active = value === option.code;
+        return (
+          <Pressable
+            key={option.code}
+            onPress={() => onSelect(option.code)}
+            style={[
+              styles.segmentedOption,
+              { backgroundColor: colors.surface, borderColor: colors.borderLight },
+              active && { backgroundColor: colors.accentLight.health, borderColor: colors.health },
+            ]}
+          >
+            <Text
+              style={[
+                styles.segmentedLabel,
+                { color: active ? colors.health : colors.textPrimary },
+              ]}
+            >
+              {option.label}
+            </Text>
+          </Pressable>
+        );
+      })}
+    </View>
+  );
+}
+
+function NavRow({ icon, iconBg, iconColor, title, subtitle, onPress, colors, rightIcon = 'chevron-forward' }) {
+  return (
+    <Pressable
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.navRow,
+        { backgroundColor: pressed ? colors.surface : 'transparent' },
+      ]}
+    >
+      {icon ? (
+        <View style={[styles.navIconWrap, { backgroundColor: iconBg || colors.accentLight.health }]}>
+          <Ionicons name={icon} size={18} color={iconColor || colors.health} />
+        </View>
+      ) : null}
+      <View style={styles.navRowInfo}>
+        <Text style={[styles.navRowTitle, { color: colors.textPrimary }]}>{title}</Text>
+        {subtitle ? (
+          <Text style={[styles.navRowSubtitle, { color: colors.textSecondary }]}>{subtitle}</Text>
+        ) : null}
+      </View>
+      <Ionicons name={rightIcon} size={16} color={colors.textHint} />
+    </Pressable>
+  );
+}
+
+function InfoRow({ icon, iconBg, iconColor, title, subtitle, colors }) {
+  return (
+    <View style={styles.infoRow}>
+      {icon ? (
+        <View style={[styles.navIconWrap, { backgroundColor: iconBg || colors.surface }]}>
+          <Ionicons name={icon} size={18} color={iconColor || colors.textSecondary} />
+        </View>
+      ) : null}
+      <View style={styles.navRowInfo}>
+        <Text style={[styles.navRowTitle, { color: colors.textPrimary }]}>{title}</Text>
+        {subtitle ? (
+          <Text style={[styles.navRowSubtitle, { color: colors.textSecondary }]}>{subtitle}</Text>
+        ) : null}
+      </View>
+    </View>
+  );
+}
+
+// ─── Main Component ──────────────────────────────────────────────────────────
+
 export default function Settings() {
   const navigation = useNavigation();
   const { colors, themeMode, setThemeMode, triggerDataRefresh, profileName, setProfileName } = useTheme();
-  const { watchConfig, disconnectWatch } = useHealth();
+  const { currency, currencies, setCurrency } = useWallet();
+  const { weightUnit, waterUnit, setWeightUnit, setWaterUnit } = useHealthUnits();
+  const { width } = useWindowDimensions();
+  const isCompact = width < 430;
+  const entranceOpacity = useRef(new Animated.Value(0)).current;
+  const entranceTranslateY = useRef(new Animated.Value(12)).current;
 
-  // Settings keys
+  // Keys
   const DEVELOPER_MODE_KEY = 'lifio_developer_mode';
-  const NOTIFICATIONS_KEY = 'lifio_notifications';
-  const REMINDERS_KEY = 'lifio_reminders';
-  const LANGUAGE_KEY = 'lifio_language';
-  const REMIDER_TIME_KEY = 'lifio_default_reminder_time';
-  const LOCATION_PERM_KEY = 'lifio_location_perm';
-  const HEALTHKIT_PERM_KEY = 'lifio_healthkit_perm';
-  const CYCLE_REMINDERS_KEY = 'lifio_cycle_reminders';
+  const WALLET_CURRENCY_KEY = 'wallet_currency';
+  const WALLET_PASSCODE_FALLBACK_KEY = 'lifio_wallet_passcode_fallback_v1';
 
-  // Settings states
-  const [notifications, setNotifications] = useState(true);
-  const [reminders, setReminders] = useState(true);
-  const [language, setLanguage] = useState('English');
-  const [defaultReminderTime, setDefaultReminderTime] = useState('08:00');
-  const [locationPerm, setLocationPerm] = useState(false);
-  const [healthKitPerm, setHealthKitPerm] = useState(true);
-  const [cycleReminders, setCycleReminders] = useState(true);
+  // UI state
   const [developerMode, setDeveloperMode] = useState(false);
   const [passcodeModalVisible, setPasscodeModalVisible] = useState(false);
   const [passcode, setPasscode] = useState('');
@@ -293,68 +377,76 @@ export default function Settings() {
   const [nameModalVisible, setNameModalVisible] = useState(false);
   const [nameDraft, setNameDraft] = useState(profileName || '');
   const [nameError, setNameError] = useState('');
+  const [reduceMotion, setReduceMotion] = useState(false);
 
   useEffect(() => {
-    const loadSettings = async () => {
-      try {
-        const storedDev = await AsyncStorage.getItem(DEVELOPER_MODE_KEY);
-        if (storedDev === 'true') setDeveloperMode(true);
-
-        const storedNotif = await AsyncStorage.getItem(NOTIFICATIONS_KEY);
-        if (storedNotif !== null) setNotifications(storedNotif === 'true');
-
-        const storedRem = await AsyncStorage.getItem(REMINDERS_KEY);
-        if (storedRem !== null) setReminders(storedRem === 'true');
-
-        const storedLang = await AsyncStorage.getItem(LANGUAGE_KEY);
-        if (storedLang !== null) setLanguage(storedLang);
-
-        const storedTime = await AsyncStorage.getItem(REMIDER_TIME_KEY);
-        if (storedTime !== null) setDefaultReminderTime(storedTime);
-
-        const storedLoc = await AsyncStorage.getItem(LOCATION_PERM_KEY);
-        if (storedLoc !== null) setLocationPerm(storedLoc === 'true');
-
-        const storedHealth = await AsyncStorage.getItem(HEALTHKIT_PERM_KEY);
-        if (storedHealth !== null) setHealthKitPerm(storedHealth === 'true');
-
-        const storedCycle = await AsyncStorage.getItem(CYCLE_REMINDERS_KEY);
-        if (storedCycle !== null) setCycleReminders(storedCycle === 'true');
-      } catch (e) {
-        console.error('Error loading settings from AsyncStorage:', e);
-      }
-    };
-    loadSettings();
+    AsyncStorage.getItem(DEVELOPER_MODE_KEY)
+      .then((val) => { if (val === 'true') setDeveloperMode(true); })
+      .catch((e) => console.error('Error loading developer mode:', e));
   }, []);
+
+  useEffect(() => {
+    let mounted = true;
+
+    AccessibilityInfo.isReduceMotionEnabled()
+      .then((enabled) => {
+        if (mounted) setReduceMotion(Boolean(enabled));
+      })
+      .catch(() => {});
+
+    const subscription = AccessibilityInfo.addEventListener?.('reduceMotionChanged', (enabled) => {
+      setReduceMotion(Boolean(enabled));
+    });
+
+    return () => {
+      mounted = false;
+      subscription?.remove?.();
+    };
+  }, []);
+
+  useEffect(() => {
+    if (reduceMotion) {
+      entranceOpacity.setValue(1);
+      entranceTranslateY.setValue(0);
+      return;
+    }
+
+    entranceOpacity.setValue(0);
+    entranceTranslateY.setValue(12);
+
+    const frame = requestAnimationFrame(() => {
+      Animated.parallel([
+        Animated.timing(entranceOpacity, {
+          toValue: 1,
+          duration: 180,
+          easing: Easing.out(Easing.quad),
+          useNativeDriver: true,
+        }),
+        Animated.timing(entranceTranslateY, {
+          toValue: 0,
+          duration: 220,
+          easing: Easing.out(Easing.cubic),
+          useNativeDriver: true,
+        }),
+      ]).start();
+    });
+
+    return () => cancelAnimationFrame(frame);
+  }, [entranceOpacity, entranceTranslateY, reduceMotion]);
 
   useEffect(() => {
     setNameDraft(profileName || '');
   }, [profileName]);
 
-  const updateNotifications = async (val) => {
-    setNotifications(val);
-    await AsyncStorage.setItem(NOTIFICATIONS_KEY, String(val));
-  };
-  const updateReminders = async (val) => {
-    setReminders(val);
-    await AsyncStorage.setItem(REMINDERS_KEY, String(val));
-  };
-  const updateReminderTime = async (val) => {
-    setDefaultReminderTime(val);
-    await AsyncStorage.setItem(REMIDER_TIME_KEY, val);
-  };
-  const updateLocationPerm = async (val) => {
-    setLocationPerm(val);
-    await AsyncStorage.setItem(LOCATION_PERM_KEY, String(val));
-  };
-  const updateHealthKitPerm = async (val) => {
-    setHealthKitPerm(val);
-    await AsyncStorage.setItem(HEALTHKIT_PERM_KEY, String(val));
-  };
-  const updateCycleReminders = async (val) => {
-    setCycleReminders(val);
-    await AsyncStorage.setItem(CYCLE_REMINDERS_KEY, String(val));
-  };
+  const entranceStyle = useMemo(
+    () => ({
+      opacity: entranceOpacity,
+      transform: [{ translateY: entranceTranslateY }],
+    }),
+    [entranceOpacity, entranceTranslateY]
+  );
+
+  // ── Developer Mode ──────────────────────────────────────────────────────
 
   const requestDeveloperMode = () => {
     setPasscode('');
@@ -375,7 +467,7 @@ export default function Settings() {
     try {
       await AsyncStorage.setItem(DEVELOPER_MODE_KEY, 'true');
     } catch (e) {
-      console.error('Error saving developer mode state:', e);
+      console.error('Error saving developer mode:', e);
     }
   };
 
@@ -386,7 +478,7 @@ export default function Settings() {
     try {
       await AsyncStorage.setItem(DEVELOPER_MODE_KEY, 'false');
     } catch (e) {
-      console.error('Error saving developer mode state:', e);
+      console.error('Error saving developer mode:', e);
     }
   };
 
@@ -400,6 +492,8 @@ export default function Settings() {
     }
     setVersionTapCount(nextCount);
   };
+
+  // ── Display Name ─────────────────────────────────────────────────────────
 
   const openNameModal = () => {
     setNameDraft(profileName || '');
@@ -417,7 +511,6 @@ export default function Settings() {
       setNameError('Use at least 2 characters.');
       return;
     }
-
     try {
       await setProfileName(trimmed);
       setNameModalVisible(false);
@@ -428,6 +521,8 @@ export default function Settings() {
       setNameError('Could not save your name. Please try again.');
     }
   };
+
+  // ── Developer Data Actions ────────────────────────────────────────────────
 
   const confirmFill = () => {
     if (!developerMode) {
@@ -446,7 +541,6 @@ export default function Settings() {
         showToast('Could not add dummy data: ' + (error.message || 'Please try again.'));
       }
     };
-
     safeConfirm('Input dummy data?', message, runFill, 'Cancel', 'Input Data');
   };
 
@@ -467,28 +561,105 @@ export default function Settings() {
         showToast('Could not erase dummy data: ' + (error.message || 'Please try again.'));
       }
     };
-
     safeConfirm('Erase dummy data?', message, runErase, 'Cancel', 'Erase Dummy Data');
   };
 
+  // ── Data & Privacy Actions ────────────────────────────────────────────────
 
+  const exportAllData = async () => {
+    try {
+      const health = await getData('health_logs');
+      const habits = await getData('habits_list');
+      const completions = await getData('habits_completions');
+      const notes = await getData('notes_list');
+      const wallet = await getData('wallet_entries');
+      const walletAccounts = await getData('wallet_accounts');
+      const moodLogs = await getData('mood_logs');
+
+      const allData = {
+        exportedAt: new Date().toISOString(),
+        app: 'Lifio',
+        version: '1.0.0',
+        health,
+        habits,
+        completions,
+        notes,
+        wallet,
+        walletAccounts,
+        moodLogs,
+      };
+
+      await Share.share({
+        message: JSON.stringify(allData, null, 2),
+        title: 'Lifio Data Export',
+      });
+    } catch (e) {
+      Alert.alert('Export Failed', e.message);
+    }
+  };
+
+  const clearAllTrackerData = () => {
+    const message =
+      'This will permanently remove all health logs, habits, notes, wallet history, your display name, and wallet passcode. Appearance and theme preferences will not change.';
+
+    const runReset = async () => {
+      try {
+        const keys = await AsyncStorage.getAllKeys();
+        const walkthroughKeys = keys.filter((key) => key.startsWith(WALKTHROUGH_STORAGE_PREFIX));
+
+        await Promise.all([
+          setData('health_logs', []),
+          setData('habits_list', []),
+          setData('habits_completions', []),
+          setData('notes_list', []),
+          setData('wallet_entries', []),
+          setData('wallet_accounts', []),
+          setData('mood_logs', []),
+          AsyncStorage.removeItem('wearable_config'),
+          AsyncStorage.removeItem(WALLET_CURRENCY_KEY),
+          AsyncStorage.removeItem(WALLET_PASSCODE_FALLBACK_KEY),
+          AsyncStorage.multiRemove(walkthroughKeys),
+        ]);
+
+        try {
+          const SecureStore = require('expo-secure-store');
+          await SecureStore.deleteItemAsync?.('lifio_wallet_passcode_v1');
+        } catch (error) {
+          // Secure storage may not be available in all environments; fallback is already cleared.
+        }
+
+        await setProfileName('');
+        clearMemoryCache();
+        triggerDataRefresh();
+        showToast('All tracker data cleared ✓');
+      } catch (error) {
+        console.error('[Settings] Error clearing tracker data:', error);
+        showToast('Could not clear tracker data. Please try again.');
+      }
+    };
+
+    safeConfirm('Clear all data?', message, runReset, 'Cancel', 'Clear All Data');
+  };
+
+  // ── Render ────────────────────────────────────────────────────────────────
 
   return (
-    <Screen>
-      <AppHeader
-        title="Settings"
-        showSettings={false}
-        onBack={navigation.canGoBack() ? () => navigation.goBack() : undefined}
-      />
+    <Screen contentStyle={styles.screenContent}>
+      <Animated.View style={[styles.animatedContent, entranceStyle]}>
+        <AppHeader
+          title="Settings"
+          showSettings={false}
+          onBack={navigation.canGoBack() ? () => navigation.goBack() : undefined}
+        />
 
-      {/* 1. Theme / Appearance Selection */}
+      {/* ── 1. Appearance ─────────────────────────────────────────────── */}
       <View style={styles.section}>
         <SectionHeader>Appearance</SectionHeader>
         <View style={[styles.card, { backgroundColor: colors.white, borderColor: colors.borderLight }]}>
           <Text style={[styles.cardDesc, { color: colors.textSecondary }]}>
             Choose how Lifio looks on your device.
           </Text>
-          <View style={styles.themeSelectorRow}>
+          <View style={[styles.themeSelectorRow, isCompact ? styles.themeSelectorRowCompact : null]}>
             {['light', 'dark', 'system'].map((mode) => {
               const active = themeMode === mode;
               return (
@@ -497,14 +668,9 @@ export default function Settings() {
                   onPress={() => setThemeMode(mode)}
                   style={[
                     styles.themeOption,
-                    {
-                      backgroundColor: colors.surface,
-                      borderColor: colors.borderLight,
-                    },
-                    active && {
-                      borderColor: colors.health,
-                      backgroundColor: colors.accentLight.health,
-                    },
+                    isCompact ? styles.themeOptionCompact : null,
+                    { backgroundColor: colors.surface, borderColor: colors.borderLight },
+                    active && { borderColor: colors.health, backgroundColor: colors.accentLight.health },
                   ]}
                 >
                   <Ionicons
@@ -518,12 +684,7 @@ export default function Settings() {
                     size={20}
                     color={active ? colors.health : colors.textSecondary}
                   />
-                  <Text
-                    style={[
-                      styles.themeOptionLabel,
-                      { color: active ? colors.health : colors.textPrimary },
-                    ]}
-                  >
+                  <Text style={[styles.themeOptionLabel, { color: active ? colors.health : colors.textPrimary }]}>
                     {mode.charAt(0).toUpperCase() + mode.slice(1)}
                   </Text>
                 </Pressable>
@@ -533,191 +694,242 @@ export default function Settings() {
         </View>
       </View>
 
+      {/* ── 2. Profile ────────────────────────────────────────────────── */}
       <View style={styles.section}>
-        <SectionHeader>Personalization</SectionHeader>
+        <SectionHeader>Profile</SectionHeader>
         <View style={[styles.card, { backgroundColor: colors.white, borderColor: colors.borderLight }]}>
-          <View style={styles.optionRow}>
+          <View style={[styles.optionRow, isCompact ? styles.optionRowCompact : null]}>
+            <View style={[styles.navIconWrap, { backgroundColor: colors.accentLight.health }]}>
+              <Ionicons name="person-outline" size={18} color={colors.health} />
+            </View>
             <View style={styles.optionInfo}>
               <Text style={[styles.optionTitle, { color: colors.textPrimary }]}>Display Name</Text>
-              <Text style={[styles.optionDesc, { color: colors.textSecondary }]}>
-                {profileName || 'Set the name Lifio uses across the app.'}
+              <Text style={[styles.optionDesc, { color: colors.textSecondary }]} numberOfLines={1}>
+                {profileName || 'Not set — tap to add your name'}
               </Text>
             </View>
             <Pressable
               onPress={openNameModal}
-              style={[styles.settingsConnectLink, { backgroundColor: colors.accentLight.health, borderColor: colors.health }]}
+              style={[styles.inlineButton, { backgroundColor: colors.accentLight.health, borderColor: colors.health }]}
             >
-              <Text style={[styles.settingsConnectLinkText, { color: colors.health }]}>
-                {profileName ? 'Change' : 'Set Name'}
+              <Text style={[styles.inlineButtonText, { color: colors.health }]}>
+                {profileName ? 'Edit' : 'Set'}
               </Text>
             </Pressable>
           </View>
         </View>
       </View>
 
-      {/* 2. Notifications & Language */}
+      {/* ── 3. Health ─────────────────────────────────────────────────── */}
       <View style={styles.section}>
-        <SectionHeader>General Preferences</SectionHeader>
+        <SectionHeader>Health</SectionHeader>
         <View style={[styles.card, { backgroundColor: colors.white, borderColor: colors.borderLight }]}>
-          <View style={styles.optionRow}>
-            <View style={styles.optionInfo}>
-              <Text style={[styles.optionTitle, { color: colors.textPrimary }]}>Push Notifications</Text>
-              <Text style={[styles.optionDesc, { color: colors.textSecondary }]}>Receive morning digest summaries</Text>
+          <Text style={[styles.cardDesc, { color: colors.textSecondary }]}>
+            Select the units used when logging and viewing your health metrics.
+          </Text>
+
+          {/* Weight */}
+          <View style={[styles.unitRow, isCompact ? styles.unitRowCompact : null]}>
+            <View style={[styles.unitIconWrap, { backgroundColor: colors.accentLight.health }]}>
+              <Ionicons name="barbell-outline" size={16} color={colors.health} />
             </View>
-            <Switch
-              value={notifications}
-              onValueChange={updateNotifications}
-              trackColor={{ false: colors.border, true: colors.health }}
-              thumbColor={colors.white}
-            />
-          </View>
- 
-          <View style={[styles.divider, { backgroundColor: colors.borderLight }]} />
- 
-          <View style={styles.optionRow}>
-            <View style={styles.optionInfo}>
-              <Text style={[styles.optionTitle, { color: colors.textPrimary }]}>Habit Reminders</Text>
-              <Text style={[styles.optionDesc, { color: colors.textSecondary }]}>Alerts for scheduled milestones</Text>
+            <View style={[styles.unitLabelWrap, isCompact ? styles.unitLabelWrapCompact : null]}>
+              <Text style={[styles.optionTitle, { color: colors.textPrimary }]}>Weight</Text>
             </View>
-            <Switch
-              value={reminders}
-              onValueChange={updateReminders}
-              trackColor={{ false: colors.border, true: colors.health }}
-              thumbColor={colors.white}
-            />
-          </View>
- 
-          <View style={[styles.divider, { backgroundColor: colors.borderLight }]} />
- 
-          <View style={styles.optionRow}>
-            <View style={styles.optionInfo}>
-              <Text style={[styles.optionTitle, { color: colors.textPrimary }]}>App Language</Text>
-              <Text style={[styles.optionDesc, { color: colors.textSecondary }]}>Select interface language</Text>
+            <View style={styles.unitPickerWrap}>
+              <SegmentedPicker
+                options={WEIGHT_UNITS.map((u) => ({ code: u.code, label: u.label }))}
+                value={weightUnit}
+                onSelect={setWeightUnit}
+                colors={colors}
+              />
             </View>
-            <Pressable
-              style={[styles.pickerMock, { backgroundColor: colors.surface, borderColor: colors.borderLight }]}
-              onPress={() => Alert.alert('Language', 'Only English is available in developer build.')}
-            >
-              <Text style={[styles.pickerValue, { color: colors.textPrimary }]}>{language}</Text>
-              <Ionicons name="chevron-down" size={14} color={colors.textSecondary} />
-            </Pressable>
-          </View>
-        </View>
-      </View>
- 
-      {/* 3. Default Preferences */}
-      <View style={styles.section}>
-        <SectionHeader>Defaults</SectionHeader>
-        <View style={[styles.card, { backgroundColor: colors.white, borderColor: colors.borderLight }]}>
-          <View style={styles.optionColumn}>
-            <Text style={[styles.optionTitle, { color: colors.textPrimary }]}>Default Habits reminder time</Text>
-            <InputField
-              value={defaultReminderTime}
-              onChangeText={updateReminderTime}
-              placeholder="e.g. 08:00"
-              style={{ marginTop: 8 }}
-            />
-          </View>
-        </View>
-      </View>
- 
-      {/* 4. App Permissions */}
-      <View style={styles.section}>
-        <SectionHeader>App Permissions</SectionHeader>
-        <View style={[styles.card, { backgroundColor: colors.white, borderColor: colors.borderLight }]}>
-          <View style={styles.optionRow}>
-            <View style={styles.optionInfo}>
-              <Text style={[styles.optionTitle, { color: colors.textPrimary }]}>Location Services</Text>
-              <Text style={[styles.optionDesc, { color: colors.textSecondary }]}>Add location tags to local tracker logs</Text>
-            </View>
-            <Switch
-              value={locationPerm}
-              onValueChange={updateLocationPerm}
-              trackColor={{ false: colors.border, true: colors.health }}
-              thumbColor={colors.white}
-            />
-          </View>
- 
-          <View style={[styles.divider, { backgroundColor: colors.borderLight }]} />
- 
-          <View style={styles.optionRow}>
-            <View style={styles.optionInfo}>
-              <Text style={[styles.optionTitle, { color: colors.textPrimary }]}>Health Integration</Text>
-              <Text style={[styles.optionDesc, { color: colors.textSecondary }]}>Import steps and sleep automatically</Text>
-            </View>
-            <Switch
-              value={healthKitPerm}
-              onValueChange={updateHealthKitPerm}
-              trackColor={{ false: colors.border, true: colors.health }}
-              thumbColor={colors.white}
-            />
           </View>
 
           <View style={[styles.divider, { backgroundColor: colors.borderLight }]} />
 
-          <View style={styles.optionRow}>
-            <View style={styles.optionInfo}>
-              <Text style={[styles.optionTitle, { color: colors.textPrimary }]}>Menstrual Cycle Reminders</Text>
-              <Text style={[styles.optionDesc, { color: colors.textSecondary }]}>Get notified about upcoming cycles</Text>
+          {/* Water */}
+          <View style={[styles.unitRow, isCompact ? styles.unitRowCompact : null]}>
+            <View style={[styles.unitIconWrap, { backgroundColor: colors.accentLight.health }]}>
+              <Ionicons name="water-outline" size={16} color={colors.health} />
             </View>
-            <Switch
-              value={cycleReminders}
-              onValueChange={updateCycleReminders}
-              trackColor={{ false: colors.border, true: colors.health }}
-              thumbColor={colors.white}
-            />
-          </View>
-
-          <View style={[styles.divider, { backgroundColor: colors.borderLight }]} />
-
-          <View style={styles.optionRow}>
-            <View style={styles.optionInfo}>
-              <Text style={[styles.optionTitle, { color: colors.textPrimary }]}>Smartwatch Connection</Text>
-              <Text style={[styles.optionDesc, { color: colors.textSecondary }]}>
-                {watchConfig && watchConfig.connected
-                  ? `${
-                      watchConfig.provider === 'google_fit'
-                        ? 'Google Fit'
-                        : watchConfig.provider === 'bluetooth'
-                        ? `Bluetooth (${watchConfig.deviceName || 'Wearable'})`
-                        : 'Connected Wearable'
-                    } · ${Object.values(watchConfig.permissions || {}).filter(Boolean).length} metrics`
-                  : 'Status: Disconnected'}
-              </Text>
+            <View style={[styles.unitLabelWrap, isCompact ? styles.unitLabelWrapCompact : null]}>
+              <Text style={[styles.optionTitle, { color: colors.textPrimary }]}>Water</Text>
             </View>
-            {watchConfig && watchConfig.connected ? (
-              <Pressable
-                onPress={disconnectWatch}
-                style={[styles.settingsDisconnectBtn, { backgroundColor: colors.dangerBg, borderColor: colors.danger }]}
-              >
-                <Text style={[styles.settingsDisconnectBtnText, { color: colors.danger }]}>Disconnect</Text>
-              </Pressable>
-            ) : (
-              <Pressable
-                onPress={() => navigation.navigate('Main', { screen: 'HealthTab' })}
-                style={[styles.settingsConnectLink, { backgroundColor: colors.accentLight.health, borderColor: colors.health }]}
-              >
-                <Text style={[styles.settingsConnectLinkText, { color: colors.health }]}>Connect</Text>
-              </Pressable>
-            )}
+            <View style={styles.unitPickerWrap}>
+              <SegmentedPicker
+                options={WATER_UNITS.map((u) => ({ code: u.code, label: u.label }))}
+                value={waterUnit}
+                onSelect={setWaterUnit}
+                colors={colors}
+              />
+            </View>
           </View>
         </View>
       </View>
 
+      {/* ── 4. Habits ─────────────────────────────────────────────────── */}
+      <View style={styles.section}>
+        <SectionHeader>Habits</SectionHeader>
+        <View style={[styles.card, { backgroundColor: colors.white, borderColor: colors.borderLight }]}>
+          <InfoRow
+            icon="alarm-outline"
+            iconBg={colors.accentLight.habits}
+            iconColor={colors.habits}
+            title="Reminder Times"
+            subtitle="Set a reminder time individually on each habit via Add or Edit Habit."
+            colors={colors}
+          />
+        </View>
+      </View>
+
+      {/* ── 5. Wallet ─────────────────────────────────────────────────── */}
+      <View style={styles.section}>
+        <SectionHeader>Wallet</SectionHeader>
+        <View style={[styles.card, { backgroundColor: colors.white, borderColor: colors.borderLight }]}>
+          {/* Currency */}
+          <Text style={[styles.cardDesc, { color: colors.textSecondary }]}>
+            Currency used for wallet balance, spending, and transaction history.
+          </Text>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.currencyScrollContent}
+          >
+            {currencies.map((item) => {
+              const selected = currency.code === item.code;
+              return (
+                <Pressable
+                  key={item.code}
+                  onPress={() => setCurrency(item.code)}
+                  style={[
+                    styles.currencyOption,
+                    { backgroundColor: colors.surface, borderColor: colors.borderLight },
+                    selected && { backgroundColor: colors.accentLight.health, borderColor: colors.health },
+                  ]}
+                >
+                  <Text style={[styles.currencySymbol, { color: selected ? colors.health : colors.textPrimary }]}>
+                    {item.symbol}
+                  </Text>
+                  <Text style={[styles.currencyLabel, { color: selected ? colors.health : colors.textSecondary }]}>
+                    {item.code}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </ScrollView>
+
+          <View style={[styles.divider, { backgroundColor: colors.borderLight }]} />
+
+          {/* Passcode note */}
+          <InfoRow
+            icon="lock-closed-outline"
+            iconBg={colors.accentLight.wallet}
+            iconColor={colors.wallet}
+            title="Wallet Passcode"
+            subtitle="Your wallet is protected by a local passcode. To reset it, use Manage Privacy below."
+            colors={colors}
+          />
+        </View>
+      </View>
+
+      {/* ── 6. Data & Privacy ─────────────────────────────────────────── */}
+      <View style={styles.section}>
+        <SectionHeader>Data & Privacy</SectionHeader>
+        <View style={[styles.card, { backgroundColor: colors.white, borderColor: colors.borderLight }]}>
+
+          {/* Local-storage notice */}
+          <View style={[styles.privacyNotice, { backgroundColor: colors.accentLight.health, borderColor: colors.health }]}>
+            <Ionicons name="shield-checkmark-outline" size={16} color={colors.health} />
+            <Text style={[styles.privacyNoticeText, { color: colors.health }]}>
+              All your data is stored privately on this device. Nothing is sent to any server.
+            </Text>
+          </View>
+
+          {/* Export */}
+          <NavRow
+            icon="download-outline"
+            iconBg={colors.accentLight.health}
+            iconColor={colors.health}
+            title="Export App Data"
+            subtitle="Share a full JSON backup of all your tracked data"
+            onPress={exportAllData}
+            colors={colors}
+            rightIcon="share-outline"
+          />
+
+          <View style={[styles.divider, { backgroundColor: colors.borderLight }]} />
+
+          {/* Manage Privacy */}
+          <NavRow
+            icon="shield-outline"
+            iconBg={colors.accentLight.health}
+            iconColor={colors.health}
+            title="Manage Privacy"
+            subtitle="Reset wallet passcode or clear individual data sections"
+            onPress={() => navigation.navigate('PrivacyManagement')}
+            colors={colors}
+          />
+
+          <View style={[styles.divider, { backgroundColor: colors.borderLight }]} />
+
+          {/* Clear all data */}
+          <NavRow
+            icon="trash-outline"
+            iconBg={colors.dangerBg}
+            iconColor={colors.danger}
+            title="Clear All App Data"
+            subtitle="Permanently delete all logs, habits, notes, and wallet data"
+            onPress={clearAllTrackerData}
+            colors={colors}
+          />
+        </View>
+      </View>
+
+      {/* ── 7. About ──────────────────────────────────────────────────── */}
+      <View style={styles.section}>
+        <SectionHeader>About</SectionHeader>
+        <View style={[styles.card, { backgroundColor: colors.white, borderColor: colors.borderLight }]}>
+          <NavRow
+            icon="information-circle-outline"
+            iconBg={colors.accentLight.habits}
+            iconColor={colors.habits}
+            title="About Lifio"
+            subtitle="Version, design values, and app details"
+            onPress={() => navigation.navigate('About')}
+            colors={colors}
+          />
+
+          <View style={[styles.divider, { backgroundColor: colors.borderLight }]} />
+
+          <NavRow
+            icon="help-circle-outline"
+            iconBg={colors.accentLight.notes}
+            iconColor={colors.notes}
+            title="Help & FAQ"
+            subtitle="Tips, frequently asked questions, and feature guidance"
+            onPress={() => navigation.navigate('Help')}
+            colors={colors}
+          />
+        </View>
+
+        <Pressable onPress={handleVersionTap} hitSlop={12} style={styles.versionWrap}>
+          <Text style={[styles.versionText, { color: colors.textHint }]}>Lifio · Version 1.0.0</Text>
+        </Pressable>
+      </View>
+
+      {/* ── 8. Developer Tools (hidden, unlocked by tapping version) ──── */}
       {developerMode ? (
         <View style={styles.section}>
           <SectionHeader>Developer Tools</SectionHeader>
           <View style={[styles.card, { backgroundColor: colors.white, borderColor: colors.borderLight }]}>
             <Text style={[styles.cardDesc, { color: colors.textSecondary }]}>
-              Dummy records are tagged separately and can be removed without deleting real user data.
+              Dummy records are tagged separately and removed independently from real user data.
             </Text>
-            <View style={styles.buttonRow}>
+            <View style={[styles.buttonRow, isCompact ? styles.buttonRowCompact : null]}>
               <Pressable
                 onPress={confirmFill}
-                style={[
-                  styles.actionButton,
-                  { backgroundColor: colors.accentLight.health, borderColor: colors.health }
-                ]}
+                style={[styles.actionButton, { backgroundColor: colors.accentLight.health, borderColor: colors.health }]}
               >
                 <Ionicons name="cloud-upload-outline" size={18} color={colors.health} />
                 <Text style={[styles.actionButtonText, { color: colors.health }]}>Input Dummy Data</Text>
@@ -725,10 +937,7 @@ export default function Settings() {
 
               <Pressable
                 onPress={confirmErase}
-                style={[
-                  styles.actionButton,
-                  { backgroundColor: colors.dangerBg, borderColor: colors.danger }
-                ]}
+                style={[styles.actionButton, { backgroundColor: colors.dangerBg, borderColor: colors.danger }]}
               >
                 <Ionicons name="trash-outline" size={18} color={colors.danger} />
                 <Text style={[styles.actionButtonText, { color: colors.danger }]}>Erase Dummy Data</Text>
@@ -736,10 +945,7 @@ export default function Settings() {
             </View>
             <Pressable
               onPress={disableDeveloperMode}
-              style={[
-                styles.actionButton,
-                { backgroundColor: colors.surface, borderColor: colors.borderLight, flex: 0, width: '100%' }
-              ]}
+              style={[styles.actionButton, { backgroundColor: colors.surface, borderColor: colors.borderLight, flex: 0, width: '100%' }]}
             >
               <Ionicons name="power-outline" size={18} color={colors.textSecondary} />
               <Text style={[styles.actionButtonText, { color: colors.textSecondary }]}>Turn Off Developer Mode</Text>
@@ -747,27 +953,16 @@ export default function Settings() {
           </View>
         </View>
       ) : null}
+      </Animated.View>
 
-
-
-      {/* 6. About Section Info */}
-      <View style={[styles.card, styles.aboutCard, { backgroundColor: colors.white, borderColor: colors.borderLight }]}>
-        <View style={styles.headerRow}>
-          <View style={[styles.iconWrap, { backgroundColor: colors.accentLight.habits }]}>
-            <Ionicons name="sparkles" size={22} color={colors.habits} />
-          </View>
-          <View style={styles.titleColumn}>
-            <Text style={[styles.title, { color: colors.textPrimary }]}>Lifio Tracker</Text>
-            <Text style={[styles.cardDesc, { color: colors.textSecondary }]}>A personal ledger, health, and habits tracker for mindful momentum.</Text>
-          </View>
-        </View>
-        <Pressable onPress={handleVersionTap} hitSlop={8}>
-          <Text style={[styles.versionText, { color: colors.textHint }]}>Version 1.0.0 (Production Build)</Text>
-        </Pressable>
-      </View>
-
+      {/* ── Developer Passcode Modal ───────────────────────────────────── */}
       {passcodeModalVisible && (
-        <Modal visible={passcodeModalVisible} transparent animationType="fade" onRequestClose={() => setPasscodeModalVisible(false)}>
+        <Modal
+          visible={passcodeModalVisible}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setPasscodeModalVisible(false)}
+        >
           <View style={[styles.modalBackdrop, { backgroundColor: colors.overlay }]}>
             <View style={[styles.modalCard, { backgroundColor: colors.white, borderColor: colors.borderLight }]}>
               <View style={styles.headerRow}>
@@ -775,8 +970,10 @@ export default function Settings() {
                   <Ionicons name="lock-closed-outline" size={22} color={colors.health} />
                 </View>
                 <View style={styles.titleColumn}>
-                  <Text style={[styles.title, { color: colors.textPrimary }]}>Enable Developer Mode</Text>
-                  <Text style={[styles.cardDesc, { color: colors.textSecondary }]}>Enter the developer passcode to continue.</Text>
+                  <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>Enable Developer Mode</Text>
+                  <Text style={[styles.cardDesc, { color: colors.textSecondary }]}>
+                    Enter the developer passcode to continue.
+                  </Text>
                 </View>
               </View>
               <InputField
@@ -790,14 +987,12 @@ export default function Settings() {
                 autoCapitalize="none"
                 autoCorrect={false}
               />
-              {passcodeError ? <Text style={[styles.errorText, { color: colors.danger }]}>{passcodeError}</Text> : null}
+              {passcodeError ? (
+                <Text style={[styles.errorText, { color: colors.danger }]}>{passcodeError}</Text>
+              ) : null}
               <View style={styles.buttonRow}>
                 <Pressable
-                  onPress={() => {
-                    setPasscodeModalVisible(false);
-                    setPasscode('');
-                    setPasscodeError('');
-                  }}
+                  onPress={() => { setPasscodeModalVisible(false); setPasscode(''); setPasscodeError(''); }}
                   style={[styles.actionButton, { backgroundColor: colors.surface, borderColor: colors.borderLight }]}
                 >
                   <Text style={[styles.actionButtonText, { color: colors.textSecondary }]}>Cancel</Text>
@@ -814,8 +1009,14 @@ export default function Settings() {
         </Modal>
       )}
 
+      {/* ── Display Name Modal ────────────────────────────────────────── */}
       {nameModalVisible && (
-        <Modal visible={nameModalVisible} transparent animationType="fade" onRequestClose={() => setNameModalVisible(false)}>
+        <Modal
+          visible={nameModalVisible}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setNameModalVisible(false)}
+        >
           <View style={[styles.modalBackdrop, { backgroundColor: colors.overlay }]}>
             <View style={[styles.modalCard, { backgroundColor: colors.white, borderColor: colors.borderLight }]}>
               <View style={styles.headerRow}>
@@ -823,9 +1024,9 @@ export default function Settings() {
                   <Ionicons name="person-outline" size={22} color={colors.health} />
                 </View>
                 <View style={styles.titleColumn}>
-                  <Text style={[styles.title, { color: colors.textPrimary }]}>Update your name</Text>
+                  <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>Your display name</Text>
                   <Text style={[styles.cardDesc, { color: colors.textSecondary }]}>
-                    Lifio uses this name for simple, local personalization.
+                    Used across the app for greetings. Stored locally only.
                   </Text>
                 </View>
               </View>
@@ -840,14 +1041,12 @@ export default function Settings() {
                 autoCorrect={false}
                 maxLength={40}
               />
-              {nameError ? <Text style={[styles.errorText, { color: colors.danger }]}>{nameError}</Text> : null}
+              {nameError ? (
+                <Text style={[styles.errorText, { color: colors.danger }]}>{nameError}</Text>
+              ) : null}
               <View style={styles.buttonRow}>
                 <Pressable
-                  onPress={() => {
-                    setNameModalVisible(false);
-                    setNameError('');
-                    setNameDraft(profileName || '');
-                  }}
+                  onPress={() => { setNameModalVisible(false); setNameError(''); setNameDraft(profileName || ''); }}
                   style={[styles.actionButton, { backgroundColor: colors.surface, borderColor: colors.borderLight }]}
                 >
                   <Text style={[styles.actionButtonText, { color: colors.textSecondary }]}>Cancel</Text>
@@ -856,7 +1055,7 @@ export default function Settings() {
                   onPress={saveProfileDisplayName}
                   style={[styles.actionButton, { backgroundColor: colors.accentLight.health, borderColor: colors.health }]}
                 >
-                  <Text style={[styles.actionButtonText, { color: colors.health }]}>Save Name</Text>
+                  <Text style={[styles.actionButtonText, { color: colors.health }]}>Save</Text>
                 </Pressable>
               </View>
             </View>
@@ -867,7 +1066,18 @@ export default function Settings() {
   );
 }
 
+// ─── Styles ──────────────────────────────────────────────────────────────────
+
 const styles = StyleSheet.create({
+  screenContent: {
+    paddingBottom: 28,
+  },
+  animatedContent: {
+    gap: 16,
+  },
+  section: {
+    gap: 8,
+  },
   card: {
     borderRadius: RADIUS.lg,
     borderWidth: 1,
@@ -879,8 +1089,245 @@ const styles = StyleSheet.create({
     fontSize: 12,
     lineHeight: 17,
   },
-  aboutCard: {
-    marginTop: 8,
+
+  // Theme picker
+  themeSelectorRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 4,
+  },
+  themeSelectorRowCompact: {
+    flexWrap: 'wrap',
+  },
+  themeOption: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 12,
+    borderRadius: RADIUS.md,
+    borderWidth: 1.5,
+  },
+  themeOptionCompact: {
+    flexBasis: '48%',
+    minWidth: 132,
+  },
+  themeOptionLabel: {
+    fontSize: 12,
+    fontWeight: '700',
+  },
+
+  // Profile / option row
+  optionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  optionRowCompact: {
+    alignItems: 'flex-start',
+    flexWrap: 'wrap',
+  },
+  optionInfo: {
+    flex: 1,
+    gap: 2,
+  },
+  optionTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  optionDesc: {
+    fontSize: 11,
+  },
+  inlineButton: {
+    paddingVertical: 6,
+    paddingHorizontal: 14,
+    borderRadius: RADIUS.sm,
+    borderWidth: 1,
+  },
+  inlineButtonText: {
+    fontSize: 12,
+    fontWeight: '700',
+  },
+
+  // Health unit rows
+  unitRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  unitRowCompact: {
+    alignItems: 'flex-start',
+    flexWrap: 'wrap',
+  },
+  unitIconWrap: {
+    width: 32,
+    height: 32,
+    borderRadius: RADIUS.sm,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  unitLabelWrap: {
+    width: 56,
+  },
+  unitLabelWrapCompact: {
+    paddingTop: 6,
+    width: 64,
+  },
+  unitPickerWrap: {
+    flex: 1,
+    minWidth: 180,
+  },
+  segmentedRow: {
+    flexDirection: 'row',
+    gap: 6,
+  },
+  segmentedOption: {
+    flex: 1,
+    alignItems: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 6,
+    borderRadius: RADIUS.sm,
+    borderWidth: 1.5,
+  },
+  segmentedLabel: {
+    fontSize: 12,
+    fontWeight: '700',
+  },
+
+  // Currency picker
+  currencyScrollContent: {
+    flexDirection: 'row',
+    gap: 7,
+    paddingVertical: 2,
+    paddingRight: 4,
+  },
+  currencyOption: {
+    alignItems: 'center',
+    borderRadius: RADIUS.md,
+    borderWidth: 1.5,
+    width: 58,
+    paddingHorizontal: 6,
+    paddingVertical: 9,
+  },
+  currencySymbol: {
+    fontSize: 14,
+    fontWeight: '800',
+  },
+  currencyLabel: {
+    fontSize: 10,
+    fontWeight: '700',
+    marginTop: 2,
+  },
+
+  // Divider
+  divider: {
+    height: 1,
+    marginVertical: 2,
+  },
+
+  // Nav rows (tappable)
+  navRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 2,
+    borderRadius: RADIUS.md,
+  },
+  navIconWrap: {
+    width: 34,
+    height: 34,
+    borderRadius: RADIUS.sm,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  navRowInfo: {
+    flex: 1,
+    gap: 2,
+  },
+  navRowTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  navRowSubtitle: {
+    fontSize: 11,
+    lineHeight: 15,
+  },
+
+  // Info rows (non-tappable)
+  infoRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
+    paddingVertical: 4,
+    paddingHorizontal: 2,
+  },
+
+  // Privacy notice badge
+  privacyNotice: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: RADIUS.md,
+    borderWidth: 1,
+  },
+  privacyNoticeText: {
+    flex: 1,
+    fontSize: 12,
+    fontWeight: '600',
+    lineHeight: 16,
+  },
+
+  // Danger action buttons
+  buttonRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginTop: 4,
+  },
+  buttonRowCompact: {
+    flexDirection: 'column',
+  },
+  actionButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 12,
+    borderRadius: RADIUS.md,
+    borderWidth: 1.5,
+  },
+  actionButtonText: {
+    fontSize: 12,
+    fontWeight: '700',
+  },
+
+  // Version
+  versionWrap: {
+    alignItems: 'center',
+    paddingVertical: 4,
+  },
+  versionText: {
+    fontSize: 10,
+    fontWeight: '600',
+  },
+
+  // Modals
+  modalBackdrop: {
+    flex: 1,
+    justifyContent: 'center',
+    padding: 24,
+  },
+  modalCard: {
+    borderRadius: RADIUS.lg,
+    borderWidth: 1,
+    gap: 14,
+    padding: 16,
+    ...SHADOWS.soft,
   },
   headerRow: {
     flexDirection: 'row',
@@ -898,128 +1345,12 @@ const styles = StyleSheet.create({
     flex: 1,
     gap: 2,
   },
-  title: {
+  modalTitle: {
     fontSize: 15,
     fontWeight: '700',
-  },
-  section: {
-    gap: 8,
-  },
-  themeSelectorRow: {
-    flexDirection: 'row',
-    gap: 8,
-    marginTop: 4,
-  },
-  themeOption: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    paddingVertical: 12,
-    borderRadius: RADIUS.md,
-    borderWidth: 1.5,
-  },
-  themeOptionLabel: {
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  optionRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  optionInfo: {
-    flex: 1,
-    paddingRight: 16,
-    gap: 2,
-  },
-  optionTitle: {
-    fontSize: 13,
-    fontWeight: '700',
-  },
-  optionDesc: {
-    fontSize: 11,
-  },
-  optionColumn: {
-    flexDirection: 'column',
-  },
-  divider: {
-    height: 1,
-    marginVertical: 4,
-  },
-  pickerMock: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    borderRadius: RADIUS.sm,
-    borderWidth: 1,
-  },
-  pickerValue: {
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  buttonRow: {
-    flexDirection: 'row',
-    gap: 8,
-    marginTop: 4,
-  },
-  actionButton: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    paddingVertical: 12,
-    borderRadius: RADIUS.md,
-    borderWidth: 1.5,
-  },
-  actionButtonText: {
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  versionText: {
-    fontSize: 10,
-    fontWeight: '600',
-    textAlign: 'center',
-    marginTop: 4,
-  },
-  modalBackdrop: {
-    flex: 1,
-    justifyContent: 'center',
-    padding: 24,
-  },
-  modalCard: {
-    borderRadius: RADIUS.lg,
-    borderWidth: 1,
-    gap: 14,
-    padding: 16,
-    ...SHADOWS.soft,
   },
   errorText: {
     fontSize: 12,
     fontWeight: '600',
-  },
-  settingsDisconnectBtn: {
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    borderRadius: RADIUS.sm,
-    borderWidth: 1,
-  },
-  settingsDisconnectBtnText: {
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  settingsConnectLink: {
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    borderRadius: RADIUS.sm,
-    borderWidth: 1,
-  },
-  settingsConnectLinkText: {
-    fontSize: 12,
-    fontWeight: '700',
   },
 });

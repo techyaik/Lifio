@@ -71,13 +71,13 @@ export const WALKTHROUGH_STEPS = {
   settings: [
     {
       title: 'Control your app',
-      body: 'Settings manages appearance, reminders, permissions, defaults, developer mode, and app information.',
+      body: 'Settings manages your display name, theme, wallet currency, privacy shortcuts, and developer tools.',
       icon: 'settings-outline',
     },
     {
-      title: 'Replay walkthroughs',
-      body: 'Use the Feature Walkthrough section here to reset these guides and see them again across the app.',
-      icon: 'refresh-circle-outline',
+      title: 'Manage local data',
+      body: 'Open Privacy Management to export your logs or clear specific tracker sections when needed.',
+      icon: 'shield-checkmark-outline',
     },
   ],
   privacy: [

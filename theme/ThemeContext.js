@@ -105,10 +105,10 @@ export function ThemeProvider({ children }) {
 
   const gradients = {
     page: [colors.bgWarm, colors.bg],
-    health: [theme === 'dark' ? '#385F7E' : '#2E7BBE', colors.health],
-    habits: [theme === 'dark' ? '#514A7E' : '#7B72DA', colors.habits],
-    notes: [theme === 'dark' ? '#72583B' : '#D9902E', colors.notes],
-    wallet: [theme === 'dark' ? '#714332' : '#B24B2B', colors.wallet],
+    health: [colors.gradientHealthStart, colors.health],
+    habits: [colors.gradientHabitsStart, colors.habits],
+    notes: [colors.gradientNotesStart, colors.notes],
+    wallet: [colors.gradientWalletStart, colors.wallet],
   };
 
   const contextValue = {

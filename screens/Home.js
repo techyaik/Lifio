@@ -84,6 +84,20 @@ export default function Home({ navigation }) {
             {firstName ? `Welcome, ${firstName}` : 'Mindful Momentum'}
           </Text>
         </View>
+        <Pressable
+          onPress={() => navigation.navigate('Analytics')}
+          style={({ pressed }) => [
+            styles.analyticsButton,
+            {
+              backgroundColor: colors.white,
+              borderColor: colors.borderLight,
+              opacity: pressed ? 0.86 : 1,
+            },
+          ]}
+        >
+          <Ionicons name="stats-chart-outline" size={16} color={colors.health} />
+          <Text style={[styles.analyticsButtonText, { color: colors.textPrimary }]}>Analytics</Text>
+        </Pressable>
       </View>
 
       {/* First Bento Grid Row: Mood & Habits Progress */}
@@ -396,6 +410,20 @@ const styles = StyleSheet.create({
   welcomeTitle: {
     fontSize: 22,
     fontWeight: '800',
+  },
+  analyticsButton: {
+    alignItems: 'center',
+    borderRadius: RADIUS.pill,
+    borderWidth: 1,
+    flexDirection: 'row',
+    gap: 6,
+    minHeight: 38,
+    paddingHorizontal: 12,
+    ...SHADOWS.subtle,
+  },
+  analyticsButtonText: {
+    fontSize: 12,
+    fontWeight: '700',
   },
   profileAvatar: {
     width: 44,

@@ -58,7 +58,7 @@ export function WalletBalance({
         </View>
       </View>
 
-      <View style={styles.statsRow}>
+      <View style={[styles.statsRow, { borderTopColor: colors.borderLight }]}>
         <View style={styles.statGroup}>
           <View style={[styles.indicatorDot, { backgroundColor: colors.tealMid }]} />
           <Text style={[styles.statText, { color: colors.textSecondary }]}>
@@ -116,7 +116,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 18,
     borderTopWidth: 0.5,
-    borderTopColor: '#F0F0F0',
     paddingTop: 12,
   },
   statGroup: {

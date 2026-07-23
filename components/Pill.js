@@ -28,7 +28,7 @@ export function Pill({ label, palette, selected, onPress }) {
         },
       ]}
     >
-      <Text style={[styles.text, { color: selected ? (colors.onAccent || '#FFFFFF') : activeText }]} numberOfLines={1}>
+      <Text style={[styles.text, { color: selected ? colors.onAccent : activeText }]} numberOfLines={1}>
         {label}
       </Text>
     </Container>

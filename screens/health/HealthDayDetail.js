@@ -10,6 +10,7 @@ import { PrimaryButton } from '../../components/PrimaryButton';
 import { Screen } from '../../components/Screen';
 import { SectionHeader } from '../../components/SectionHeader';
 import { useHealth } from '../../hooks/useHealth';
+import { useHealthUnits } from '../../hooks/useHealthUnits';
 import { displayDate, lastSevenDaysEnding } from '../../utils/dates';
 import { RADIUS, SHADOWS } from '../../constants/theme';
 import { showToast, safeConfirm } from '../../utils/feedback';
@@ -18,6 +19,7 @@ export default function HealthDayDetail({ navigation, route }) {
   const { logs, loading, deleteLog } = useHealth();
   const { width } = useWindowDimensions();
   const { colors, triggerDataRefresh } = useTheme();
+  const { weightUnit, waterUnit, formatWeight, formatWater } = useHealthUnits();
   
   const entry = logs.find((log) => log.id === route.params?.entryId) || route.params?.entry;
   const cycleInfo = useMemo(() => {
@@ -74,8 +76,8 @@ export default function HealthDayDetail({ navigation, route }) {
       />
       <View style={styles.grid}>
         <MetricCard
-          value={entry.weight ?? '—'}
-          label="Weight kg"
+          value={entry.weight != null ? (formatWeight(entry.weight) || `${entry.weight} kg`) : '—'}
+          label={`Weight ${weightUnit}`}
           accent={colors.health}
           icon={<Ionicons name="scale-outline" size={16} color={colors.health} />}
         />
@@ -94,8 +96,8 @@ export default function HealthDayDetail({ navigation, route }) {
           icon={<Ionicons name="walk-outline" size={16} color={colors.health} />}
         />
         <MetricCard
-          value={entry.water ?? '—'}
-          label="Water glasses"
+          value={entry.water != null ? (formatWater(entry.water) || `${entry.water} glasses`) : '—'}
+          label={`Water ${waterUnit}`}
           accent={colors.health}
           icon={<Ionicons name="water-outline" size={16} color={colors.health} />}
         />

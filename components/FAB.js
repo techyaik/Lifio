@@ -10,7 +10,7 @@ export function FAB({ onPress, color, icon = 'add' }) {
 
   return (
     <Pressable onPress={onPress} style={[styles.fab, { backgroundColor: activeColor }]} hitSlop={10}>
-      <Ionicons name={icon} size={22} color={colors.onAccent || '#FFFFFF'} />
+      <Ionicons name={icon} size={22} color={colors.onAccent} />
     </Pressable>
   );
 }

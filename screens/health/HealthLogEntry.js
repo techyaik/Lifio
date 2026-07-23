@@ -10,6 +10,7 @@ import { PrimaryButton } from '../../components/PrimaryButton';
 import { Screen } from '../../components/Screen';
 import { SectionHeader } from '../../components/SectionHeader';
 import { FLOW_LEVELS, ENERGY_LEVELS, HEALTH_MOODS, SYMPTOMS, useHealth } from '../../hooks/useHealth';
+import { useHealthUnits } from '../../hooks/useHealthUnits';
 import { displayDate, todayKey } from '../../utils/dates';
 import { showToast, safeConfirm } from '../../utils/feedback';
 import { RADIUS, SHADOWS } from '../../constants/theme';
@@ -35,6 +36,7 @@ const toggleInList = (list, value) =>
 export default function HealthLogEntry({ navigation, route }) {
   const { logs, addLog, updateLog, deleteLog, refresh } = useHealth();
   const { colors, triggerDataRefresh } = useTheme();
+  const { weightUnit } = useHealthUnits();
 
   const editing = useMemo(
     () => logs.find((log) => log.id === route.params?.entryId) || route.params?.entry,
@@ -228,7 +230,7 @@ export default function HealthLogEntry({ navigation, route }) {
           <SectionHeader>Daily overview</SectionHeader>
           <InputField value={form.date} onChangeText={(v) => setValue('date', v)} placeholder="Date (YYYY-MM-DD)" />
           <View style={styles.twoCol}>
-            <InputField style={styles.inputFlex} value={form.weight} onChangeText={(v) => setValue('weight', v)} placeholder="Weight (kg)" keyboardType="decimal-pad" />
+            <InputField style={styles.inputFlex} value={form.weight} onChangeText={(v) => setValue('weight', v)} placeholder={`Weight (${weightUnit})`} keyboardType="decimal-pad" />
             <InputField style={styles.inputFlex} value={form.sleep} onChangeText={(v) => setValue('sleep', v)} placeholder="Sleep (hours)" keyboardType="decimal-pad" />
           </View>
           <View style={styles.twoCol}>
