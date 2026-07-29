@@ -25,7 +25,7 @@ on:
 
 jobs:
   build:
-    name: EAS Cloud Build
+    name: EAS Local Build
     runs-on: ubuntu-latest
 
     steps:
@@ -33,94 +33,61 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # ── 2. Node (LTS — compatible with expo-github-action@v8) ────────────
+      # ── 2. Setup Java (Required for Android local builds) ──────────────────
+      - name: Setup Java (JDK 17)
+        if: inputs.platform == 'android' || inputs.platform == 'all'
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      # ── 3. Setup Node.js ──────────────────────────────────────────────────
       - name: Setup Node.js 20
         uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: 'npm'
 
-      # ── 3. Install JS dependencies ────────────────────────────────────────
+      # ── 4. Install JS dependencies ────────────────────────────────────────
       - name: Install dependencies
         run: npm ci
 
-      # ── 4. Authenticate with Expo & install latest EAS CLI ────────────────
-      #      expo-github-action@v8 is the stable release that works with
-      #      Node 20 and EAS CLI ≥ 9. Do NOT add --local here; EAS cloud
-      #      servers handle the compilation so the runner needs no Android SDK.
+      # ── 5. Setup Expo / EAS CLI ───────────────────────────────────────────
       - name: Setup Expo & EAS CLI
         uses: expo/expo-github-action@v8
         with:
           eas-version: latest
           token: ${{ secrets.EXPO_TOKEN }}
 
-      # ── 5. EAS cloud build ────────────────────────────────────────────────
-      #      No --local flag → EAS servers compile the app.
-      #      The CLI blocks until the build finishes (or fails).
-      #      Output is written to eas-build.log so we can parse the build ID.
-      - name: Build on EAS
-        id: eas-build
-        run: |
-          eas build \
-            --platform "${{ inputs.platform }}" \
-            --profile "${{ inputs.profile }}" \
-            --non-interactive \
-            2>&1 | tee eas-build.log
-
-          # Extract the build ID from the log line that looks like:
-          # "See logs: https://expo.dev/accounts/.../builds/<ID>"
-          BUILD_ID=$(grep -oP '(?<=builds/)[a-f0-9-]{36}' eas-build.log | head -1)
-          echo "build-id=$BUILD_ID" >> "$GITHUB_OUTPUT"
-          echo "Build ID: $BUILD_ID"
-
-      # ── 6. Download the artifact from EAS ────────────────────────────────
-      #      eas build:download fetches the .aab / .apk / .ipa produced by
-      #      the cloud build and saves it locally so upload-artifact can find it.
-      - name: Download build artifact from EAS
-        if: success()
+      # ── 6. Build App (Local) ──────────────────────────────────────────────
+      #      Runs build locally on the GitHub Actions runner.
+      #      Downloads keystores/credentials from Expo servers using EXPO_TOKEN.
+      - name: Build App (Local)
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
         run: |
           mkdir -p artifacts
-          BUILD_ID="${{ steps.eas-build.outputs.build-id }}"
-
-          if [ -n "$BUILD_ID" ]; then
-            echo "Downloading build $BUILD_ID …"
-            eas build:download \
-              --id "$BUILD_ID" \
-              --output artifacts/ \
-              --non-interactive
-          else
-            echo "Build ID not found in logs, downloading latest …"
-            eas build:download \
-              --platform "${{ inputs.platform }}" \
-              --output artifacts/ \
-              --non-interactive
-          fi
-
+          
+          # Run local build
+          eas build \
+            --local \
+            --platform "${{ inputs.platform }}" \
+            --profile "${{ inputs.profile }}" \
+            --non-interactive
+            
+          # Move local build outputs (*.apk, *.aab, *.ipa) to the artifacts folder
+          find . -maxdepth 1 -name "*.apk" -o -name "*.aab" -o -name "*.ipa" | while read -r file; do
+            echo "Found local build artifact: $file"
+            mv "$file" artifacts/
+          done
+          
           ls -lh artifacts/
 
-      # ── 7. Upload to GitHub Actions artifacts (30-day retention) ─────────
+      # ── 7. Upload to GitHub Actions artifacts ────────────────────────────
       - name: Upload build artifact
-        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: lifio-${{ inputs.profile }}-${{ inputs.platform }}-${{ github.sha }}
           path: artifacts/
-          if-no-files-found: warn
+          if-no-files-found: error
           retention-days: 30
-
-      # ── 8. Job summary ────────────────────────────────────────────────────
-      - name: Write job summary
-        if: always()
-        run: |
-          BUILD_URL=$(grep -oP 'https://expo\.dev/accounts[^\s]+' eas-build.log | head -1 || echo "—")
-          STATUS="${{ job.status }}"
-          echo "## EAS Build Summary" >> "$GITHUB_STEP_SUMMARY"
-          echo "" >> "$GITHUB_STEP_SUMMARY"
-          echo "| Field | Value |" >> "$GITHUB_STEP_SUMMARY"
-          echo "|---|---|" >> "$GITHUB_STEP_SUMMARY"
-          echo "| **Status** | $STATUS |" >> "$GITHUB_STEP_SUMMARY"
-          echo "| **Profile** | ${{ inputs.profile }} |" >> "$GITHUB_STEP_SUMMARY"
-          echo "| **Platform** | ${{ inputs.platform }} |" >> "$GITHUB_STEP_SUMMARY"
-          echo "| **Build ID** | ${{ steps.eas-build.outputs.build-id }} |" >> "$GITHUB_STEP_SUMMARY"
-          echo "| **EAS Dashboard** | $BUILD_URL |" >> "$GITHUB_STEP_SUMMARY"
-          echo "| **Commit** | ${{ github.sha }} |" >> "$GITHUB_STEP_SUMMARY"
