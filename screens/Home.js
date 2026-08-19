@@ -21,6 +21,7 @@ export default function Home({ navigation }) {
   const { width } = useWindowDimensions();
   const isCompact = width < 390;
   const isNarrow = width < 360;
+  const shouldStackWallet = !isCompact || isNarrow;
 
   const { habits, getDayCompletionPercent, getStreak, isDone } = useHabits();
   const { getTodayLog } = useHealth();
@@ -301,7 +302,7 @@ export default function Home({ navigation }) {
             </View>
           </View>
           <View style={[styles.walletHeroPanel, { backgroundColor: colors.white, borderColor: colors.borderLight }]}>
-            <View style={styles.walletTopRow}>
+            <View style={[styles.walletTopRow, shouldStackWallet ? styles.walletTopStack : null]}>
               <Text style={[styles.walletCaption, { color: colors.textHint }]}>Total balance</Text>
               <Text style={[styles.walletStatusLabel, { color: colors.textSecondary }]}>
                 {walletBalanceVisible ? 'Visible for this session' : 'Private by default'}
@@ -310,7 +311,13 @@ export default function Home({ navigation }) {
 
             <View style={styles.walletAmountBlock}>
               {walletBalanceVisible ? (
-                <Text selectable style={[styles.walletAmount, { color: colors.textPrimary }]}>
+                <Text
+                  selectable
+                  numberOfLines={1}
+                  adjustsFontSizeToFit
+                  minimumFontScale={0.5}
+                  style={[styles.walletAmount, { color: colors.textPrimary }]}
+                >
                   {formatMoney(totalWalletBalance)}
                 </Text>
               ) : (
@@ -318,7 +325,7 @@ export default function Home({ navigation }) {
               )}
             </View>
 
-            <View style={[styles.walletFooterRow, isNarrow ? styles.walletFooterStack : null]}>
+            <View style={[styles.walletFooterRow, shouldStackWallet ? styles.walletFooterStack : null]}>
               <View style={[styles.walletPrivacyChip, { backgroundColor: colors.surface, borderColor: colors.borderLight }]}>
                 <Ionicons
                   name={walletBalanceVisible ? 'eye-outline' : 'eye-off-outline'}
@@ -481,8 +488,8 @@ const styles = StyleSheet.create({
     minWidth: 0,
   },
   walletCard: {
-    gap: 12,
-    padding: 16,
+    gap: 10,
+    padding: 14,
   },
   walletBadge: {
     alignItems: 'center',
@@ -614,14 +621,19 @@ const styles = StyleSheet.create({
   walletHeroPanel: {
     borderRadius: RADIUS.md,
     borderWidth: 1,
-    gap: 16,
-    padding: 16,
+    gap: 12,
+    padding: 12,
   },
   walletTopRow: {
     alignItems: 'center',
     flexDirection: 'row',
     gap: 8,
     justifyContent: 'space-between',
+  },
+  walletTopStack: {
+    flexDirection: 'column',
+    alignItems: 'flex-start',
+    gap: 2,
   },
   walletStatusLabel: {
     fontSize: 11,
@@ -641,10 +653,12 @@ const styles = StyleSheet.create({
     gap: 5,
     minHeight: 28,
     paddingHorizontal: 10,
+    justifyContent: 'center',
   },
   walletPrivacyText: {
     fontSize: 11,
     fontWeight: '700',
+    flexShrink: 1,
   },
   walletAmountBlock: {
     alignItems: 'flex-start',
@@ -658,8 +672,9 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   walletFooterStack: {
-    alignItems: 'flex-start',
+    alignItems: 'stretch',
     flexDirection: 'column',
+    gap: 8,
   },
   walletLinkChip: {
     alignItems: 'center',
@@ -669,6 +684,7 @@ const styles = StyleSheet.create({
     gap: 5,
     minHeight: 28,
     paddingHorizontal: 10,
+    justifyContent: 'center',
   },
   walletLinkText: {
     fontSize: 11,
