@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Alert, StyleSheet, Text, View, Switch, Share, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import * as LocalAuthentication from 'expo-local-authentication';
 import { useTheme } from '../theme/ThemeContext';
 import { AppHeader } from '../components/AppHeader';
 import { Screen } from '../components/Screen';
@@ -11,11 +12,45 @@ import { RADIUS, SHADOWS } from '../constants/theme';
 import { clearMemoryCache } from '../hooks/useStoredList';
 
 export default function PrivacyManagement({ navigation }) {
-  const { colors, triggerDataRefresh } = useTheme();
+  const { colors, triggerDataRefresh, appLockEnabled, setAppLockEnabled } = useTheme();
 
   const [encryptionEnabled, setEncryptionEnabled] = useState(true);
   const [dataSync, setDataSync] = useState(false);
   const [analytics, setAnalytics] = useState(true);
+  
+  const handleToggleAppLock = async (val) => {
+    if (val) {
+      // Enabling Lock
+      const hasHardware = await LocalAuthentication.hasHardwareAsync();
+      const isEnrolled = await LocalAuthentication.isEnrolledAsync();
+
+      if (!hasHardware || !isEnrolled) {
+        Alert.alert('Not Available', 'Biometric authentication is not set up on this device.');
+        return;
+      }
+
+      const result = await LocalAuthentication.authenticateAsync({
+        promptMessage: 'Authenticate to enable App Lock',
+        cancelLabel: 'Cancel',
+        disableDeviceFallback: false,
+      });
+
+      if (result.success) {
+        setAppLockEnabled(true);
+      }
+    } else {
+      // Disabling Lock
+      const result = await LocalAuthentication.authenticateAsync({
+        promptMessage: 'Authenticate to disable App Lock',
+        cancelLabel: 'Cancel',
+        disableDeviceFallback: false,
+      });
+
+      if (result.success) {
+        setAppLockEnabled(false);
+      }
+    }
+  };
 
   const exportData = async () => {
     try {
@@ -89,6 +124,21 @@ export default function PrivacyManagement({ navigation }) {
         <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>Data Controls</Text>
         
         <View style={[styles.controlCard, { backgroundColor: colors.white, borderColor: colors.borderLight }]}>
+          <View style={styles.switchRow}>
+            <View style={styles.switchInfo}>
+              <Text style={[styles.switchTitle, { color: colors.textPrimary }]}>Biometric App Lock</Text>
+              <Text style={[styles.switchDesc, { color: colors.textSecondary }]}>Require authentication to open Lifio</Text>
+            </View>
+            <Switch
+              value={appLockEnabled}
+              onValueChange={handleToggleAppLock}
+              trackColor={{ false: colors.border, true: colors.health }}
+              thumbColor={colors.white}
+            />
+          </View>
+
+          <View style={[styles.divider, { backgroundColor: colors.borderLight }]} />
+
           <View style={styles.switchRow}>
             <View style={styles.switchInfo}>
               <Text style={[styles.switchTitle, { color: colors.textPrimary }]}>On-Device Encryption</Text>

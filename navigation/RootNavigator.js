@@ -19,6 +19,7 @@ import MyPlan from '../screens/MyPlan';
 import PrivacyManagement from '../screens/PrivacyManagement';
 import Help from '../screens/Help';
 import About from '../screens/About';
+import { AppLockOverlay } from '../components/AppLockOverlay';
 
 const Tab = createBottomTabNavigator();
 const Drawer = createDrawerNavigator();
@@ -222,7 +223,9 @@ function NavigatorContent() {
 export default function RootNavigator() {
   return (
     <ThemeProvider>
-      <NavigatorContent />
+      <AppLockOverlay>
+        <NavigatorContent />
+      </AppLockOverlay>
     </ThemeProvider>
   );
 }

@@ -7,6 +7,7 @@ const ThemeContext = createContext();
 
 export const THEME_KEY = 'lifio_theme_mode_v2';
 export const PROFILE_NAME_KEY = 'lifio_profile_name_v1';
+export const APP_LOCK_KEY = 'lifio_app_lock_enabled_v1';
 
 export const resolveColor = (colorStr, colors) => {
   if (!colorStr) return colorStr;
@@ -46,20 +47,25 @@ export function ThemeProvider({ children }) {
   const systemColorScheme = useColorScheme();
   const [themeMode, setThemeModeState] = useState('system'); // 'light' | 'dark' | 'system'
   const [profileName, setProfileNameState] = useState('');
+  const [appLockEnabled, setAppLockEnabledState] = useState(false);
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
     const loadTheme = async () => {
       try {
-        const [storedTheme, storedProfileName] = await Promise.all([
+        const [storedTheme, storedProfileName, storedAppLock] = await Promise.all([
           AsyncStorage.getItem(THEME_KEY),
           AsyncStorage.getItem(PROFILE_NAME_KEY),
+          AsyncStorage.getItem(APP_LOCK_KEY),
         ]);
         if (storedTheme) {
           setThemeModeState(storedTheme);
         }
         if (storedProfileName) {
           setProfileNameState(storedProfileName.trim());
+        }
+        if (storedAppLock === 'true') {
+          setAppLockEnabledState(true);
         }
       } catch (e) {
         console.error('Error loading theme:', e);
@@ -100,6 +106,19 @@ export function ThemeProvider({ children }) {
     }
   };
 
+  const setAppLockEnabled = async (value) => {
+    setAppLockEnabledState(value);
+    try {
+      if (value) {
+        await AsyncStorage.setItem(APP_LOCK_KEY, 'true');
+      } else {
+        await AsyncStorage.removeItem(APP_LOCK_KEY);
+      }
+    } catch (e) {
+      console.error('Error saving app lock state:', e);
+    }
+  };
+
   const theme = themeMode === 'system' ? (systemColorScheme || 'light') : themeMode;
   const colors = theme === 'dark' ? DARK_COLORS : LIGHT_COLORS;
 
@@ -120,6 +139,8 @@ export function ThemeProvider({ children }) {
     ready,
     profileName,
     setProfileName,
+    appLockEnabled,
+    setAppLockEnabled,
     resolveThemeColor: (colorStr) => resolveColor(colorStr, colors),
     dataVersion,
     triggerDataRefresh,
