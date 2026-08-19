@@ -42,7 +42,10 @@
         {
           "android": {
             "compileSdkVersion": 35,
-            "targetSdkVersion": 35
+            "targetSdkVersion": 35,
+            "gradleProperties": {
+              "org.gradle.jvmargs": "-Xmx4096m -XX:MaxMetaspaceSize=512m"
+            }
           }
         }
       ]
