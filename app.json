@@ -6,11 +6,6 @@
     "orientation": "portrait",
     "icon": "./assets/lifio-icon.png",
     "userInterfaceStyle": "light",
-    "splash": {
-      "image": "./assets/lifio-logo.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#F5F5F0"
-    },
     "assetBundlePatterns": [
       "**/*"
     ],
@@ -41,13 +36,18 @@
         "expo-build-properties",
         {
           "android": {
-            "compileSdkVersion": 35,
-            "targetSdkVersion": 35,
-            "buildToolsVersion": "35.0.0",
             "gradleProperties": {
               "org.gradle.jvmargs": "-Xmx4096m -XX:MaxMetaspaceSize=512m"
             }
           }
+        }
+      ],
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/lifio-logo.png",
+          "resizeMode": "contain",
+          "backgroundColor": "#F5F5F0"
         }
       ]
     ],
