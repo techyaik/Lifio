@@ -150,7 +150,7 @@ export default function HealthDashboard({ navigation }) {
   });
 
   const [devMode, setDevMode] = useState(false);
-  const [provider, setProvider] = useState('google_fit'); // 'google_fit' or 'bluetooth'
+  const [provider, setProvider] = useState('health_connect'); // 'health_connect' or 'bluetooth'
   const [clientId, setClientId] = useState('');
   
   // Bluetooth specific states
@@ -206,26 +206,34 @@ export default function HealthDashboard({ navigation }) {
     setPermissions((prev) => ({ ...prev, [key]: !prev[key] }));
   };
 
-  const handleConnect = async () => {
-    if (provider === 'google_fit') {
-      await AsyncStorage.setItem('pending_wearable_permissions', JSON.stringify(permissions));
-      await AsyncStorage.setItem('pending_wearable_client_id', clientId);
-
-      const redirectUri = Platform.OS === 'web' ? window.location.origin + '/' : 'http://localhost:8081/';
-      const { getGoogleAuthUrl } = require('../../utils/googleFit');
-      const authUrl = getGoogleAuthUrl(clientId, redirectUri);
-
+    if (provider === 'health_connect') {
+      setPermissionModalVisible(false);
+      
       if (Platform.OS === 'web') {
-        setPermissionModalVisible(false);
-        showToast('Redirecting to Google Fit...');
-        setTimeout(() => {
-          window.location.href = authUrl;
-        }, 800);
-      } else {
-        setPermissionModalVisible(false);
-        const token = 'mock_native_google_fit_token';
-        await connectWatch(permissions, 'google_fit', token, clientId || 'mock');
-        showToast('Google Fit connected (Simulated) ✓');
+        showToast('Health Connect is only supported on Android native apps.');
+        return;
+      }
+      
+      const { initializeHealthConnect, requestHealthPermissions } = require('../../utils/healthConnect');
+      
+      try {
+        const initialized = await initializeHealthConnect();
+        if (!initialized) {
+          showToast('Failed to initialize Health Connect on this device.');
+          return;
+        }
+
+        const granted = await requestHealthPermissions(permissions);
+        
+        if (granted) {
+          await connectWatch(permissions, 'health_connect');
+          showToast('Health Connect linked ✓');
+        } else {
+          showToast('Permission to access Health Connect was denied.');
+        }
+      } catch (err) {
+        console.error('Health Connect error:', err);
+        showToast('Error linking Health Connect.');
       }
     } else if (provider === 'bluetooth') {
       setPermissionModalVisible(false);
@@ -448,7 +456,7 @@ export default function HealthDashboard({ navigation }) {
           <View style={styles.rowAlign}>
             <Ionicons name="bluetooth" size={16} color={colors.health} style={{ marginRight: 6 }} />
             <Text style={[styles.syncStatusText, { color: colors.health }]} numberOfLines={1}>
-              {watchConfig.provider === 'google_fit' ? 'Google Fit' : watchConfig.deviceName || 'Wearable'} · Synced {watchConfig.lastSynced ? new Date(watchConfig.lastSynced).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Never'}
+              {watchConfig.provider === 'health_connect' ? 'Health Connect' : watchConfig.deviceName || 'Wearable'} · Synced {watchConfig.lastSynced ? new Date(watchConfig.lastSynced).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Never'}
             </Text>
           </View>
           <View style={styles.syncStatusButtons}>
@@ -879,17 +887,17 @@ export default function HealthDashboard({ navigation }) {
               <Text style={[styles.sectionLabel, { color: colors.textSecondary }]}>Choose Provider</Text>
               <View style={styles.providerRow}>
                 <Pressable
-                  onPress={() => setProvider('google_fit')}
+                  onPress={() => setProvider('health_connect')}
                   style={[
                     styles.providerBtn,
                     {
-                      borderColor: provider === 'google_fit' ? colors.health : colors.border,
-                      backgroundColor: provider === 'google_fit' ? colors.accentLight.health : colors.transparent,
+                      borderColor: provider === 'health_connect' ? colors.health : colors.border,
+                      backgroundColor: provider === 'health_connect' ? colors.accentLight.health : colors.transparent,
                     }
                   ]}
                 >
-                  <Ionicons name="logo-google" size={15} color={provider === 'google_fit' ? colors.health : colors.textSecondary} />
-                  <Text style={[styles.providerBtnText, { color: provider === 'google_fit' ? colors.health : colors.textPrimary }]}>Google Fit</Text>
+                  <Ionicons name="fitness-outline" size={15} color={provider === 'health_connect' ? colors.health : colors.textSecondary} />
+                  <Text style={[styles.providerBtnText, { color: provider === 'health_connect' ? colors.health : colors.textPrimary }]}>Health Connect</Text>
                 </Pressable>
                 <Pressable
                   onPress={() => setProvider('bluetooth')}
@@ -906,20 +914,10 @@ export default function HealthDashboard({ navigation }) {
                 </Pressable>
               </View>
 
-              {provider === 'google_fit' && (
+              {provider === 'health_connect' && (
                 <View style={styles.inputContainer}>
-                  <Text style={[styles.inputLabel, { color: colors.textSecondary }]}>Google Client ID</Text>
-                  <TextInput
-                    style={[styles.textInput, { color: colors.textPrimary, borderColor: colors.border, backgroundColor: colors.surface }]}
-                    placeholder="Paste OAuth Client ID here..."
-                    placeholderTextColor={colors.textHint}
-                    value={clientId}
-                    onChangeText={setClientId}
-                    autoCapitalize="none"
-                    autoCorrect={false}
-                  />
-                  <Text style={[styles.inputHelp, { color: colors.textHint }]}>
-                    Leave empty to test with mock accounts.
+                  <Text style={[styles.inputHelp, { color: colors.textSecondary }]}>
+                    Link your health data through Android's Health Connect safely and securely.
                   </Text>
                 </View>
               )}

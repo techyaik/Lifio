@@ -4,7 +4,7 @@ import { parseISO } from 'date-fns';
 import { useFocusEffect } from '@react-navigation/native';
 import { useStoredList } from './useStoredList';
 import { todayKey } from '../utils/dates';
-import { fetchGoogleFitData } from '../utils/googleFit';
+import { fetchHealthConnectData } from '../utils/healthConnect';
 import { useTheme } from '../theme/ThemeContext';
 
 const KEY = 'health_logs';
@@ -142,11 +142,11 @@ export function useHealth() {
 
     let syncedMetrics = null;
 
-    if (watchConfig.provider === 'google_fit' && watchConfig.accessToken) {
+    if (watchConfig.provider === 'health_connect') {
       try {
-        syncedMetrics = await fetchGoogleFitData(watchConfig.accessToken, watchConfig.permissions);
+        syncedMetrics = await fetchHealthConnectData(watchConfig.permissions);
       } catch (err) {
-        console.warn('Error fetching Google Fit data, falling back:', err);
+        console.warn('Error fetching Health Connect data, falling back:', err);
       }
     } else if (watchConfig.provider === 'bluetooth') {
       try {
