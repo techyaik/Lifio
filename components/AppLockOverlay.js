@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { View, Text, StyleSheet, AppState, Pressable, Animated, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, AppState, Pressable, ActivityIndicator, Modal } from 'react-native';
 import * as LocalAuthentication from 'expo-local-authentication';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../theme/ThemeContext';
@@ -73,8 +73,13 @@ export function AppLockOverlay({ children }) {
     <View style={{ flex: 1 }}>
       {children}
 
-      {isLocked && (
-        <Animated.View style={[styles.overlay, { backgroundColor: colors.bg }]}>
+      <Modal
+        visible={isLocked}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => {}} 
+      >
+        <View style={[styles.overlay, { backgroundColor: colors.bg }]}>
           <View style={styles.content}>
             <View style={[styles.iconWrap, { backgroundColor: colors.accentLight.health }]}>
               <Ionicons name="lock-closed" size={32} color={colors.health} />
@@ -100,8 +105,8 @@ export function AppLockOverlay({ children }) {
               )}
             </Pressable>
           </View>
-        </Animated.View>
-      )}
+        </View>
+      </Modal>
     </View>
   );
 }
