@@ -10,7 +10,6 @@ import { Pill } from '../../components/Pill';
 import { Screen } from '../../components/Screen';
 import { SectionHeader } from '../../components/SectionHeader';
 import { WalletBalance } from '../../components/WalletBalance';
-import { WalletPasscodeGate } from '../../components/WalletPasscodeGate';
 import { TransactionItem } from '../../components/TransactionItem';
 import { WalletAccountList } from '../../components/WalletAccountList';
 import { WalletModal } from '../../components/WalletModal';
@@ -29,7 +28,7 @@ const TYPE_FILTERS = [
   { key: 'transfer', label: 'Transfers' },
 ];
 
-function WalletContent({ navigation }) {
+export default function WalletList({ navigation }) {
   const { colors } = useTheme();
   
   // Custom hook manages state automatically (wallets and transactions)
@@ -428,14 +427,6 @@ function WalletContent({ navigation }) {
       )}
       <FeatureWalkthrough screenKey="wallet" steps={WALKTHROUGH_STEPS.wallet} />
     </View>
-  );
-}
-
-export default function WalletList({ navigation }) {
-  return (
-    <WalletPasscodeGate>
-      <WalletContent navigation={navigation} />
-    </WalletPasscodeGate>
   );
 }
 

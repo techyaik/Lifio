@@ -52,8 +52,9 @@ const styles = StyleSheet.create({
   card: {
     borderRadius: RADIUS.lg,
     borderWidth: 1,
-    gap: 8,
-    padding: 12,
+    gap: 12,
+    marginHorizontal: 16,
+    padding: 16,
     ...SHADOWS.subtle,
   },
   titleRow: { alignItems: 'center', flexDirection: 'row', gap: 6 },
@@ -65,7 +66,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderRadius: RADIUS.lg,
     justifyContent: 'center',
-    marginLeft: 8,
-    width: 70,
+    marginLeft: 12,
+    marginRight: 16,
+    width: 76,
   },
 });

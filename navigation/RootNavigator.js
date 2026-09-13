@@ -4,6 +4,7 @@ import AsyncStorage from '../storage/safeAsyncStorage';
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createDrawerNavigator, DrawerContentScrollView } from '@react-navigation/drawer';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme, ThemeProvider } from '../theme/ThemeContext';
 import { RADIUS, SHADOWS } from '../constants/theme';
@@ -36,12 +37,16 @@ const TAB_META = {
 
 function MainTabs() {
   const { colors, resolveThemeColor } = useTheme();
+  const insets = useSafeAreaInsets();
+  
   const themedTabBarStyle = [
     styles.tabBar,
     {
       backgroundColor: colors.surfaceElevated,
       borderTopColor: colors.borderLight,
       shadowColor: colors.overlay,
+      height: 60 + insets.bottom,
+      paddingBottom: insets.bottom + 10,
     },
   ];
 
@@ -79,6 +84,7 @@ function MainTabs() {
 function CustomDrawerContent(props) {
   const { state, navigation } = props;
   const { colors, profileName } = useTheme();
+  const insets = useSafeAreaInsets();
 
   const activeRoute = state.routes[state.index];
   const activeName = activeRoute.name;
@@ -104,7 +110,7 @@ function CustomDrawerContent(props) {
   return (
     <View style={[styles.drawerContainer, { backgroundColor: colors.bgWarm }]}>
       {/* Drawer Header */}
-      <View style={[styles.drawerHeader, { borderBottomColor: colors.borderLight }]}>
+      <View style={[styles.drawerHeader, { borderBottomColor: colors.borderLight, paddingTop: insets.top }]}>
         <Image source={LOGO} style={styles.drawerLogo} />
         <Text style={[styles.appName, { color: colors.textPrimary }]} numberOfLines={1}>
           Lifio
@@ -147,7 +153,7 @@ function CustomDrawerContent(props) {
       </DrawerContentScrollView>
 
       {/* Share Application Footer */}
-      <View style={[styles.drawerFooter, { borderTopColor: colors.borderLight }]}>
+      <View style={[styles.drawerFooter, { borderTopColor: colors.borderLight, paddingBottom: insets.bottom + 16 }]}>
         <Pressable onPress={handleShare} style={styles.shareItem}>
           <Ionicons name="share-social-outline" size={20} color={colors.health} />
           <Text style={[styles.shareLabel, { color: colors.health }]}>Share Application</Text>
@@ -233,8 +239,6 @@ export default function RootNavigator() {
 const styles = StyleSheet.create({
   tabBar: {
     borderTopWidth: 1,
-    height: 76,
-    paddingBottom: 12,
     paddingTop: 8,
     ...SHADOWS.soft,
   },

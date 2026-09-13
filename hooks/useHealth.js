@@ -26,15 +26,6 @@ export function useHealth() {
       if (val) {
         const parsed = JSON.parse(val);
         setWatchConfig(parsed);
-
-        // Bluetooth auto-reconnection recovery
-        if (parsed.connected && parsed.provider === 'bluetooth') {
-          const { attemptAutoReconnect } = require('../utils/bluetoothWearable');
-          const result = await attemptAutoReconnect();
-          const updatedConfig = { ...parsed, status: result ? 'Connected' : 'Disconnected' };
-          setWatchConfig(updatedConfig);
-          await AsyncStorage.setItem(WATCH_CONFIG_KEY, JSON.stringify(updatedConfig));
-        }
       } else {
         setWatchConfig(null);
       }
@@ -127,12 +118,6 @@ export function useHealth() {
   };
 
   const disconnectWatch = async () => {
-    try {
-      const { disconnectActiveGattDevice } = require('../utils/bluetoothWearable');
-      disconnectActiveGattDevice();
-    } catch (e) {
-      console.warn('Error disconnecting GATT device:', e);
-    }
     setWatchConfig(null);
     await AsyncStorage.removeItem(WATCH_CONFIG_KEY);
   };
@@ -146,33 +131,23 @@ export function useHealth() {
       try {
         syncedMetrics = await fetchHealthConnectData(watchConfig.permissions);
       } catch (err) {
-        console.warn('Error fetching Health Connect data, falling back:', err);
-      }
-    } else if (watchConfig.provider === 'bluetooth') {
-      try {
-        const { fetchBluetoothDeviceData } = require('../utils/bluetoothWearable');
-        syncedMetrics = fetchBluetoothDeviceData(watchConfig.deviceName || 'Smartwatch', watchConfig.permissions, devMode);
-      } catch (err) {
-        throw err;
+        console.warn('Error fetching Health Connect data, returning zeroed state:', err);
+        // On failure, return zeroed metrics based on permissions
+        syncedMetrics = {
+          steps: watchConfig.permissions.steps ? 0 : null,
+          distance: watchConfig.permissions.distance ? 0 : null,
+          activeMinutes: watchConfig.permissions.activeMinutes ? 0 : null,
+          calories: watchConfig.permissions.calories ? 0 : null,
+          heartRate: watchConfig.permissions.heartRate ? 0 : null,
+          sleep: watchConfig.permissions.sleep ? 0 : null,
+          bloodOxygen: watchConfig.permissions.bloodOxygen ? 0 : null,
+          workout: watchConfig.permissions.workout ? 'None' : null,
+        };
       }
     }
 
     if (!syncedMetrics) {
-      if (!devMode) {
-        throw new Error('Wearable integration sync failed: No active health indicators were readable.');
-      }
-
-      // Simulated/Mock Fallback data (strictly for developer testing)
-      syncedMetrics = {
-        steps: watchConfig.permissions.steps ? 8430 : null,
-        distance: watchConfig.permissions.distance ? 5.8 : null,
-        activeMinutes: watchConfig.permissions.activeMinutes ? 38 : null,
-        calories: watchConfig.permissions.calories ? 290 : null,
-        heartRate: watchConfig.permissions.heartRate ? 72 : null,
-        sleep: watchConfig.permissions.sleep ? 7.4 : null,
-        bloodOxygen: watchConfig.permissions.bloodOxygen ? 98 : null,
-        workout: watchConfig.permissions.workout ? 'Morning Walk' : null,
-      };
+      return;
     }
 
     const todayDate = todayKey();

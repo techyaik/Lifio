@@ -150,17 +150,7 @@ export default function HealthDashboard({ navigation }) {
   });
 
   const [devMode, setDevMode] = useState(false);
-  const [provider, setProvider] = useState('health_connect'); // 'health_connect' or 'bluetooth'
   const [clientId, setClientId] = useState('');
-  
-  // Bluetooth specific states
-  const [bluetoothExplanationVisible, setBluetoothExplanationVisible] = useState(false);
-  const [bluetoothScanVisible, setBluetoothScanVisible] = useState(false);
-  const [bluetoothDevices, setBluetoothDevices] = useState([]);
-  const [isScanning, setIsScanning] = useState(false);
-  const [pairingDevice, setPairingDevice] = useState(null);
-  const [pairingStatus, setPairingStatus] = useState(''); // 'Scanning', 'Pairing', 'Connecting', 'Connected'
-  const [scanningError, setScanningError] = useState('');
 
   React.useEffect(() => {
     AsyncStorage.getItem('lifio_developer_mode').then((val) => {
@@ -170,153 +160,46 @@ export default function HealthDashboard({ navigation }) {
     });
   }, []);
 
-  React.useEffect(() => {
-    if (Platform.OS === 'web' && typeof window !== 'undefined') {
-      const hash = window.location.hash;
-      if (hash && hash.includes('access_token=')) {
-        const params = new URLSearchParams(hash.replace('#', '?'));
-        const token = params.get('access_token');
-        if (token) {
-          window.history.replaceState(null, null, window.location.pathname + window.location.search);
-          Promise.all([
-            AsyncStorage.getItem('pending_wearable_permissions'),
-            AsyncStorage.getItem('pending_wearable_client_id')
-          ]).then(([storedPerms, storedClientId]) => {
-             const perms = storedPerms ? JSON.parse(storedPerms) : {
-               steps: true,
-               sleep: true,
-               heartRate: true,
-               calories: true,
-               distance: true,
-               activeMinutes: true,
-               bloodOxygen: true,
-               workout: true,
-             };
-             connectWatch(perms, 'google_fit', token, storedClientId || 'mock');
-             showToast('Google Fit connected ✓');
-          }).catch((e) => {
-             console.error('Error recovering pending Google Fit settings:', e);
-          });
-        }
-      }
-    }
-  }, [connectWatch]);
-
   const togglePermission = (key) => {
     setPermissions((prev) => ({ ...prev, [key]: !prev[key] }));
   };
 
-    if (provider === 'health_connect') {
-      setPermissionModalVisible(false);
-      
-      if (Platform.OS === 'web') {
-        showToast('Health Connect is only supported on Android native apps.');
-        return;
-      }
-      
-      const { initializeHealthConnect, requestHealthPermissions } = require('../../utils/healthConnect');
-      
-      try {
-        const initialized = await initializeHealthConnect();
-        if (!initialized) {
-          showToast('Failed to initialize Health Connect on this device.');
-          return;
-        }
-
-        const granted = await requestHealthPermissions(permissions);
-        
-        if (granted) {
-          await connectWatch(permissions, 'health_connect');
-          showToast('Health Connect linked ✓');
-        } else {
-          showToast('Permission to access Health Connect was denied.');
-        }
-      } catch (err) {
-        console.error('Health Connect error:', err);
-        showToast('Error linking Health Connect.');
-      }
-    } else if (provider === 'bluetooth') {
-      setPermissionModalVisible(false);
-      setBluetoothExplanationVisible(true);
+  const handleConnect = async () => {
+    setPermissionModalVisible(false);
+    
+    if (Platform.OS === 'web') {
+      showToast('Health Connect is only supported on Android native apps.');
+      return;
     }
-  };
-
-  const startBluetoothScanFlow = async () => {
-    setBluetoothExplanationVisible(false);
-    setBluetoothScanVisible(true);
-    setIsScanning(true);
-    setBluetoothDevices([]);
-    setScanningError('');
-    setPairingStatus('Scanning');
-
-    try {
-      const { scanNearbyDevices } = require('../../utils/bluetoothWearable');
-      const devices = await scanNearbyDevices(devMode);
-      setBluetoothDevices(devices);
-      if (devices.length === 0) {
-        setScanningError('No Bluetooth wearables discovered. Make sure Bluetooth is enabled and devices are in pairing mode.');
-      }
-    } catch (e) {
-      console.warn('Bluetooth scanning failed:', e);
-      setScanningError(e.message || 'Bluetooth scan failed.');
-      setPairingStatus('Failed');
-    } finally {
-      setIsScanning(false);
-    }
-  };
-
-  const handlePairDevice = async (device) => {
-    setPairingDevice(device);
-    setPairingStatus('Pairing');
-    setScanningError('');
+    
+    const { initializeHealthConnect, requestHealthPermissions } = require('../../utils/healthConnect');
     
     try {
-      const { connectToGattDevice } = require('../../utils/bluetoothWearable');
-      await connectToGattDevice(device, devMode);
+      const initialized = await initializeHealthConnect();
+      if (!initialized) {
+        showToast('Failed to initialize Health Connect on this device.');
+        return;
+      }
+
+      const granted = await requestHealthPermissions(permissions);
       
-      setPairingStatus('Connecting');
-      
-      setTimeout(async () => {
-        setPairingStatus('Connected');
-        await connectWatch(
-          permissions,
-          'bluetooth',
-          null,
-          null,
-          device.name,
-          device.address,
-          'Connected'
-        );
-        showToast(`${device.name} paired ✓`);
-        
-        setTimeout(() => {
-          setBluetoothScanVisible(false);
-          setPairingDevice(null);
-        }, 600);
-      }, 1000);
+      if (granted) {
+        await connectWatch(permissions, 'health_connect');
+        showToast('Health Connect linked ✓');
+      } else {
+        showToast('Permission to access Health Connect was denied.');
+      }
     } catch (err) {
-      console.warn('Pairing failed:', err);
-      setPairingStatus('Failed');
-      setScanningError(err.message || 'Pairing or connection failed. Make sure device is nearby.');
-      setPairingDevice(null);
+      console.error('Health Connect error:', err);
+      showToast('Error linking Health Connect.');
     }
   };
 
   const handleSync = async () => {
-    const isBluetooth = watchConfig?.provider === 'bluetooth';
     try {
-      if (isBluetooth) {
-        await updateWatchConfig({ status: 'Syncing' });
-      }
       await syncWatch(devMode);
-      if (isBluetooth) {
-        await updateWatchConfig({ status: 'Connected' });
-      }
       showToast('Wearable synced ✓');
     } catch (error) {
-      if (isBluetooth) {
-        await updateWatchConfig({ status: 'Connected' });
-      }
       if (Platform.OS === 'web') {
         alert(error.message + '\n\nEnable Developer Mode in Settings to test simulated syncing.');
       } else {
@@ -367,7 +250,7 @@ export default function HealthDashboard({ navigation }) {
     return num >= 1000 ? `${num / 1000}k` : num;
   };
 
-  const sleepHours = today?.sleep || today?.watchData?.sleep || 7.23;
+  const sleepHours = today?.sleep || today?.watchData?.sleep || 0;
   const sleepVal = useMemo(() => {
     return {
       hours: Math.floor(sleepHours),
@@ -476,7 +359,7 @@ export default function HealthDashboard({ navigation }) {
           <View style={styles.rowAlign}>
             <Ionicons name="watch-outline" size={16} color={colors.textHint} style={{ marginRight: 6 }} />
             <Text style={[styles.syncStatusText, { color: colors.textSecondary }]}>
-              No wearable connected. Tap to link your Smartwatch.
+              No health data source linked. Tap to connect.
             </Text>
           </View>
           <Ionicons name="chevron-forward-outline" size={14} color={colors.textHint} />
@@ -520,7 +403,7 @@ export default function HealthDashboard({ navigation }) {
                 <Text style={[styles.cardHeaderTitle, { color: colors.textSecondary }]}>Heart rate</Text>
               </View>
               <Text style={[styles.compactValue, { color: colors.textPrimary }]}>
-                {today?.watchData?.heartRate || 72} <Text style={styles.compactUnit}>bpm</Text>
+                {today?.watchData?.heartRate || '--'} <Text style={styles.compactUnit}>bpm</Text>
               </Text>
               <Text style={[styles.meta, { color: colors.textSecondary }]}>Resting · 58 avg</Text>
               <View style={[styles.bottomIndicator, { backgroundColor: colors.danger }]} />
@@ -533,7 +416,7 @@ export default function HealthDashboard({ navigation }) {
                 <Text style={[styles.cardHeaderTitle, { color: colors.textSecondary }]}>SpO2</Text>
               </View>
               <Text style={[styles.compactValue, { color: colors.textPrimary }]}>
-                {today?.watchData?.bloodOxygen || 97} <Text style={styles.compactUnit}>%</Text>
+                {today?.watchData?.bloodOxygen || '--'} <Text style={styles.compactUnit}>%</Text>
               </Text>
               <Text style={[styles.meta, { color: colors.tealMid }]}>Normal range</Text>
               <View style={[styles.bottomIndicator, { backgroundColor: colors.tealMid }]} />
@@ -602,7 +485,7 @@ export default function HealthDashboard({ navigation }) {
                 <Text style={[styles.cardHeaderTitle, { color: colors.textSecondary }]}>Calories</Text>
               </View>
               <Text style={[styles.compactValue, { color: colors.textPrimary }]}>
-                {formatSteps(today?.watchData?.calories || 1420)} <Text style={styles.compactUnit}>kcal</Text>
+                {formatSteps(today?.watchData?.calories || 0)} <Text style={styles.compactUnit}>kcal</Text>
               </Text>
               <Text style={[styles.meta, { color: colors.textSecondary }]}>580 remaining</Text>
               <View style={[styles.bottomIndicator, { backgroundColor: colors.warning }]} />
@@ -615,7 +498,7 @@ export default function HealthDashboard({ navigation }) {
                 <Text style={[styles.cardHeaderTitle, { color: colors.textSecondary }]}>Hydration</Text>
               </View>
               <Text style={[styles.compactValue, { color: colors.textPrimary }]}>
-                {((today?.water || 7.2) * 0.25).toFixed(1)} <Text style={styles.compactUnit}>L</Text>
+                {((today?.water || 0) * 0.25).toFixed(1)} <Text style={styles.compactUnit}>L</Text>
               </Text>
               <Text style={[styles.meta, { color: colors.textSecondary }]}>of 2.5 L goal</Text>
               <View style={[styles.bottomIndicator, { backgroundColor: colors.health }]} />
@@ -646,7 +529,7 @@ export default function HealthDashboard({ navigation }) {
                 <View style={styles.ringLegendRow}>
                   <View style={[styles.ringLegendDot, { backgroundColor: colors.health }]} />
                   <Text style={[styles.ringLegendLabel, { color: colors.textSecondary }]}>Steps</Text>
-                  <Text style={[styles.ringLegendValue, { color: colors.textPrimary }]}>{formatSteps(today?.steps || today?.watchData?.steps || 6241)} / {formatStepsGoal(goals.steps)}</Text>
+                  <Text style={[styles.ringLegendValue, { color: colors.textPrimary }]}>{formatSteps(today?.steps || today?.watchData?.steps || 0)} / {formatStepsGoal(goals.steps)}</Text>
                 </View>
                 <View style={styles.ringLegendRow}>
                   <View style={[styles.ringLegendDot, { backgroundColor: colors.chartRingStand }]} />
@@ -873,54 +756,21 @@ export default function HealthDashboard({ navigation }) {
             <View style={[styles.modalCard, { backgroundColor: colors.white, borderColor: colors.borderLight }]}>
               <View style={styles.modalHeader}>
                 <View style={[styles.iconWrap, { backgroundColor: colors.accentLight.health }]}>
-                  <Ionicons name="watch-outline" size={22} color={colors.health} />
+                  <Ionicons name="fitness-outline" size={22} color={colors.health} />
                 </View>
                 <View style={styles.titleColumn}>
-                  <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>Smartwatch Connection</Text>
+                  <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>Health Data Connection</Text>
                   <Text style={[styles.modalDesc, { color: colors.textSecondary }]}>
                     Configure your health provider and data permissions.
                   </Text>
                 </View>
               </View>
 
-              {/* Provider Platform Selection */}
-              <Text style={[styles.sectionLabel, { color: colors.textSecondary }]}>Choose Provider</Text>
-              <View style={styles.providerRow}>
-                <Pressable
-                  onPress={() => setProvider('health_connect')}
-                  style={[
-                    styles.providerBtn,
-                    {
-                      borderColor: provider === 'health_connect' ? colors.health : colors.border,
-                      backgroundColor: provider === 'health_connect' ? colors.accentLight.health : colors.transparent,
-                    }
-                  ]}
-                >
-                  <Ionicons name="fitness-outline" size={15} color={provider === 'health_connect' ? colors.health : colors.textSecondary} />
-                  <Text style={[styles.providerBtnText, { color: provider === 'health_connect' ? colors.health : colors.textPrimary }]}>Health Connect</Text>
-                </Pressable>
-                <Pressable
-                  onPress={() => setProvider('bluetooth')}
-                  style={[
-                    styles.providerBtn,
-                    {
-                      borderColor: provider === 'bluetooth' ? colors.health : colors.border,
-                      backgroundColor: provider === 'bluetooth' ? colors.accentLight.health : colors.transparent,
-                    }
-                  ]}
-                >
-                  <Ionicons name="bluetooth" size={15} color={provider === 'bluetooth' ? colors.health : colors.textSecondary} />
-                  <Text style={[styles.providerBtnText, { color: provider === 'bluetooth' ? colors.health : colors.textPrimary }]}>Bluetooth</Text>
-                </Pressable>
+              <View style={styles.inputContainer}>
+                <Text style={[styles.inputHelp, { color: colors.textSecondary }]}>
+                  Link your health data through Android's Health Connect safely and securely.
+                </Text>
               </View>
-
-              {provider === 'health_connect' && (
-                <View style={styles.inputContainer}>
-                  <Text style={[styles.inputHelp, { color: colors.textSecondary }]}>
-                    Link your health data through Android's Health Connect safely and securely.
-                  </Text>
-                </View>
-              )}
 
               <Text style={[styles.sectionLabel, { color: colors.textSecondary }]}>Permissions</Text>
               <View style={styles.permissionsList}>
@@ -959,151 +809,6 @@ export default function HealthDashboard({ navigation }) {
         </Modal>
       )}
 
-      {/* Bluetooth Permission Explanation Modal */}
-      {bluetoothExplanationVisible && (
-        <Modal visible={bluetoothExplanationVisible} transparent animationType="fade" onRequestClose={() => setBluetoothExplanationVisible(false)}>
-          <View style={[styles.modalBackdrop, { backgroundColor: colors.overlay }]}>
-            <View style={[styles.modalCard, { backgroundColor: colors.white, borderColor: colors.borderLight }]}>
-              <View style={styles.modalHeader}>
-                <View style={[styles.iconWrap, { backgroundColor: colors.accentLight.health }]}>
-                  <Ionicons name="bluetooth" size={24} color={colors.health} />
-                </View>
-                <View style={styles.titleColumn}>
-                  <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>Bluetooth Permission</Text>
-                  <Text style={[styles.modalDesc, { color: colors.textSecondary }]}>
-                    Why does Lifio request Bluetooth access?
-                  </Text>
-                </View>
-              </View>
-              <Text style={[styles.body, { color: colors.textSecondary, fontSize: 13, lineHeight: 18 }]}>
-                Lifio requires Bluetooth access to scan for nearby smartwatches, fitness bands, and rings, establish a secure local pairing channel, and periodically synchronize your active steps, distance, calories, sleep logs, and heart rate metrics directly from the device.
-              </Text>
-              <View style={styles.modalButtonsRow}>
-                <Pressable
-                  onPress={() => setBluetoothExplanationVisible(false)}
-                  style={[styles.modalBtn, { borderColor: colors.border }]}
-                >
-                  <Text style={[styles.modalBtnText, { color: colors.textSecondary }]}>Deny</Text>
-                </Pressable>
-                <Pressable
-                  onPress={startBluetoothScanFlow}
-                  style={[styles.modalBtn, { backgroundColor: colors.accentLight.health, borderColor: colors.health }]}
-                >
-                  <Text style={[styles.modalBtnText, { color: colors.health }]}>Allow & Scan</Text>
-                </Pressable>
-              </View>
-            </View>
-          </View>
-        </Modal>
-      )}
-
-      {/* Bluetooth Scan / Pairing Modal */}
-      {bluetoothScanVisible && (
-        <Modal visible={bluetoothScanVisible} transparent animationType="fade" onRequestClose={() => setBluetoothScanVisible(false)}>
-          <View style={[styles.modalBackdrop, { backgroundColor: colors.overlay }]}>
-            <View style={[styles.modalCard, { backgroundColor: colors.white, borderColor: colors.borderLight }]}>
-              <View style={styles.modalHeader}>
-                <View style={[styles.iconWrap, { backgroundColor: colors.accentLight.health }]}>
-                  <Ionicons name="bluetooth" size={24} color={colors.health} />
-                </View>
-                <View style={styles.titleColumn}>
-                  <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>
-                    {pairingDevice ? 'Establishing Link' : 'Bluetooth Scan'}
-                  </Text>
-                  <Text style={[styles.modalDesc, { color: colors.textSecondary }]}>
-                    {pairingDevice ? `Status: ${pairingStatus}...` : 'Searching for nearby wearable devices...'}
-                  </Text>
-                </View>
-              </View>
-
-              {pairingDevice ? (
-                <View style={styles.pairingContainer}>
-                  <Text style={[styles.pairingText, { color: colors.textPrimary }]}>
-                    Connecting to <Text style={{ fontWeight: '800' }}>{pairingDevice.name}</Text>
-                  </Text>
-                  <Text style={[styles.pairingSub, { color: colors.textSecondary }]}>
-                    Please keep your device close and discoverable.
-                  </Text>
-                  <View style={styles.progressTrack}>
-                    <View
-                      style={[
-                        styles.progressFill,
-                        {
-                          backgroundColor: colors.health,
-                          width: pairingStatus === 'Pairing' ? '35%' : pairingStatus === 'Connecting' ? '70%' : '100%',
-                        }
-                      ]}
-                    />
-                  </View>
-                </View>
-              ) : (
-                <View style={styles.devicesListContainer}>
-                  {isScanning ? (
-                    <View style={styles.scanLoading}>
-                      <Ionicons name="sync-outline" size={24} color={colors.health} style={{ marginBottom: 8 }} />
-                      <Text style={[styles.meta, { color: colors.textSecondary, marginTop: 8 }]}>Scanning for active signals...</Text>
-                    </View>
-                  ) : scanningError ? (
-                    <View style={styles.scanLoading}>
-                      <Ionicons name="alert-circle-outline" size={28} color={colors.danger} style={{ marginBottom: 8 }} />
-                      <Text style={[styles.meta, { color: colors.textSecondary, textAlign: 'center', marginHorizontal: 12 }]}>{scanningError}</Text>
-                    </View>
-                  ) : bluetoothDevices.length ? (
-                    <View style={styles.devicesList}>
-                      {bluetoothDevices.map((device) => (
-                        <Pressable
-                          key={device.id}
-                          onPress={() => handlePairDevice(device)}
-                          style={({ pressed }) => [
-                            styles.deviceItem,
-                            {
-                              borderColor: colors.borderLight,
-                              backgroundColor: pressed ? colors.surface : colors.white,
-                            }
-                          ]}
-                        >
-                          <View style={styles.deviceItemInfo}>
-                            <Ionicons name="watch-outline" size={20} color={colors.health} />
-                            <View>
-                              <Text style={[styles.deviceNameText, { color: colors.textPrimary }]}>{device.name}</Text>
-                              <Text style={[styles.deviceAddressText, { color: colors.textHint }]}>{device.address}</Text>
-                            </View>
-                          </View>
-                          <View style={[styles.pairBadge, { backgroundColor: colors.accentLight.health }]}>
-                            <Text style={[styles.pairBadgeText, { color: colors.health }]}>Pair</Text>
-                          </View>
-                        </Pressable>
-                      ))}
-                    </View>
-                  ) : (
-                    <Text style={[styles.meta, { color: colors.textHint, textAlign: 'center', marginVertical: 12 }]}>
-                      No Bluetooth wearables discovered. Make sure Bluetooth is enabled and devices are in pairing mode.
-                    </Text>
-                  )}
-                </View>
-              )}
-
-              {!pairingDevice && (
-                <View style={styles.modalButtonsRow}>
-                  <Pressable
-                    onPress={() => setBluetoothScanVisible(false)}
-                    style={[styles.modalBtn, { borderColor: colors.border }]}
-                  >
-                    <Text style={[styles.modalBtnText, { color: colors.textSecondary }]}>Close</Text>
-                  </Pressable>
-                  <Pressable
-                    onPress={startBluetoothScanFlow}
-                    disabled={isScanning}
-                    style={[styles.modalBtn, { backgroundColor: colors.accentLight.health, borderColor: colors.health, opacity: isScanning ? 0.6 : 1 }]}
-                  >
-                    <Text style={[styles.modalBtnText, { color: colors.health }]}>Rescan</Text>
-                  </Pressable>
-                </View>
-              )}
-            </View>
-          </View>
-        </Modal>
-      )}
     </Screen>
   );
 }

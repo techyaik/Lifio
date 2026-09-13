@@ -12,7 +12,11 @@ export async function initializeHealthConnect() {
     const isInitialized = await initialize();
     return isInitialized;
   } catch (e) {
-    console.error('Failed to initialize Health Connect:', e);
+    if (e.message && e.message.includes('Expo Go')) {
+      console.warn('Health Connect is not available in Expo Go. Use a development build to test this feature.');
+    } else {
+      console.warn('Failed to initialize Health Connect:', e);
+    }
     return false;
   }
 }

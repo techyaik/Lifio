@@ -366,7 +366,6 @@ export default function Settings() {
   // Keys
   const DEVELOPER_MODE_KEY = 'lifio_developer_mode';
   const WALLET_CURRENCY_KEY = 'wallet_currency';
-  const WALLET_PASSCODE_FALLBACK_KEY = 'lifio_wallet_passcode_fallback_v1';
 
   // UI state
   const [developerMode, setDeveloperMode] = useState(false);
@@ -614,16 +613,11 @@ export default function Settings() {
           setData('notes_list', []),
           setData('wallet_entries', []),
           setData('wallet_accounts', []),
-          setData('mood_logs', []),
           AsyncStorage.removeItem('wearable_config'),
-          AsyncStorage.removeItem(WALLET_CURRENCY_KEY),
-          AsyncStorage.removeItem(WALLET_PASSCODE_FALLBACK_KEY),
-          AsyncStorage.multiRemove(walkthroughKeys),
         ]);
 
         try {
-          const SecureStore = require('expo-secure-store');
-          await SecureStore.deleteItemAsync?.('lifio_wallet_passcode_v1');
+          await SecureStore.deleteItemAsync?.('lifio_app_lock_v1');
         } catch (error) {
           // Secure storage may not be available in all environments; fallback is already cleared.
         }
@@ -818,18 +812,6 @@ export default function Settings() {
               );
             })}
           </ScrollView>
-
-          <View style={[styles.divider, { backgroundColor: colors.borderLight }]} />
-
-          {/* Passcode note */}
-          <InfoRow
-            icon="lock-closed-outline"
-            iconBg={colors.accentLight.wallet}
-            iconColor={colors.wallet}
-            title="Wallet Passcode"
-            subtitle="Your wallet is protected by a local passcode. To reset it, use Manage Privacy below."
-            colors={colors}
-          />
         </View>
       </View>
 
