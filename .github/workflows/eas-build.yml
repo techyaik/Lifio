@@ -31,7 +31,7 @@ jobs:
     steps:
       # ── 1. Source ─────────────────────────────────────────────────────────
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       # ── 2. Setup Java (Required for Android local builds) ──────────────────
       - name: Setup Java (JDK 17)
@@ -44,16 +44,23 @@ jobs:
       # ── 2.5 Setup Android SDK (Required for compileSdkVersion 35) ─────────
       - name: Setup Android SDK
         if: inputs.platform == 'android' || inputs.platform == 'all'
-        uses: android-actions/setup-android@v3
+        uses: android-actions/setup-android@v4
         with:
           packages: "platforms;android-35 build-tools;35.0.0"
 
       # ── 3. Setup Node.js ──────────────────────────────────────────────────
       - name: Setup Node.js 22
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: '22'
-          cache: 'npm'
+
+      - name: Cache npm modules
+        uses: actions/cache@v4
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
 
       # ── 4. Install JS dependencies ────────────────────────────────────────
       - name: Install dependencies
@@ -61,7 +68,7 @@ jobs:
 
       # ── 5. Setup Expo / EAS CLI ───────────────────────────────────────────
       - name: Setup Expo & EAS CLI
-        uses: expo/expo-github-action@v8
+        uses: expo/expo-github-action@v9
         with:
           eas-version: latest
           token: ${{ secrets.EXPO_TOKEN }}
