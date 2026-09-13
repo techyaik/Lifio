@@ -58,14 +58,14 @@ export default function Analytics({ navigation }) {
   const habitsDoneToday = activeHabits.filter((habit) => isDone(habit.id, todayKey())).length;
   const topHabitStreak = activeHabits.length ? Math.max(...activeHabits.map((habit) => getStreak(habit))) : 0;
 
-  const dashboardBg = theme === 'dark' ? '#091014' : '#081115';
-  const dashboardBorder = theme === 'dark' ? '#1A2830' : '#132027';
-  const dashboardCardBg = theme === 'dark' ? '#0D161C' : '#0D171D';
-  const dashboardCardAlt = theme === 'dark' ? '#101B22' : '#101B22';
-  const dashboardText = '#F3F7FA';
-  const dashboardMuted = 'rgba(225,236,245,0.72)';
-  const dashboardHint = 'rgba(173,194,209,0.56)';
-  const dashboardTrack = 'rgba(255,255,255,0.08)';
+  const dashboardBg = colors.bg;
+  const dashboardBorder = colors.border;
+  const dashboardCardBg = colors.surface;
+  const dashboardCardAlt = colors.surfaceElevated;
+  const dashboardText = colors.textPrimary;
+  const dashboardMuted = colors.textSecondary;
+  const dashboardHint = colors.textHint;
+  const dashboardTrack = theme === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)';
 
   const healthSummary = useMemo(() => {
     const recent = logs.slice(0, 7);
@@ -254,8 +254,8 @@ export default function Analytics({ navigation }) {
                 rightScale={['100%', '80%', '60%', '40%', '20%', '0%']}
                 barLabel="Step load"
                 lineLabel="Momentum"
-                barColor="#20CFF8"
-                lineColor="#F1A9C7"
+                barColor={colors.chartRingMove || colors.health}
+                lineColor={colors.chartRingStand || colors.danger}
                 data={healthWeekSeries.data}
                 linePoints={healthLinePoints}
                 muted={dashboardMuted}
@@ -577,7 +577,7 @@ function ReferenceChartPanel({
             ))}
           </View>
 
-          <View style={[styles.referenceLineOverlay, { borderLeftColor: '#2FA7FF' }]}>
+          <View style={[styles.referenceLineOverlay, { borderLeftColor: track }]}>
             <Svg viewBox="0 0 100 100" preserveAspectRatio="none" style={styles.svgFill}>
               <Polyline
                 fill="none"

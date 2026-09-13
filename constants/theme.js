@@ -17,14 +17,14 @@ export const SPACING = {
 
 export const SHADOWS = {
   soft: {
-    shadowColor: COLORS.textPrimary,
+    shadowColor: '#000000',
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.08,
     shadowRadius: 18,
     elevation: 4,
   },
   subtle: {
-    shadowColor: COLORS.textPrimary,
+    shadowColor: '#000000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.06,
     shadowRadius: 10,

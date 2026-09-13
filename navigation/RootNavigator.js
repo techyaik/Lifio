@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, View, Share, Image } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, Text, View, Share, Image, StatusBar } from 'react-native';
 import AsyncStorage from '../storage/safeAsyncStorage';
-import { NavigationContainer } from '@react-navigation/native';
+import { NavigationContainer, DefaultTheme, DarkTheme } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createDrawerNavigator, DrawerContentScrollView } from '@react-navigation/drawer';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -166,7 +166,29 @@ function CustomDrawerContent(props) {
 function NavigatorContent() {
   const [ready, setReady] = useState(false);
   const [onboarded, setOnboarded] = useState(false);
-  const { colors, ready: themeReady, profileName, setProfileName } = useTheme();
+  const { theme, colors, ready: themeReady, profileName, setProfileName } = useTheme();
+
+  const navigationTheme = theme === 'dark' ? {
+    ...DarkTheme,
+    colors: {
+      ...DarkTheme.colors,
+      background: colors.bg,
+      card: colors.surfaceElevated,
+      text: colors.textPrimary,
+      border: colors.borderLight,
+      primary: colors.health,
+    }
+  } : {
+    ...DefaultTheme,
+    colors: {
+      ...DefaultTheme.colors,
+      background: colors.bg,
+      card: colors.surfaceElevated,
+      text: colors.textPrimary,
+      border: colors.borderLight,
+      primary: colors.health,
+    }
+  };
 
   useEffect(() => {
     let mounted = true;
@@ -198,8 +220,10 @@ function NavigatorContent() {
   }
 
   return (
-    <NavigationContainer>
-      {onboarded ? (
+    <>
+      <StatusBar barStyle={theme === 'dark' ? 'light-content' : 'dark-content'} />
+      <NavigationContainer theme={navigationTheme}>
+        {onboarded ? (
         profileName ? (
           <Drawer.Navigator
             id="RootDrawer"
@@ -223,6 +247,7 @@ function NavigatorContent() {
         <Onboarding onGetStarted={completeOnboarding} />
       )}
     </NavigationContainer>
+    </>
   );
 }
 
