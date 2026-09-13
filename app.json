@@ -37,6 +37,9 @@
         "expo-build-properties",
         {
           "android": {
+            "compileSdkVersion": 35,
+            "minSdkVersion": 26,
+            "kotlinVersion": "1.9.22",
             "gradleProperties": {
               "org.gradle.jvmargs": "-Xmx4096m -XX:MaxMetaspaceSize=512m"
             }
