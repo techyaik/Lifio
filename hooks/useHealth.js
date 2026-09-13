@@ -127,7 +127,19 @@ export function useHealth() {
 
     let syncedMetrics = null;
 
-    if (watchConfig.provider === 'health_connect') {
+    if (devMode) {
+      console.log('[DevMode] Injecting mock Health Connect data.');
+      syncedMetrics = {
+        steps: watchConfig.permissions.steps ? 8432 : null,
+        distance: watchConfig.permissions.distance ? 6.2 : null,
+        activeMinutes: watchConfig.permissions.activeMinutes ? 45 : null,
+        calories: watchConfig.permissions.calories ? 342 : null,
+        heartRate: watchConfig.permissions.heartRate ? 72 : null,
+        sleep: watchConfig.permissions.sleep ? 7.5 : null,
+        bloodOxygen: watchConfig.permissions.bloodOxygen ? 98 : null,
+        workout: watchConfig.permissions.workout ? 'Running' : null,
+      };
+    } else if (watchConfig.provider === 'health_connect') {
       try {
         syncedMetrics = await fetchHealthConnectData(watchConfig.permissions);
       } catch (err) {

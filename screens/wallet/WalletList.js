@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { Alert, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { addMonths, format, isToday, isYesterday, parseISO } from 'date-fns';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../../theme/ThemeContext';
 import { AppHeader } from '../../components/AppHeader';
 import { EmptyState } from '../../components/EmptyState';
@@ -30,6 +31,7 @@ const TYPE_FILTERS = [
 
 export default function WalletList({ navigation }) {
   const { colors } = useTheme();
+  const insets = useSafeAreaInsets();
   
   // Custom hook manages state automatically (wallets and transactions)
   const {
@@ -383,7 +385,7 @@ export default function WalletList({ navigation }) {
               accent={colors.wallet}
             />
           }
-          contentContainerStyle={styles.list}
+          contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + 88 }]}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         />

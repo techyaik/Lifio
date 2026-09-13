@@ -1,5 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { FlatList, Pressable, StyleSheet, View } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../theme/ThemeContext';
 import { AppHeader } from '../../components/AppHeader';
@@ -11,13 +13,14 @@ import { Pill } from '../../components/Pill';
 import { Screen } from '../../components/Screen';
 import { FAB } from '../../components/FAB';
 import { useNotes } from '../../hooks/useNotes';
-import { RADIUS, SHADOWS } from '../../constants/theme';
+import { RADIUS, SHADOWS, SPACING } from '../../constants/theme';
 import { WALKTHROUGH_STEPS } from '../../constants/walkthroughs';
 import { showToast, safeConfirm } from '../../utils/feedback';
 
 export default function NotesList({ navigation, route }) {
   const { notes, loading, deleteNote, getAllTags } = useNotes();
   const { colors } = useTheme();
+  const insets = useSafeAreaInsets();
   
   const [query, setQuery] = useState('');
   const [tag, setTag] = useState(route.params?.tag || 'All');
@@ -96,7 +99,7 @@ export default function NotesList({ navigation, route }) {
               accent={colors.notes}
             />
           }
-          contentContainerStyle={styles.list}
+          contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + 88 }]}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
           initialNumToRender={8}
@@ -116,7 +119,7 @@ export default function NotesList({ navigation, route }) {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  headerContainer: { gap: 10, paddingHorizontal: 16, paddingTop: 8 },
+  headerContainer: { gap: 10, paddingTop: 8 },
   searchRow: { alignItems: 'center', flexDirection: 'row', gap: 8 },
   searchInput: { flex: 1 },
   tagButton: {
@@ -129,7 +132,7 @@ const styles = StyleSheet.create({
     ...SHADOWS.subtle,
   },
   tags: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 4 },
-  list: { gap: 16, paddingVertical: 16 },
+  list: { gap: 16, paddingVertical: SPACING.screen, paddingHorizontal: SPACING.screen },
   fabWrap: {
     position: 'absolute',
     right: 20,

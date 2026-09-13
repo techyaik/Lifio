@@ -40,6 +40,33 @@ const average = (items, key) => {
   return values.reduce((sum, value) => sum + value, 0) / values.length;
 };
 
+const HEALTH_TIPS = [
+  "Drink a glass of water first thing in the morning to rehydrate after sleep.",
+  "Take a 5-minute walk every two hours to improve circulation.",
+  "Aim for 7-9 hours of quality sleep to support cognitive function and recovery.",
+  "Incorporate a serving of leafy greens into at least one meal today.",
+  "Practice deep breathing for 2 minutes to lower stress and heart rate.",
+  "Swap sugary snacks for nuts or fruit to keep your energy levels stable.",
+  "Screen time can disrupt sleep—try turning off devices an hour before bed.",
+  "Stretching your hamstrings and back can help alleviate sitting fatigue.",
+  "Eat mindfully without distractions to better recognize fullness cues.",
+  "Sunlight exposure early in the day helps regulate your circadian rhythm.",
+  "A short nap (15-20 minutes) can boost alertness without causing grogginess.",
+  "Strength training twice a week helps maintain muscle mass and bone density.",
+  "Stay hydrated during workouts to prevent early fatigue.",
+  "Chew your food slowly to improve digestion and nutrient absorption.",
+  "Replace one processed food item with a whole food alternative today.",
+];
+
+const getDailyTip = () => {
+  const key = todayKey(); 
+  let hash = 0;
+  for (let i = 0; i < key.length; i++) {
+    hash = key.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  return HEALTH_TIPS[Math.abs(hash) % HEALTH_TIPS.length];
+};
+
 function BentoCard({ children, style }) {
   const { colors } = useTheme();
   return <View style={[styles.bentoCard, { backgroundColor: colors.white, borderColor: colors.borderLight }, style]}>{children}</View>;
@@ -167,7 +194,7 @@ export default function HealthDashboard({ navigation }) {
   const handleConnect = async () => {
     setPermissionModalVisible(false);
     
-    if (Platform.OS === 'web') {
+    if (Platform.OS === 'web' && !devMode) {
       showToast('Health Connect is only supported on Android native apps.');
       return;
     }
@@ -368,7 +395,21 @@ export default function HealthDashboard({ navigation }) {
 
       {/* Redesigned Bento Grid Panel matching Reference Image */}
       <View style={styles.grid}>
-        {/* Row 1: Steps Today (Wide), Heart Rate (Compact), SpO2 (Compact) */}
+        {/* Row 1: Editorial Daily Health Tip (Wide) */}
+        <BentoCard style={styles.tipCard}>
+          <View style={styles.tipEyebrowRow}>
+            <View style={[styles.tipDot, { backgroundColor: colors.info }]} />
+            <Text style={[styles.tipEyebrowText, { color: colors.textSecondary }]}>Daily Tips</Text>
+          </View>
+          <View style={styles.tipContentRow}>
+            <Ionicons name="sparkles" size={24} color={colors.info} style={styles.tipIcon} />
+            <Text style={[styles.tipText, { color: colors.textPrimary }]}>
+              "{getDailyTip()}"
+            </Text>
+          </View>
+        </BentoCard>
+
+        {/* Row 2: Steps Today (Wide), Heart Rate (Compact), SpO2 (Compact) */}
         <View style={styles.gridRow}>
           {/* Steps Today Card */}
           <BentoCard style={styles.stepsCard}>
@@ -506,7 +547,7 @@ export default function HealthDashboard({ navigation }) {
           </View>
         </View>
 
-        {/* Row 3: Activity Rings (Wide Card) */}
+        {/* Row 4: Activity Rings (Wide Card) */}
         <View style={styles.gridRow}>
           {/* Activity Rings Card */}
           <BentoCard style={styles.wideCard}>
@@ -539,17 +580,6 @@ export default function HealthDashboard({ navigation }) {
               </View>
             </View>
           </BentoCard>
-        </View>
-
-        {/* Row 4: Today's Insight Card (Wide) */}
-        <View style={[styles.insightCard, { backgroundColor: colors.infoBg, borderColor: colors.infoBorder }]}>
-          <Ionicons name="bulb" size={20} color={colors.info} style={{ marginRight: 10, marginTop: 2 }} />
-          <View style={styles.flexOne}>
-            <Text style={[styles.insightTitle, { color: colors.info }]}>Today's insight</Text>
-            <Text style={[styles.insightDesc, { color: colors.textPrimary }]}>
-              Your HRV is lower than usual — on high-HRV days you average 2,100 more steps. Consider a lighter session today.
-            </Text>
-          </View>
         </View>
 
         {/* Row 5: Today's Mood (Half), Supplements (Half) */}
@@ -1126,21 +1156,42 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: '600',
   },
-  insightCard: {
+  tipCard: {
+    padding: 16,
+    gap: 12,
+  },
+  tipEyebrowRow: {
     flexDirection: 'row',
-    padding: 14,
-    borderRadius: RADIUS.lg,
-    borderWidth: 1,
-    marginVertical: 4,
+    alignItems: 'center',
+    gap: 6,
   },
-  insightTitle: {
-    fontSize: 13,
-    fontWeight: '800',
-    marginBottom: 2,
+  tipDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
   },
-  insightDesc: {
-    fontSize: 11,
-    lineHeight: 15,
+  tipEyebrowText: {
+    fontSize: 10,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+  },
+  tipContentRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
+    paddingRight: 10,
+  },
+  tipIcon: {
+    marginTop: -2,
+    opacity: 0.9,
+  },
+  tipText: {
+    flex: 1,
+    fontSize: 15,
+    fontWeight: '500',
+    lineHeight: 22,
+    letterSpacing: 0.2,
   },
   moodSubtitle: {
     fontSize: 11,

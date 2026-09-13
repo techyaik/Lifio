@@ -195,14 +195,10 @@ export default function Analytics({ navigation }) {
       <View
         style={[
           styles.dashboardShell,
-          {
-            backgroundColor: dashboardBg,
-            borderColor: dashboardBorder,
-            maxWidth: isExpanded ? 1120 : 960,
-          },
+          { maxWidth: isExpanded ? 1120 : 960 },
         ]}
       >
-        <View style={[styles.heroPanel, { backgroundColor: dashboardBg, borderColor: dashboardBorder }]}>
+        <View style={styles.heroPanel}>
           <View style={styles.heroTopRow}>
             <View style={styles.heroTitleWrap}>
               <Text style={[styles.heroEyebrow, { color: dashboardMuted }]}>Users: last 7 days using median</Text>
@@ -669,17 +665,13 @@ function TimelineRow({ color, label, value, text, muted, border, last }) {
 const styles = StyleSheet.create({
   content: { gap: 16 },
   dashboardShell: {
-    borderRadius: 28,
-    borderWidth: 1,
-    gap: 14,
-    padding: 14,
-    ...SHADOWS.soft,
+    gap: 24,
+    alignSelf: 'center',
+    width: '100%',
   },
   heroPanel: {
-    borderRadius: 22,
-    borderWidth: 0,
     gap: 18,
-    padding: 4,
+    paddingTop: 8,
   },
   heroTopRow: {
     alignItems: 'flex-start',

@@ -112,6 +112,9 @@ export default function HabitsToday({ navigation }) {
             </View>
           </View>
         ) : null}
+
+        {/* Spacer for FAB so it doesn't cover content */}
+        <View style={{ height: 88 }} />
       </Screen>
       {!loading && habits.length > 0 && (
         <View style={styles.fabWrap}>

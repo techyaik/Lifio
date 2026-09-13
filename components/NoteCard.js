@@ -53,7 +53,6 @@ const styles = StyleSheet.create({
     borderRadius: RADIUS.lg,
     borderWidth: 1,
     gap: 12,
-    marginHorizontal: 16,
     padding: 16,
     ...SHADOWS.subtle,
   },
@@ -67,7 +66,7 @@ const styles = StyleSheet.create({
     borderRadius: RADIUS.lg,
     justifyContent: 'center',
     marginLeft: 12,
-    marginRight: 16,
     width: 76,
+    height: '100%',
   },
 });
