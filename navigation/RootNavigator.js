@@ -60,21 +60,15 @@ function CustomTabBar({ state, descriptors, navigation }) {
   if (keyboardVisible) return null;
 
   return (
-    <View style={{
-      position: 'absolute',
-      bottom: insets.bottom > 0 ? insets.bottom + 6 : 24,
-      alignSelf: 'center',
-      flexDirection: 'row',
-      backgroundColor: colors.surfaceElevated,
-      borderRadius: 40,
-      height: 72,
-      alignItems: 'center',
-      paddingHorizontal: 10,
-      gap: 8,
-      ...SHADOWS.medium,
-      borderWidth: 1,
-      borderColor: colors.borderLight,
-    }}>
+    <View style={[
+      styles.navBar,
+      {
+        bottom: insets.bottom > 0 ? insets.bottom + 8 : 24,
+        backgroundColor: colors.surfaceElevated,
+        borderColor: colors.borderLight,
+      },
+      SHADOWS.medium,
+    ]}>
       {state.routes.map((route, index) => {
         if (route.name === 'HabitsTab' || route.name === 'NotesTab') return null;
 
@@ -107,16 +101,14 @@ function CustomTabBar({ state, descriptors, navigation }) {
             key={route.key}
             onPress={onPress}
             hitSlop={{ top: 12, bottom: 12, left: 8, right: 8 }}
-            style={({ pressed }) => [{
-              flexDirection: 'row',
-              alignItems: 'center',
-              justifyContent: 'center',
-              height: 54,
-              paddingHorizontal: isFocused ? 20 : 14,
-              borderRadius: 28,
-              backgroundColor: isFocused ? activeBg : 'transparent',
-              transform: [{ scale: pressed ? 0.94 : 1 }],
-            }]}
+            style={({ pressed }) => [
+              styles.tabItem,
+              {
+                paddingHorizontal: isFocused ? 20 : 12,
+                backgroundColor: isFocused ? activeBg : 'transparent',
+                transform: [{ scale: pressed ? 0.94 : 1 }],
+              },
+            ]}
           >
             <Ionicons
               name={isFocused ? meta.activeIcon : meta.icon}
@@ -124,14 +116,7 @@ function CustomTabBar({ state, descriptors, navigation }) {
               color={isFocused ? activeContentColor : inactiveContentColor}
             />
             {isFocused && (
-              <Text
-                style={{
-                  color: activeContentColor,
-                  fontSize: 15,
-                  fontWeight: '800',
-                  marginLeft: 8,
-                }}
-              >
+              <Text style={[styles.tabLabel, { color: activeContentColor }]}>
                 {meta.label}
               </Text>
             )}
@@ -256,13 +241,32 @@ export default function RootNavigator() {
 }
 
 const styles = StyleSheet.create({
-  tabBar: {
-    borderTopWidth: 1,
-    paddingTop: 8,
-    ...SHADOWS.soft,
+  // ── Bottom Tab Bar ────────────────────────────────────────────────────
+  navBar: {
+    position: 'absolute',
+    alignSelf: 'center',
+    flexDirection: 'row',
+    borderRadius: 40,
+    height: 72,
+    alignItems: 'center',
+    paddingHorizontal: 10,
+    gap: 4,
+    borderWidth: 1,
   },
-  tabLabel: { fontSize: 10, fontWeight: '700' },
-  tabItem: { borderRadius: RADIUS.md, marginHorizontal: 1 },
+  tabItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    height: 54,
+    borderRadius: 28,
+  },
+  tabLabel: {
+    fontSize: 14,
+    fontWeight: '700',
+    marginLeft: 8,
+  },
+
+  // ── Drawer (legacy / unused, kept for reference) ──────────────────────
   drawer: {
     width: 286,
   },
