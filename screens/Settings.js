@@ -776,7 +776,7 @@ export default function Settings() {
         <SectionHeader>Health & Data Integrations</SectionHeader>
         <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.borderLight }]}>
           {/* Health Connect Integration */}
-          <View style={[styles.optionRow, isCompact ? styles.optionRowCompact : null, { marginBottom: 12 }]}>
+          <View style={[styles.optionRow, isCompact ? styles.optionRowCompact : null]}>
             <View style={[styles.navIconWrap, { backgroundColor: colors.accentLight.health }]}>
               <Ionicons name="fitness-outline" size={18} color={colors.pillHealth.text} />
             </View>
@@ -902,7 +902,7 @@ export default function Settings() {
           )}
 
 
-          <View style={[styles.divider, { backgroundColor: colors.borderLight, marginVertical: 16 }]} />
+          <View style={[styles.divider, { backgroundColor: colors.borderLight, marginVertical: 8 }]} />
 
 
           <Text style={[styles.cardDesc, { color: colors.textSecondary }]}>
@@ -1339,24 +1339,25 @@ export default function Settings() {
 
 const styles = StyleSheet.create({
   screenContent: {
-    gap: 16,
+    gap: 0,
   },
   animatedContent: {
-    gap: 16,
+    gap: 20,
   },
   section: {
-    gap: 8,
+    gap: 6,
   },
   card: {
     borderRadius: RADIUS.lg,
     borderWidth: 1,
-    gap: 12,
+    gap: 14,
     padding: 16,
     ...SHADOWS.subtle,
   },
   cardDesc: {
-    fontSize: 12,
-    lineHeight: 17,
+    fontSize: 13,
+    lineHeight: 18,
+    fontWeight: '400',
   },
 
   // Theme picker
@@ -1383,8 +1384,9 @@ const styles = StyleSheet.create({
     minWidth: 132,
   },
   themeOptionLabel: {
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: '700',
+    letterSpacing: 0.1,
   },
 
   // Profile / option row
@@ -1402,24 +1404,25 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   optionTitle: {
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: '700',
-    lineHeight: 18,
+    lineHeight: 20,
   },
   optionDesc: {
-    fontSize: 11,
-    lineHeight: 15,
+    fontSize: 12,
+    lineHeight: 17,
   },
 
   inlineButton: {
-    paddingVertical: 6,
-    paddingHorizontal: 14,
+    paddingVertical: 7,
+    paddingHorizontal: 16,
     borderRadius: RADIUS.sm,
     borderWidth: 1,
   },
   inlineButtonText: {
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: '700',
+    letterSpacing: 0.1,
   },
 
   // Health unit rows
@@ -1457,13 +1460,13 @@ const styles = StyleSheet.create({
   segmentedOption: {
     flex: 1,
     alignItems: 'center',
-    paddingVertical: 8,
+    paddingVertical: 9,
     paddingHorizontal: 6,
     borderRadius: RADIUS.sm,
     borderWidth: 1.5,
   },
   segmentedLabel: {
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: '700',
   },
 
@@ -1478,24 +1481,24 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderRadius: RADIUS.md,
     borderWidth: 1.5,
-    width: 58,
-    paddingHorizontal: 6,
-    paddingVertical: 9,
+    width: 64,
+    paddingHorizontal: 8,
+    paddingVertical: 10,
   },
   currencySymbol: {
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '800',
   },
   currencyLabel: {
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: '700',
-    marginTop: 2,
+    marginTop: 3,
   },
 
   // Divider
   divider: {
     height: 1,
-    marginVertical: 6,
+    marginVertical: 2,
   },
 
 
@@ -1504,28 +1507,28 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-    paddingVertical: 10,
-    paddingHorizontal: 2,
+    paddingVertical: 11,
+    paddingHorizontal: 4,
     borderRadius: RADIUS.md,
   },
   navIconWrap: {
-    width: 34,
-    height: 34,
+    width: 36,
+    height: 36,
     borderRadius: RADIUS.sm,
     alignItems: 'center',
     justifyContent: 'center',
   },
   navRowInfo: {
     flex: 1,
-    gap: 2,
+    gap: 3,
   },
   navRowTitle: {
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: '700',
   },
   navRowSubtitle: {
-    fontSize: 11,
-    lineHeight: 15,
+    fontSize: 12,
+    lineHeight: 17,
   },
 
   // Info rows (non-tappable)
@@ -1541,17 +1544,17 @@ const styles = StyleSheet.create({
   privacyNotice: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    paddingVertical: 10,
-    paddingHorizontal: 12,
+    gap: 10,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
     borderRadius: RADIUS.md,
     borderWidth: 1,
   },
   privacyNoticeText: {
     flex: 1,
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: '600',
-    lineHeight: 16,
+    lineHeight: 18,
   },
 
   // Danger action buttons
@@ -1559,7 +1562,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 8,
-    marginTop: 4,
+    marginTop: 6,
   },
   buttonRowCompact: {
     flexDirection: 'column',
@@ -1570,23 +1573,25 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    paddingVertical: 12,
+    paddingVertical: 13,
     borderRadius: RADIUS.md,
     borderWidth: 1.5,
   },
   actionButtonText: {
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: '700',
+    letterSpacing: 0.1,
   },
 
   // Version
   versionWrap: {
     alignItems: 'center',
-    paddingVertical: 4,
+    paddingVertical: 6,
   },
   versionText: {
-    fontSize: 10,
-    fontWeight: '600',
+    fontSize: 12,
+    fontWeight: '500',
+    letterSpacing: 0.2,
   },
 
   // Modals
@@ -1598,8 +1603,8 @@ const styles = StyleSheet.create({
   modalCard: {
     borderRadius: RADIUS.lg,
     borderWidth: 1,
-    gap: 14,
-    padding: 16,
+    gap: 16,
+    padding: 20,
     ...SHADOWS.soft,
   },
   headerRow: {
@@ -1610,37 +1615,39 @@ const styles = StyleSheet.create({
   iconWrap: {
     alignItems: 'center',
     borderRadius: RADIUS.pill,
-    height: 44,
+    height: 46,
     justifyContent: 'center',
-    width: 44,
+    width: 46,
   },
   titleColumn: {
     flex: 1,
-    gap: 2,
+    gap: 3,
   },
   modalTitle: {
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: '700',
+    lineHeight: 22,
   },
   errorText: {
     fontSize: 12,
     fontWeight: '600',
+    lineHeight: 17,
   },
 
   // Time display badge
   timeDisplayBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 7,
     borderRadius: RADIUS.md,
     borderWidth: 1.5,
-    minHeight: 34,
+    minHeight: 36,
   },
   timeDisplayBadgeText: {
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: '700',
-    letterSpacing: 0.5,
+    letterSpacing: 0.4,
   },
 
   // Health Connect integration buttons
@@ -1649,10 +1656,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    height: 48,
+    height: 50,
     borderRadius: RADIUS.md,
-    marginTop: 6,
-    paddingHorizontal: 16,
+    marginTop: 8,
+    paddingHorizontal: 20,
     ...SHADOWS.subtle,
   },
   connectPrimaryButtonText: {
@@ -1666,13 +1673,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
-    height: 40,
+    height: 42,
     borderRadius: RADIUS.md,
     borderWidth: 1,
-    paddingHorizontal: 10,
+    paddingHorizontal: 12,
   },
   connectActionButtonText: {
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: '700',
   },
 });

@@ -118,8 +118,7 @@ export function RadialClockTimePickerModal({ visible, initialTime = '09:00', onC
               <Text
                 style={[
                   styles.dialNumberText,
-                  { color: isSelected ? '#FFFFFF' : '#E1E2E4' },
-                  isSelected && { fontWeight: '700' },
+                  isSelected && styles.dialNumberTextSelected,
                 ]}
               >
                 {label}
@@ -249,16 +248,17 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   timeHeaderText: {
-    fontSize: 54,
-    fontWeight: '300',
+    fontSize: 56,
+    fontFamily: 'Inter_300Light',
     color: '#FFFFFF',
-    letterSpacing: 1,
+    letterSpacing: -1,
   },
   colonText: {
-    fontSize: 48,
-    fontWeight: '300',
+    fontSize: 50,
+    fontFamily: 'Inter_300Light',
     color: '#FFFFFF',
-    marginBottom: 6,
+    marginBottom: 4,
+    letterSpacing: -1,
   },
 
   // Dial
@@ -289,8 +289,13 @@ const styles = StyleSheet.create({
     zIndex: 2,
   },
   dialNumberText: {
-    fontSize: 14,
-    fontWeight: '500',
+    fontSize: 13,
+    fontFamily: 'Inter_500Medium',
+    color: '#E1E2E4',
+  },
+  dialNumberTextSelected: {
+    fontFamily: 'Inter_700Bold',
+    color: '#FFFFFF',
   },
 
   // Input fallback
@@ -301,8 +306,8 @@ const styles = StyleSheet.create({
   },
   inputLabel: {
     fontSize: 12,
+    fontFamily: 'Inter_600SemiBold',
     color: '#A0A5AC',
-    fontWeight: '600',
   },
   inputRow: {
     flexDirection: 'row',
@@ -333,7 +338,8 @@ const styles = StyleSheet.create({
   },
   actionBtnText: {
     fontSize: 14,
-    fontWeight: '700',
+    fontFamily: 'Inter_700Bold',
     letterSpacing: 0.5,
   },
 });
+

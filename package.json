@@ -10,6 +10,7 @@
     "build:apk:local": "eas build --platform android --profile preview --local"
   },
   "dependencies": {
+    "@expo-google-fonts/inter": "^0.4.2",
     "@expo-google-fonts/outfit": "^0.4.3",
     "@expo-google-fonts/urbanist": "^0.4.2",
     "@expo/metro-runtime": "~57.0.11",
