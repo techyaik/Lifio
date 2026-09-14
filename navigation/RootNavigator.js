@@ -24,7 +24,8 @@ import Help from '../screens/Help';
 import About from '../screens/About';
 import { AppLockOverlay } from '../components/AppLockOverlay';
 
-if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+const isNewArch = Boolean(global.nativeFabricUIManager);
+if (Platform.OS === 'android' && !isNewArch && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
 }
 
