@@ -122,38 +122,39 @@ export function useHealth() {
     await AsyncStorage.removeItem(WATCH_CONFIG_KEY);
   };
 
-  const syncWatch = async (devMode = false) => {
-    if (!watchConfig || !watchConfig.connected) return;
+  const syncWatch = async (devMode = false, configOverride = null) => {
+    const config = configOverride || watchConfig;
+    if (!config || !config.connected) return;
 
     let syncedMetrics = null;
 
     if (devMode) {
       console.log('[DevMode] Injecting mock Health Connect data.');
       syncedMetrics = {
-        steps: watchConfig.permissions.steps ? 8432 : null,
-        distance: watchConfig.permissions.distance ? 6.2 : null,
-        activeMinutes: watchConfig.permissions.activeMinutes ? 45 : null,
-        calories: watchConfig.permissions.calories ? 342 : null,
-        heartRate: watchConfig.permissions.heartRate ? 72 : null,
-        sleep: watchConfig.permissions.sleep ? 7.5 : null,
-        bloodOxygen: watchConfig.permissions.bloodOxygen ? 98 : null,
-        workout: watchConfig.permissions.workout ? 'Running' : null,
+        steps: config.permissions.steps ? 8432 : null,
+        distance: config.permissions.distance ? 6.2 : null,
+        activeMinutes: config.permissions.activeMinutes ? 45 : null,
+        calories: config.permissions.calories ? 342 : null,
+        heartRate: config.permissions.heartRate ? 72 : null,
+        sleep: config.permissions.sleep ? 7.5 : null,
+        bloodOxygen: config.permissions.bloodOxygen ? 98 : null,
+        workout: config.permissions.workout ? 'Running' : null,
       };
-    } else if (watchConfig.provider === 'health_connect') {
+    } else if (config.provider === 'health_connect') {
       try {
-        syncedMetrics = await fetchHealthConnectData(watchConfig.permissions);
+        syncedMetrics = await fetchHealthConnectData(config.permissions);
       } catch (err) {
         console.warn('Error fetching Health Connect data, returning zeroed state:', err);
         // On failure, return zeroed metrics based on permissions
         syncedMetrics = {
-          steps: watchConfig.permissions.steps ? 0 : null,
-          distance: watchConfig.permissions.distance ? 0 : null,
-          activeMinutes: watchConfig.permissions.activeMinutes ? 0 : null,
-          calories: watchConfig.permissions.calories ? 0 : null,
-          heartRate: watchConfig.permissions.heartRate ? 0 : null,
-          sleep: watchConfig.permissions.sleep ? 0 : null,
-          bloodOxygen: watchConfig.permissions.bloodOxygen ? 0 : null,
-          workout: watchConfig.permissions.workout ? 'None' : null,
+          steps: config.permissions.steps ? 0 : null,
+          distance: config.permissions.distance ? 0 : null,
+          activeMinutes: config.permissions.activeMinutes ? 0 : null,
+          calories: config.permissions.calories ? 0 : null,
+          heartRate: config.permissions.heartRate ? 0 : null,
+          sleep: config.permissions.sleep ? 0 : null,
+          bloodOxygen: config.permissions.bloodOxygen ? 0 : null,
+          workout: config.permissions.workout ? 'None' : null,
         };
       }
     }
@@ -221,7 +222,7 @@ export function useHealth() {
     await saveAll(updatedLogs);
 
     const updatedConfig = {
-      ...watchConfig,
+      ...config,
       lastSynced: new Date().toISOString(),
     };
     setWatchConfig(updatedConfig);

@@ -1,5 +1,5 @@
-import React, { useMemo, useState } from 'react';
-import { Pressable, StyleSheet, Text as RNText, View, Modal, Switch, Alert, Platform, TextInput as RNTextInput } from 'react-native';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { Pressable, StyleSheet, Text as RNText, View, Modal, Switch, Alert, Platform, AppState, ScrollView, TextInput as RNTextInput } from 'react-native';
 import { AppTextInput as TextInput } from '../../components/AppTextInput';
 import { AppText as Text } from '../../components/AppText';
 import { Ionicons } from '@expo/vector-icons';
@@ -30,6 +30,16 @@ import { RADIUS, SHADOWS } from '../../constants/theme';
 import { WALKTHROUGH_STEPS } from '../../constants/walkthroughs';
 
 const formatSteps = (steps) => (steps || steps === 0 ? Number(steps).toLocaleString() : '—');
+
+const PERMISSION_LABELS = {
+  steps: 'Steps',
+  distance: 'Distance',
+  calories: 'Calories',
+  heartRate: 'Heart rate',
+  sleep: 'Sleep',
+  bloodOxygen: 'Blood oxygen',
+  workout: 'Exercise',
+};
 const percent = (value, goal) => {
   const parsedValue = Number(value) || 0;
   const parsedGoal = Number(goal) || 0;
@@ -259,6 +269,9 @@ export default function HealthDashboard({ navigation }) {
   const upcomingMedicineReminders = useMemo(() => getUpcomingReminders(3), [getUpcomingReminders]);
 
   const [permissionModalVisible, setPermissionModalVisible] = useState(false);
+  const [deniedModal, setDeniedModal] = useState(null);
+  const awaitingHealthConnectReturn = useRef(false);
+  const requestAndLinkRef = useRef(null);
   const [permissions, setPermissions] = useState({
     steps: true,
     sleep: true,
@@ -287,34 +300,135 @@ export default function HealthDashboard({ navigation }) {
 
   const handleConnect = async () => {
     setPermissionModalVisible(false);
-    
+
     if (Platform.OS === 'web' && !devMode) {
       showToast('Health Connect is only supported on Android native apps.');
       return;
     }
-    
-    const { initializeHealthConnect, requestHealthPermissions } = require('../../utils/healthConnect');
-    
+
+    await requestAndLink();
+  };
+
+  const requestAndLink = async () => {
+    setDeniedModal(null);
+
+    const {
+      initializeHealthConnect,
+      requestHealthPermissions,
+      getHealthConnectAvailability,
+      openHealthConnectStore,
+    } = require('../../utils/healthConnect');
+
     try {
+      const availability = await getHealthConnectAvailability();
+      if (!availability.available) {
+        if (availability.isExpoGo) {
+          Alert.alert(
+            'Native Build Required',
+            'Google Health Connect uses native Android libraries and cannot run inside Expo Go.\n\nTo link real Health Connect data on your device, build & run the native Android app using:\n\nnpx expo run:android',
+            [{ text: 'OK' }]
+          );
+        } else if (availability.requireUpdate) {
+          Alert.alert(
+            'Health Connect update required',
+            'Health Connect needs to be updated before Lifio can read your health data. You can update it on the Play Store.',
+            [
+              { text: 'Not now', style: 'cancel' },
+              { text: 'Update', onPress: openHealthConnectStore },
+            ]
+          );
+        } else {
+          Alert.alert(
+            'Health Connect not installed',
+            'Lifio reads real health data through Google Health Connect. Install it from the Play Store to continue.',
+            [
+              { text: 'Not now', style: 'cancel' },
+              { text: 'Install', onPress: openHealthConnectStore },
+            ]
+          );
+        }
+        return false;
+      }
+
       const initialized = await initializeHealthConnect();
       if (!initialized) {
         showToast('Failed to initialize Health Connect on this device.');
-        return;
+        return false;
       }
 
-      const granted = await requestHealthPermissions(permissions);
-      
-      if (granted) {
-        await connectWatch(permissions, 'health_connect');
-        showToast('Health Connect linked ✓');
-      } else {
-        showToast('Permission to access Health Connect was denied.');
-      }
+      const result = await requestHealthPermissions(permissions);
+      return await handlePermissionResult(result);
     } catch (err) {
       console.error('Health Connect error:', err);
       showToast('Error linking Health Connect.');
+      return false;
     }
   };
+
+  const handlePermissionResult = async (result) => {
+    if (!result || !result.ok) {
+      if (result && result.denied && result.denied.length > 0) {
+        setDeniedModal({ denied: result.denied, linked: false });
+        return false;
+      }
+      showToast((result && result.message) || 'Permission to access Health Connect was denied.');
+      return false;
+    }
+
+    const grantedConfig = { ...result.grantedKeys };
+    grantedConfig.activeMinutes = !!grantedConfig.workout;
+    await connectWatch(grantedConfig, 'health_connect');
+
+    if (result.allGranted) {
+      showToast('Health Connect linked ✓');
+    } else {
+      showToast('Health Connect linked with limited access ✓');
+      setDeniedModal({ denied: result.denied, linked: true });
+    }
+
+    try {
+      await syncWatch(devMode, {
+        connected: true,
+        lastSynced: null,
+        permissions: grantedConfig,
+        provider: 'health_connect',
+      });
+    } catch (e) {
+      console.warn('Auto-sync after linking Health Connect failed:', e);
+    }
+    return true;
+  };
+
+  requestAndLinkRef.current = requestAndLink;
+
+  const openHealthConnectGrant = () => {
+    const { openHealthConnectSettings } = require('../../utils/healthConnect');
+    awaitingHealthConnectReturn.current = true;
+    try {
+      openHealthConnectSettings();
+    } catch (e) {
+      console.warn('Failed to open Health Connect settings:', e);
+    }
+  };
+
+  const continueAfterGrant = async () => {
+    setDeniedModal(null);
+    await requestAndLink();
+  };
+
+  const closeDeniedModal = () => setDeniedModal(null);
+
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', (nextState) => {
+      if (nextState === 'active' && awaitingHealthConnectReturn.current) {
+        awaitingHealthConnectReturn.current = false;
+        setTimeout(() => {
+          requestAndLinkRef.current?.();
+        }, 600);
+      }
+    });
+    return () => subscription.remove();
+  }, []);
 
   const handleSync = async () => {
     try {
@@ -652,18 +766,18 @@ export default function HealthDashboard({ navigation }) {
                 <View style={styles.titleColumn}>
                   <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>Health Data Connection</Text>
                   <Text style={[styles.modalDesc, { color: colors.textSecondary }]}>
-                    Configure your health provider and data permissions.
+                    Choose which health metrics Lifio will request from Google Health Connect.
                   </Text>
                 </View>
               </View>
 
               <View style={styles.inputContainer}>
                 <Text style={[styles.inputHelp, { color: colors.textSecondary }]}>
-                  Link your health data through Android's Health Connect safely and securely.
+                  Turn switches ON for the metrics you want Lifio to read and sync automatically.
                 </Text>
               </View>
 
-              <Text style={[styles.sectionLabel, { color: colors.textSecondary }]}>Permissions</Text>
+              <Text style={[styles.sectionLabel, { color: colors.textSecondary }]}>Requested Metrics</Text>
               <View style={styles.permissionsList}>
                 {Object.keys(permissions).map((key) => {
                   const label = key.charAt(0).toUpperCase() + key.slice(1).replace(/([A-Z])/g, ' $1');
@@ -695,6 +809,91 @@ export default function HealthDashboard({ navigation }) {
                   <Text style={[styles.modalBtnText, { color: colors.pillHealth.text }]}>Connect</Text>
                 </Pressable>
               </View>
+            </View>
+          </View>
+        </Modal>
+      )}
+
+      {deniedModal && (
+        <Modal visible transparent animationType="fade" onRequestClose={closeDeniedModal}>
+          <View style={[styles.modalBackdrop, { backgroundColor: colors.overlay }]}>
+            <View style={[styles.modalCard, styles.deniedCard, { backgroundColor: colors.surface, borderColor: colors.borderLight }]}>
+              <ScrollView
+                showsVerticalScrollIndicator={false}
+                style={styles.deniedScroll}
+                contentContainerStyle={styles.deniedScrollBody}
+                keyboardShouldPersistTaps="handled"
+              >
+              <View style={styles.modalHeader}>
+                <View style={[styles.deniedIconWrap, { backgroundColor: colors.dangerBg }]}>
+                  <Ionicons name="shield-checkmark-outline" size={22} color={colors.danger} />
+                </View>
+                <View style={styles.titleColumn}>
+                  <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>
+                    {deniedModal.linked ? 'Limited access' : 'Health access required'}
+                  </Text>
+                  <Text style={[styles.modalDesc, { color: colors.textSecondary }]}>
+                    {deniedModal.linked
+                      ? `Lifio is linked, but can't read ${deniedModal.denied.length === 1 ? 'this' : 'these'} yet.`
+                      : 'Lifio reads your real health data through Google Health Connect. Grant access to continue.'}
+                  </Text>
+                </View>
+              </View>
+
+              <View style={[styles.deniedBlock, { backgroundColor: colors.dangerBg }]}>
+                <Text style={[styles.sectionLabel, { color: colors.textSecondary }]}>Permissions needed</Text>
+                <View style={styles.chipRow}>
+                  {deniedModal.denied.map((key) => (
+                    <View key={key} style={[styles.chip, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                      <Text style={[styles.chipText, { color: colors.textPrimary }]}>{PERMISSION_LABELS[key] || key}</Text>
+                    </View>
+                  ))}
+                </View>
+              </View>
+
+              <View style={styles.deniedSteps}>
+                {[
+                  'Open the Google Health Connect app',
+                  'Find "Lifio" in your app list',
+                  'Turn on the permissions listed above',
+                  'Return to Lifio — we\u2019ll finish automatically',
+                ].map((instruction, index) => (
+                  <View key={instruction} style={styles.deniedStep}>
+                    <View style={[styles.deniedStepNum, { backgroundColor: colors.accentLight.health }]}>
+                      <Text style={[styles.deniedStepNumText, { color: colors.pillHealth.text }]}>{index + 1}</Text>
+                    </View>
+                    <Text style={[styles.deniedStepText, { color: colors.textSecondary }]}>{instruction}</Text>
+                  </View>
+                ))}
+              </View>
+
+              <View style={[styles.deniedNote, { backgroundColor: colors.accentLight.health }]}>
+                <Ionicons name="sparkles-outline" size={14} color={colors.pillHealth.text} />
+                <Text style={[styles.deniedNoteText, { color: colors.pillHealth.text }]}>
+                  Lifio will automatically re-check your access the moment you come back.
+                </Text>
+              </View>
+
+              <View style={styles.deniedButtons}>
+                <Pressable
+                  onPress={openHealthConnectGrant}
+                  style={[styles.modalBtn, styles.deniedPrimaryBtn, { backgroundColor: colors.health, borderColor: colors.health }]}
+                >
+                  <Ionicons name="open-outline" size={15} color={colors.onAccent} />
+                  <Text style={[styles.modalBtnText, { color: colors.onAccent }]}>Open Health Connect</Text>
+                </Pressable>
+                <Pressable
+                  onPress={continueAfterGrant}
+                  style={[styles.modalBtn, styles.deniedSecondaryBtn, { backgroundColor: colors.surface, borderColor: colors.border }]}
+                >
+                  <Ionicons name="refresh-outline" size={15} color={colors.textPrimary} />
+                  <Text style={[styles.modalBtnText, { color: colors.textPrimary }]}>{'I\u2019ve granted access'}</Text>
+                </Pressable>
+                <Pressable onPress={closeDeniedModal} style={styles.deniedNotNow}>
+                  <Text style={[styles.modalBtnText, { color: colors.textSecondary }]}>Not now</Text>
+                </Pressable>
+              </View>
+              </ScrollView>
             </View>
           </View>
         </Modal>
@@ -1254,6 +1453,101 @@ heroRow: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-be
   },
   inputHelp: {
     fontSize: 10,
+  },
+  deniedIconWrap: {
+    alignItems: 'center',
+    borderRadius: RADIUS.pill,
+    height: 40,
+    justifyContent: 'center',
+    width: 40,
+  },
+  deniedCard: {
+    maxHeight: '88%',
+    padding: 0,
+  },
+  deniedScroll: {
+    flexGrow: 0,
+    flexShrink: 1,
+  },
+  deniedScrollBody: {
+    gap: 14,
+    padding: 16,
+  },
+  deniedBlock: {
+    borderRadius: RADIUS.md,
+    gap: 8,
+    padding: 12,
+  },
+  chipRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+  },
+  chip: {
+    borderRadius: RADIUS.pill,
+    borderWidth: 1,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+  },
+  chipText: {
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  deniedSteps: {
+    gap: 8,
+    marginTop: 4,
+  },
+  deniedStep: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  deniedStepNum: {
+    alignItems: 'center',
+    borderRadius: RADIUS.pill,
+    height: 22,
+    justifyContent: 'center',
+    width: 22,
+  },
+  deniedStepNumText: {
+    fontSize: 11,
+    fontWeight: '800',
+  },
+  deniedStepText: {
+    flex: 1,
+    fontSize: 12,
+    lineHeight: 17,
+  },
+  deniedButtons: {
+    gap: 8,
+    marginTop: 4,
+  },
+  deniedPrimaryBtn: {
+    flexDirection: 'row',
+    gap: 6,
+  },
+  deniedSecondaryBtn: {
+    flexDirection: 'row',
+    gap: 6,
+  },
+  deniedNote: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    borderRadius: RADIUS.md,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+  },
+  deniedNoteText: {
+    flex: 1,
+    fontSize: 11,
+    fontWeight: '600',
+    lineHeight: 15,
+  },
+  deniedNotNow: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 8,
   },
   pairingContainer: {
     alignItems: 'center',
