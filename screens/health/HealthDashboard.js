@@ -1,5 +1,6 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import { Pressable, StyleSheet, Text as RNText, View, Modal, Switch, Alert, Platform, AppState, ScrollView, TextInput as RNTextInput } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import { AppTextInput as TextInput } from '../../components/AppTextInput';
 import { AppText as Text } from '../../components/AppText';
 import { Ionicons } from '@expo/vector-icons';
@@ -420,15 +421,28 @@ export default function HealthDashboard({ navigation }) {
 
   useEffect(() => {
     const subscription = AppState.addEventListener('change', (nextState) => {
-      if (nextState === 'active' && awaitingHealthConnectReturn.current) {
-        awaitingHealthConnectReturn.current = false;
-        setTimeout(() => {
-          requestAndLinkRef.current?.();
-        }, 600);
+      if (nextState === 'active') {
+        if (watchConfig && watchConfig.connected) {
+          syncWatch(devMode).catch((e) => console.warn('Auto sync on resume failed:', e));
+        }
+        if (awaitingHealthConnectReturn.current) {
+          awaitingHealthConnectReturn.current = false;
+          setTimeout(() => {
+            requestAndLinkRef.current?.();
+          }, 600);
+        }
       }
     });
     return () => subscription.remove();
-  }, []);
+  }, [watchConfig, syncWatch, devMode]);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (watchConfig && watchConfig.connected) {
+        syncWatch(devMode).catch((e) => console.warn('Auto sync on focus failed:', e));
+      }
+    }, [watchConfig, syncWatch, devMode])
+  );
 
   const handleSync = async () => {
     try {
@@ -568,31 +582,14 @@ export default function HealthDashboard({ navigation }) {
         </Pressable>
       </View>
 
-      {/* Smartwatch Integration Status / Sync Banner */}
-      {watchConfig && watchConfig.connected ? (
-        <View style={[styles.syncStatusBar, { backgroundColor: colors.accentLight.health, borderColor: colors.health }]}>
-          <View style={styles.rowAlign}>
-            <Ionicons name="bluetooth" size={16} color={colors.pillHealth.text} style={{ marginRight: 6 }} />
-            <Text style={[styles.syncStatusText, { color: colors.pillHealth.text }]} numberOfLines={1}>
-              {watchConfig.provider === 'health_connect' ? 'Health Connect' : watchConfig.deviceName || 'Wearable'} · Synced {watchConfig.lastSynced ? new Date(watchConfig.lastSynced).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Never'}
-            </Text>
-          </View>
-          <View style={styles.syncStatusButtons}>
-            <Pressable onPress={handleSync} style={styles.syncMiniBtn}>
-              <Ionicons name="sync-outline" size={14} color={colors.pillHealth.text} />
-            </Pressable>
-            <Pressable onPress={disconnectWatch} style={styles.syncMiniBtn}>
-              <Ionicons name="close-circle-outline" size={14} color={colors.danger} />
-            </Pressable>
-          </View>
-        </View>
-      ) : (
+      {/* Smartwatch Integration Status / Sync Banner (Only shown when NOT connected) */}
+      {(!watchConfig || !watchConfig.connected) && (
         <Pressable
-          onPress={() => setPermissionModalVisible(true)}
-          style={[styles.syncStatusBar, { backgroundColor: colors.surface, borderColor: colors.borderLight }]}
+          onPress={requestAndLink}
+          style={[styles.syncStatusBar, { backgroundColor: colors.surface, borderColor: colors.borderLight, marginBottom: 16 }]}
         >
           <View style={styles.rowAlign}>
-            <Ionicons name="watch-outline" size={16} color={colors.textHint} style={{ marginRight: 6 }} />
+            <Ionicons name="fitness-outline" size={16} color={colors.textHint} style={{ marginRight: 6 }} />
             <Text style={[styles.syncStatusText, { color: colors.textSecondary }]}>
               No health data source linked. Tap to connect.
             </Text>

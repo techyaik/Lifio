@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text as RNText, View, Share, Image, StatusBar, Keyboard } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, Text as RNText, View, Share, Image, StatusBar, Keyboard, LayoutAnimation, Platform, UIManager } from 'react-native';
+import * as Haptics from 'expo-haptics';
 import { AppText as Text } from '../components/AppText';
 import AsyncStorage from '../storage/safeAsyncStorage';
 import { NavigationContainer, DefaultTheme, DarkTheme } from '@react-navigation/native';
@@ -23,18 +24,22 @@ import Help from '../screens/Help';
 import About from '../screens/About';
 import { AppLockOverlay } from '../components/AppLockOverlay';
 
+if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
+
 const Tab = createBottomTabNavigator();
 const Stack = createStackNavigator();
 const ONBOARDING_KEY = 'lifio_onboarded_v2';
 const LOGO = require('../assets/lifio-logo.png');
 
 const TAB_META = {
-  HomeTab: { icon: 'home' },
-  JournalTab: { icon: 'wallet' },
-  HealthTab: { icon: 'heart' }, 
-  SettingsTab: { icon: 'settings' }, 
-  HabitsTab: { icon: 'checkmark-circle' },
-  NotesTab: { icon: 'document-text' },
+  HomeTab: { icon: 'grid-outline', activeIcon: 'grid', label: 'Home' },
+  JournalTab: { icon: 'wallet-outline', activeIcon: 'wallet', label: 'Wallet' },
+  HealthTab: { icon: 'heart-outline', activeIcon: 'heart', label: 'Health' }, 
+  SettingsTab: { icon: 'settings-outline', activeIcon: 'settings', label: 'Settings' }, 
+  HabitsTab: { icon: 'checkmark-circle-outline', activeIcon: 'checkmark-circle', label: 'Habits' },
+  NotesTab: { icon: 'document-text-outline', activeIcon: 'document-text', label: 'Notes' },
 };
 
 function CustomTabBar({ state, descriptors, navigation }) {
@@ -56,47 +61,79 @@ function CustomTabBar({ state, descriptors, navigation }) {
   return (
     <View style={{
       position: 'absolute',
-      bottom: insets.bottom > 0 ? insets.bottom : 32,
+      bottom: insets.bottom > 0 ? insets.bottom + 4 : 24,
       alignSelf: 'center',
       flexDirection: 'row',
       backgroundColor: colors.surfaceElevated,
-      borderRadius: RADIUS.pill,
-      height: 72,
+      borderRadius: 36,
+      height: 64,
       alignItems: 'center',
       paddingHorizontal: 8,
-      gap: 4,
+      gap: 6,
+      ...SHADOWS.medium,
+      borderWidth: 1,
+      borderColor: colors.borderLight,
     }}>
       {state.routes.map((route, index) => {
         if (route.name === 'HabitsTab' || route.name === 'NotesTab') return null;
 
         const isFocused = state.index === index;
-        const meta = TAB_META[route.name];
+        const meta = TAB_META[route.name] || { icon: 'ellipse-outline', activeIcon: 'ellipse', label: route.name };
 
         const onPress = () => {
+          try {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+          } catch (e) {}
+
           const event = navigation.emit({
             type: 'tabPress',
             target: route.key,
             canPreventDefault: true,
           });
+
           if (!isFocused && !event.defaultPrevented) {
+            LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
             navigation.navigate(route.name);
           }
         };
+
+        const activeBg = colors.white;
+        const activeContentColor = colors.textPrimary;
+        const inactiveContentColor = colors.textSecondary;
 
         return (
           <Pressable
             key={route.key}
             onPress={onPress}
-            style={{
-              height: 56,
-              width: 56,
-              borderRadius: 28,
+            hitSlop={{ top: 10, bottom: 10, left: 6, right: 6 }}
+            style={({ pressed }) => [{
+              flexDirection: 'row',
               alignItems: 'center',
               justifyContent: 'center',
-              backgroundColor: isFocused ? colors.white : 'transparent',
-            }}
+              height: 48,
+              paddingHorizontal: isFocused ? 18 : 12,
+              borderRadius: 24,
+              backgroundColor: isFocused ? activeBg : 'transparent',
+              transform: [{ scale: pressed ? 0.94 : 1 }],
+            }]}
           >
-            <Ionicons name={meta.icon} size={24} color={isFocused ? colors.textPrimary : colors.white} />
+            <Ionicons
+              name={isFocused ? meta.activeIcon : meta.icon}
+              size={20}
+              color={isFocused ? activeContentColor : inactiveContentColor}
+            />
+            {isFocused && (
+              <Text
+                style={{
+                  color: activeContentColor,
+                  fontSize: 14,
+                  fontWeight: '700',
+                  marginLeft: 8,
+                }}
+              >
+                {meta.label}
+              </Text>
+            )}
           </Pressable>
         );
       })}

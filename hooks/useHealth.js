@@ -118,8 +118,15 @@ export function useHealth() {
   };
 
   const disconnectWatch = async () => {
+    try {
+      const { revokeAllPermissions } = require('../utils/healthConnect');
+      await revokeAllPermissions();
+    } catch (e) {
+      console.warn('Could not revoke Health Connect permissions on disconnect:', e);
+    }
     setWatchConfig(null);
     await AsyncStorage.removeItem(WATCH_CONFIG_KEY);
+    triggerDataRefresh();
   };
 
   const syncWatch = async (devMode = false, configOverride = null) => {
@@ -137,6 +144,8 @@ export function useHealth() {
         calories: config.permissions.calories ? 342 : null,
         heartRate: config.permissions.heartRate ? 72 : null,
         sleep: config.permissions.sleep ? 7.5 : null,
+        weight: config.permissions.weight ? 70.5 : null,
+        height: config.permissions.height ? 175 : null,
         bloodOxygen: config.permissions.bloodOxygen ? 98 : null,
         workout: config.permissions.workout ? 'Running' : null,
       };
@@ -153,6 +162,8 @@ export function useHealth() {
           calories: config.permissions.calories ? 0 : null,
           heartRate: config.permissions.heartRate ? 0 : null,
           sleep: config.permissions.sleep ? 0 : null,
+          weight: config.permissions.weight ? 0 : null,
+          height: config.permissions.height ? 0 : null,
           bloodOxygen: config.permissions.bloodOxygen ? 0 : null,
           workout: config.permissions.workout ? 'None' : null,
         };
@@ -170,12 +181,8 @@ export function useHealth() {
       const sources = existingRecord?.sources || {};
       const isManual = sources[field] === 'MANUAL';
       
-      // If user hasn't manually entered it, and we have a valid synced value, overwrite with Health Connect
-      if (!isManual && syncedValue != null) {
-        // Only set if > 0 so we don't overwrite null with 0
-        if (syncedValue > 0) {
-           return { value: syncedValue, source: 'HEALTH_CONNECT' };
-        }
+      if (!isManual && syncedValue != null && syncedValue !== '') {
+        return { value: syncedValue, source: 'HEALTH_CONNECT' };
       }
       return { value: existingRecord?.[field] ?? null, source: sources[field] || null };
     };
@@ -186,16 +193,44 @@ export function useHealth() {
         if (log.date === todayDate) {
           const stepsData = reconcileField(log, 'steps', syncedMetrics.steps);
           const sleepData = reconcileField(log, 'sleep', syncedMetrics.sleep);
-          
+          const heartRateData = reconcileField(log, 'heartRate', syncedMetrics.heartRate);
+          const distanceData = reconcileField(log, 'distance', syncedMetrics.distance);
+          const caloriesData = reconcileField(log, 'calories', syncedMetrics.calories);
+          const weightData = reconcileField(log, 'weight', syncedMetrics.weight);
+          const heightData = reconcileField(log, 'height', syncedMetrics.height);
+          const waterData = reconcileField(log, 'water', syncedMetrics.water);
+          const bodyFatData = reconcileField(log, 'bodyFat', syncedMetrics.bodyFat);
+          const bloodOxygenData = reconcileField(log, 'bloodOxygen', syncedMetrics.bloodOxygen);
+          const activeMinutesData = reconcileField(log, 'activeMinutes', syncedMetrics.activeMinutes);
+
           return {
             ...log,
             steps: stepsData.value,
             sleep: sleepData.value,
+            heartRate: heartRateData.value,
+            distance: distanceData.value,
+            calories: caloriesData.value,
+            weight: weightData.value,
+            height: heightData.value,
+            water: waterData.value,
+            bodyFat: bodyFatData.value,
+            bloodOxygen: bloodOxygenData.value,
+            activeMinutes: activeMinutesData.value,
+            workout: syncedMetrics.workout || log.workout || null,
             watchData: syncedMetrics,
             sources: {
               ...(log.sources || {}),
               steps: stepsData.source,
               sleep: sleepData.source,
+              heartRate: heartRateData.source,
+              distance: distanceData.source,
+              calories: caloriesData.source,
+              weight: weightData.source,
+              height: heightData.source,
+              water: waterData.source,
+              bodyFat: bodyFatData.source,
+              bloodOxygen: bloodOxygenData.source,
+              activeMinutes: activeMinutesData.source,
             }
           };
         }
@@ -208,12 +243,31 @@ export function useHealth() {
           id: Date.now().toString(),
           date: todayDate,
           createdAt: new Date().toISOString(),
-          steps: syncedMetrics.steps > 0 ? syncedMetrics.steps : null,
-          sleep: syncedMetrics.sleep > 0 ? syncedMetrics.sleep : null,
+          steps: syncedMetrics.steps,
+          sleep: syncedMetrics.sleep,
+          heartRate: syncedMetrics.heartRate,
+          distance: syncedMetrics.distance,
+          calories: syncedMetrics.calories,
+          weight: syncedMetrics.weight,
+          height: syncedMetrics.height,
+          water: syncedMetrics.water,
+          bodyFat: syncedMetrics.bodyFat,
+          bloodOxygen: syncedMetrics.bloodOxygen,
+          activeMinutes: syncedMetrics.activeMinutes,
+          workout: syncedMetrics.workout,
           watchData: syncedMetrics,
           sources: {
-            steps: syncedMetrics.steps > 0 ? 'HEALTH_CONNECT' : null,
-            sleep: syncedMetrics.sleep > 0 ? 'HEALTH_CONNECT' : null,
+            steps: syncedMetrics.steps != null ? 'HEALTH_CONNECT' : null,
+            sleep: syncedMetrics.sleep != null ? 'HEALTH_CONNECT' : null,
+            heartRate: syncedMetrics.heartRate != null ? 'HEALTH_CONNECT' : null,
+            distance: syncedMetrics.distance != null ? 'HEALTH_CONNECT' : null,
+            calories: syncedMetrics.calories != null ? 'HEALTH_CONNECT' : null,
+            weight: syncedMetrics.weight != null ? 'HEALTH_CONNECT' : null,
+            height: syncedMetrics.height != null ? 'HEALTH_CONNECT' : null,
+            water: syncedMetrics.water != null ? 'HEALTH_CONNECT' : null,
+            bodyFat: syncedMetrics.bodyFat != null ? 'HEALTH_CONNECT' : null,
+            bloodOxygen: syncedMetrics.bloodOxygen != null ? 'HEALTH_CONNECT' : null,
+            activeMinutes: syncedMetrics.activeMinutes != null ? 'HEALTH_CONNECT' : null,
           }
         },
       ];

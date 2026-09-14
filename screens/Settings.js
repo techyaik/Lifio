@@ -16,6 +16,7 @@ import { showToast, safeConfirm } from '../utils/feedback';
 import { clearMemoryCache } from '../hooks/useStoredList';
 import { useWallet } from '../hooks/useWallet';
 import { useHealthUnits, WEIGHT_UNITS, WATER_UNITS } from '../hooks/useHealthUnits';
+import { useHealth } from '../hooks/useHealth';
 import { WALKTHROUGH_STORAGE_PREFIX } from '../constants/walkthroughs';
 
 const DUMMY_PREFIX = 'lifio_dummy_';
@@ -347,6 +348,7 @@ export default function Settings() {
   const { colors, themeMode, setThemeMode, triggerDataRefresh, profileName, setProfileName } = useTheme();
   const { currency, currencies, setCurrency } = useWallet();
   const { weightUnit, waterUnit, setWeightUnit, setWaterUnit } = useHealthUnits();
+  const { watchConfig, disconnectWatch, syncWatch, connectWatch } = useHealth();
   const { width } = useWindowDimensions();
   const isCompact = width < 430;
   const entranceOpacity = useRef(new Animated.Value(0)).current;
@@ -705,8 +707,122 @@ export default function Settings() {
 
       {/* ── 3. Health ─────────────────────────────────────────────────── */}
       <View style={styles.section}>
-        <SectionHeader>Health</SectionHeader>
+        <SectionHeader>Health & Data Integrations</SectionHeader>
         <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.borderLight }]}>
+          {/* Health Connect Integration */}
+          <View style={[styles.optionRow, isCompact ? styles.optionRowCompact : null, { marginBottom: 12 }]}>
+            <View style={[styles.navIconWrap, { backgroundColor: colors.accentLight.health }]}>
+              <Ionicons name="fitness-outline" size={18} color={colors.pillHealth.text} />
+            </View>
+            <View style={styles.optionInfo}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <Text style={[styles.optionTitle, { color: colors.textPrimary }]}>Google Health Connect</Text>
+                <View style={{
+                  backgroundColor: watchConfig && watchConfig.connected ? colors.accentLight.health : colors.surfaceTint,
+                  paddingHorizontal: 8,
+                  paddingVertical: 2,
+                  borderRadius: 8,
+                }}>
+                  <Text style={{
+                    fontSize: 10,
+                    fontWeight: '700',
+                    color: watchConfig && watchConfig.connected ? colors.pillHealth.text : colors.textSecondary,
+                  }}>
+                    {watchConfig && watchConfig.connected ? 'Connected' : 'Not Connected'}
+                  </Text>
+                </View>
+              </View>
+              <Text style={[styles.optionDesc, { color: colors.textSecondary }]} numberOfLines={1}>
+                {watchConfig && watchConfig.connected
+                  ? `Synced ${watchConfig.lastSynced ? new Date(watchConfig.lastSynced).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Never'}`
+                  : 'Auto-sync steps, sleep, heart rate & workouts'}
+              </Text>
+            </View>
+          </View>
+
+          {watchConfig && watchConfig.connected ? (
+            <View style={{ flexDirection: 'row', gap: 8, marginTop: 4 }}>
+              <Pressable
+                onPress={async () => {
+                  try {
+                    await syncWatch(developerMode);
+                    showToast('Health data synced ✓');
+                  } catch (e) {
+                    showToast('Sync failed');
+                  }
+                }}
+                style={[styles.inlineButton, { backgroundColor: colors.accentLight.health, borderColor: colors.health, flex: 1, height: 38, justifyContent: 'center' }]}
+              >
+                <Ionicons name="sync-outline" size={14} color={colors.pillHealth.text} style={{ marginRight: 4 }} />
+                <Text style={[styles.inlineButtonText, { color: colors.pillHealth.text }]}>Sync Now</Text>
+              </Pressable>
+
+              <Pressable
+                onPress={() => {
+                  const { openHealthConnectSettings } = require('../utils/healthConnect');
+                  openHealthConnectSettings();
+                }}
+                style={[styles.inlineButton, { borderColor: colors.border, flex: 1, height: 38, justifyContent: 'center' }]}
+              >
+                <Ionicons name="settings-outline" size={14} color={colors.textSecondary} style={{ marginRight: 4 }} />
+                <Text style={[styles.inlineButtonText, { color: colors.textSecondary }]}>Manage</Text>
+              </Pressable>
+
+              <Pressable
+                onPress={() => {
+                  safeConfirm(
+                    'Unlink Health Connect?',
+                    'This will disconnect Google Health Connect from Lifio. You can reconnect anytime.',
+                    async () => {
+                      await disconnectWatch();
+                      showToast('Google Health Connect unlinked ✓');
+                    },
+                    'Cancel',
+                    'Unlink'
+                  );
+                }}
+                style={[styles.inlineButton, { borderColor: colors.danger, flex: 1, height: 38, justifyContent: 'center' }]}
+              >
+                <Ionicons name="close-circle-outline" size={14} color={colors.danger} style={{ marginRight: 4 }} />
+                <Text style={[styles.inlineButtonText, { color: colors.danger }]}>Unlink</Text>
+              </Pressable>
+            </View>
+          ) : (
+            <Pressable
+              onPress={async () => {
+                const { getHealthConnectAvailability, initializeHealthConnect, requestHealthPermissions, openHealthConnectStore } = require('../utils/healthConnect');
+                const availability = await getHealthConnectAvailability();
+                if (!availability.available) {
+                  if (availability.isExpoGo) {
+                    Alert.alert('Native Build Required', 'Health Connect requires a native Android build.\n\nRun: npx expo run:android');
+                  } else {
+                    Alert.alert('Health Connect not installed', 'Install Health Connect from Play Store.', [
+                      { text: 'Cancel', style: 'cancel' },
+                      { text: 'Install', onPress: openHealthConnectStore },
+                    ]);
+                  }
+                  return;
+                }
+                await initializeHealthConnect();
+                const res = await requestHealthPermissions({ steps: true, sleep: true, heartRate: true, calories: true, distance: true, workout: true });
+                if (res.ok) {
+                  await connectWatch(res.grantedKeys, 'health_connect');
+                  await syncWatch(developerMode);
+                  triggerDataRefresh();
+                  showToast('Google Health Connect linked ✓');
+                } else {
+                  showToast('Permission denied');
+                }
+              }}
+              style={[styles.inlineButton, { backgroundColor: colors.accentLight.health, borderColor: colors.health, height: 40, justifyContent: 'center' }]}
+            >
+              <Ionicons name="fitness-outline" size={16} color={colors.pillHealth.text} style={{ marginRight: 6 }} />
+              <Text style={[styles.inlineButtonText, { color: colors.pillHealth.text, fontSize: 14 }]}>Connect Google Health Connect</Text>
+            </Pressable>
+          )}
+
+          <View style={[styles.divider, { backgroundColor: colors.borderLight, marginVertical: 16 }]} />
+
           <Text style={[styles.cardDesc, { color: colors.textSecondary }]}>
             Select the units used when logging and viewing your health metrics.
           </Text>
