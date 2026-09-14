@@ -13,11 +13,12 @@ export const AppTextInput = forwardRef((props, ref) => {
   }
 
   let fontFamily = 'Urbanist_400Regular';
-  if (weight === '300') fontFamily = 'Urbanist_300Light';
+  if (weight === '100' || weight === '200' || weight === '300') fontFamily = 'Urbanist_300Light';
+  if (weight === '400' || weight === 'normal') fontFamily = 'Urbanist_400Regular';
   if (weight === '500') fontFamily = 'Urbanist_500Medium';
   if (weight === '600') fontFamily = 'Urbanist_600SemiBold';
   if (weight === '700' || weight === 'bold') fontFamily = 'Urbanist_700Bold';
-  if (weight === '800') fontFamily = 'Urbanist_800ExtraBold';
+  if (weight === '800' || weight === '900') fontFamily = 'Urbanist_800ExtraBold';
 
   let finalStyle = style;
   if (style) {

@@ -5,6 +5,7 @@ import HealthLogEntry from '../screens/health/HealthLogEntry';
 import HealthHistory from '../screens/health/HealthHistory';
 import HealthDayDetail from '../screens/health/HealthDayDetail';
 import MedicineReminders from '../screens/health/MedicineReminders';
+import WaterReminders from '../screens/health/WaterReminders';
 
 const Stack = createStackNavigator();
 
@@ -16,6 +17,7 @@ export function HealthStack() {
       <Stack.Screen name="HealthHistory" component={HealthHistory} />
       <Stack.Screen name="HealthDayDetail" component={HealthDayDetail} />
       <Stack.Screen name="MedicineReminders" component={MedicineReminders} />
+      <Stack.Screen name="WaterReminders" component={WaterReminders} />
     </Stack.Navigator>
   );
 }

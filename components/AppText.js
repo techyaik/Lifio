@@ -15,11 +15,12 @@ export function AppText(props) {
 
   // Map weights to the Urbanist font family
   let fontFamily = 'Urbanist_400Regular';
-  if (weight === '300') fontFamily = 'Urbanist_300Light';
+  if (weight === '100' || weight === '200' || weight === '300') fontFamily = 'Urbanist_300Light';
+  if (weight === '400' || weight === 'normal') fontFamily = 'Urbanist_400Regular';
   if (weight === '500') fontFamily = 'Urbanist_500Medium';
   if (weight === '600') fontFamily = 'Urbanist_600SemiBold';
   if (weight === '700' || weight === 'bold') fontFamily = 'Urbanist_700Bold';
-  if (weight === '800') fontFamily = 'Urbanist_800ExtraBold';
+  if (weight === '800' || weight === '900') fontFamily = 'Urbanist_800ExtraBold';
 
   // CRITICAL FIX: React Native on Android will ignore the custom fontFamily and fallback to the system font
   // if fontWeight or fontStyle is passed alongside a custom font that doesn't have those weights defined natively.

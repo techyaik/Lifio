@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState, useCallback } from 'react';
-import { Pressable, StyleSheet, Text as RNText, View, Modal, Switch, Alert, Platform, AppState, ScrollView, TextInput as RNTextInput } from 'react-native';
+import { Pressable, StyleSheet, Text as RNText, View, Modal, Switch, Alert, Platform, AppState, ScrollView, TextInput as RNTextInput, Share } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppTextInput as TextInput } from '../../components/AppTextInput';
 import { AppText as Text } from '../../components/AppText';
 import { Ionicons } from '@expo/vector-icons';
@@ -29,6 +30,7 @@ import { displayDate, todayKey } from '../../utils/dates';
 import { showToast } from '../../utils/feedback';
 import { RADIUS, SHADOWS } from '../../constants/theme';
 import { WALKTHROUGH_STEPS } from '../../constants/walkthroughs';
+import { scheduleCycleReminderNotification } from '../../utils/cycleNotifications';
 
 const formatSteps = (steps) => (steps || steps === 0 ? Number(steps).toLocaleString() : '—');
 
@@ -268,13 +270,122 @@ export default function HealthDashboard({ navigation }) {
     refresh,
   } = useHealth();
   const { colors, triggerDataRefresh } = useTheme();
+  const insets = useSafeAreaInsets();
   const { weightUnit, formatWeight } = useHealthUnits();
   const { reminders: medicineReminders, getUpcomingReminders, markTaken } = useMedicineReminders();
   const today = getTodayLog();
   const upcomingMedicineReminders = useMemo(() => getUpcomingReminders(3), [getUpcomingReminders]);
 
   const [permissionModalVisible, setPermissionModalVisible] = useState(false);
+  const [moreMetricsModalVisible, setMoreMetricsModalVisible] = useState(false);
+  const [reportModalVisible, setReportModalVisible] = useState(false);
+  const [reportRange, setReportRange] = useState('7'); // '7' | '30' | 'all'
+  const [reportFormat, setReportFormat] = useState('summary'); // 'summary' | 'csv' | 'json'
   const [deniedModal, setDeniedModal] = useState(null);
+
+  const generateHealthReport = useCallback((rangeDays, formatType) => {
+    let filteredLogs = [...logs];
+    const now = new Date();
+    if (rangeDays === '7') {
+      const weekStart = startOfWeek(now, { weekStartsOn: 1 });
+      filteredLogs = logs.filter((l) => {
+        try { return isWithinInterval(parseISO(l.date), { start: weekStart, end: now }); }
+        catch (e) { return false; }
+      });
+    } else if (rangeDays === '30') {
+      const monthStart = startOfMonth(now);
+      filteredLogs = logs.filter((l) => {
+        try { return isWithinInterval(parseISO(l.date), { start: monthStart, end: now }); }
+        catch (e) { return false; }
+      });
+    }
+
+    if (formatType === 'json') {
+      return JSON.stringify(
+        {
+          appName: 'Lifio Health',
+          generatedAt: new Date().toISOString(),
+          range: rangeDays === 'all' ? 'All Time' : `Last ${rangeDays} Days`,
+          totalEntries: filteredLogs.length,
+          data: filteredLogs,
+        },
+        null,
+        2
+      );
+    }
+
+    if (formatType === 'csv') {
+      const headers = ['Date', 'Steps', 'Weight(kg)', 'Height(cm)', 'Sleep(hrs)', 'Water(glasses)', 'HeartRate(BPM)', 'Calories(kcal)', 'Mood'];
+      const rows = filteredLogs.map((l) => [
+        l.date || '',
+        l.steps || 0,
+        l.weight || '',
+        l.height || l.watchData?.height || '',
+        l.sleep || 0,
+        l.water || 0,
+        l.heartRate || l.watchData?.heartRate || '',
+        l.calories || l.watchData?.calories || '',
+        l.mood || '',
+      ]);
+      return [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
+    }
+
+    // Summary text report
+    const totalSteps = filteredLogs.reduce((sum, l) => sum + (Number(l.steps) || 0), 0);
+    const avgSteps = filteredLogs.length ? Math.round(totalSteps / filteredLogs.length) : 0;
+    const avgSleep = average(filteredLogs, 'sleep');
+    const avgWeight = average(filteredLogs, 'weight');
+    const avgHeartRate = average(filteredLogs, 'heartRate');
+
+    return (
+      `=== LIFIO HEALTH DATA REPORT ===\n` +
+      `Period: ${rangeDays === 'all' ? 'All Time' : `Last ${rangeDays} Days`}\n` +
+      `Generated: ${displayDate(todayKey(), 'MMM d, yyyy')}\n` +
+      `Total Logged Days: ${filteredLogs.length}\n\n` +
+      `--- AGGREGATED STATS ---\n` +
+      `• Total Steps: ${totalSteps.toLocaleString()} steps\n` +
+      `• Avg Steps/Day: ${avgSteps.toLocaleString()} steps\n` +
+      `• Avg Sleep: ${avgSleep ? avgSleep.toFixed(1) + ' hrs' : 'N/A'}\n` +
+      `• Avg Weight: ${avgWeight ? avgWeight.toFixed(1) + ' kg' : 'N/A'}\n` +
+      `• Avg Heart Rate: ${avgHeartRate ? Math.round(avgHeartRate) + ' BPM' : 'N/A'}\n\n` +
+      `--- DAILY BREAKDOWN ---\n` +
+      (filteredLogs.length > 0
+        ? filteredLogs
+            .map(
+              (l) =>
+                `[${l.date}] Steps: ${l.steps || 0} | Weight: ${l.weight || '--'}kg | Sleep: ${l.sleep || '--'}h | HR: ${l.heartRate || '--'} BPM`
+            )
+            .join('\n')
+        : 'No health logs available for this period.')
+    );
+  }, [logs]);
+
+  const handleExportReport = async () => {
+    try {
+      const reportText = generateHealthReport(reportRange, reportFormat);
+      const fileName = `Lifio_Health_Report_${reportRange}D_${todayKey()}.${reportFormat === 'json' ? 'json' : reportFormat === 'csv' ? 'csv' : 'txt'}`;
+
+      if (Platform.OS === 'web') {
+        const blob = new Blob([reportText], { type: 'text/plain;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = fileName;
+        link.click();
+        URL.revokeObjectURL(url);
+        showToast('Report downloaded ✓');
+      } else {
+        await Share.share({
+          message: reportText,
+          title: 'Lifio Health Data Report',
+        });
+        showToast('Report shared ✓');
+      }
+    } catch (error) {
+      console.error('Failed to export report:', error);
+      showToast('Could not export report.');
+    }
+  };
   const awaitingHealthConnectReturn = useRef(false);
   const requestAndLinkRef = useRef(null);
   const [permissions, setPermissions] = useState({
@@ -438,7 +549,7 @@ export default function HealthDashboard({ navigation }) {
         if (awaitingHealthConnectReturn.current) {
           awaitingHealthConnectReturn.current = false;
           setTimeout(() => {
-            requestAndLinkRef.current?.();
+            if (requestAndLinkRef.current) requestAndLinkRef.current();
           }, 600);
         }
       }
@@ -558,12 +669,66 @@ export default function HealthDashboard({ navigation }) {
     ]);
   };
 
-  const openTodayLog = () => {
+  const openTodayLog = (isCycleOnly = false) => {
+    const cycleOnly = isCycleOnly === true;
     if (today?.id) {
-      navigation.navigate('HealthLogEntry', { entryId: today.id, entry: today });
+      navigation.navigate('HealthLogEntry', { entryId: today.id, entry: today, isCycleOnly: cycleOnly });
       return;
     }
-    navigation.navigate('HealthLogEntry', { date: todayKey() });
+    navigation.navigate('HealthLogEntry', { date: todayKey(), isCycleOnly: cycleOnly });
+  };
+
+  const activeCycleLog = useMemo(
+    () => logs.find((log) => log.cycleEnabled && log.lastPeriodStart) || logs.find((log) => log.period && (log.lastPeriodStart || log.date)) || logs.find((log) => log.cycleEnabled),
+    [logs]
+  );
+  const isCycleTrackingOn = Boolean(activeCycleLog?.cycleEnabled);
+
+  const handleToggleCycleTracking = async (enabled) => {
+    try {
+      const targetLog = activeCycleLog || today;
+      const targetDate = targetLog?.date || todayKey();
+
+      if (targetLog) {
+        await updateLog(targetLog.id, {
+          ...targetLog,
+          cycleEnabled: enabled,
+          period: enabled ? Boolean(targetLog.period || targetLog.lastPeriodStart) : false,
+          updatedAt: new Date().toISOString(),
+        });
+      } else {
+        await addLog({
+          id: Date.now().toString(),
+          date: targetDate,
+          cycleEnabled: enabled,
+          period: enabled,
+          lastPeriodStart: targetDate,
+          cycleLength: 28,
+          periodDuration: 5,
+          periodReminderDays: 2,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        });
+      }
+
+      if (enabled) {
+        const lastStart = targetLog?.lastPeriodStart || targetDate;
+        await scheduleCycleReminderNotification({
+          lastPeriodStart: lastStart,
+          cycleLength: targetLog?.cycleLength || 28,
+          periodReminderDays: targetLog?.periodReminderDays || 2,
+        });
+        showToast('Cycle tracking ON ✓');
+      } else {
+        showToast('Cycle tracking OFF');
+      }
+
+      await refresh();
+      triggerDataRefresh();
+    } catch (e) {
+      console.error('Failed to toggle cycle tracking:', e);
+      Alert.alert('Could not toggle tracking', e.message || 'Please try again.');
+    }
   };
 
   const handleMedicineTaken = async (reminder) => {
@@ -610,16 +775,24 @@ export default function HealthDashboard({ navigation }) {
 
       {/* Redesigned Bento Grid Panel matching Reference Image */}
       
-      {/* 1. Hero Card: Steps Ring + 3 Vertical Metrics */}
+      {/* 1. Hero Card: Steps Ring + Essential Vertical Metrics */}
       <BentoCard style={{ padding: 24, marginBottom: 16, backgroundColor: colors.surfaceElevated, borderRadius: RADIUS.xl, borderWidth: 0 }}>
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
             <View style={{ backgroundColor: colors.health, padding: 8, borderRadius: 12 }}>
               <Ionicons name="footsteps" size={18} color={colors.surfaceElevated} />
             </View>
             <Text style={{ fontSize: 16, fontWeight: '700', color: colors.white }}>Daily Progress</Text>
           </View>
-          <Ionicons name="ellipsis-horizontal" size={24} color={colors.textSecondary} />
+          <Pressable
+            onPress={() => setMoreMetricsModalVisible(true)}
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+            style={({ pressed }) => [{ opacity: pressed ? 0.6 : 1, padding: 4 }]}
+            accessibilityLabel="View all health metrics"
+            accessibilityRole="button"
+          >
+            <Ionicons name="ellipsis-horizontal" size={24} color={colors.textSecondary} />
+          </Pressable>
         </View>
         
         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
@@ -637,84 +810,152 @@ export default function HealthDashboard({ navigation }) {
             </View>
           </View>
           
-          <View style={{ flex: 1, paddingLeft: 20, gap: 14 }}>
-            {/* Metric 1 */}
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-              <View style={{ backgroundColor: colors.surfaceTint, padding: 8, borderRadius: 10 }}>
-                <Ionicons name="scale" size={15} color={colors.pillHealth.text} />
+          <View style={{ flex: 1, paddingLeft: 16, gap: 10 }}>
+            {/* Metric 1: Body Measurements (Weight & Height) */}
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <View style={{ backgroundColor: colors.surfaceTint, padding: 7, borderRadius: 10 }}>
+                <Ionicons name="body-outline" size={14} color={colors.pillHealth.text} />
               </View>
               <View>
-                <Text style={{ fontSize: 14, fontWeight: '700', color: colors.white }}>
+                <Text style={{ fontSize: 13, fontWeight: '700', color: colors.white }}>
                   {today?.weight ? (formatWeight(today.weight) || today.weight) : '--'}
                   {today?.weight && !formatWeight(today.weight) && <Text style={{ fontSize: 10 }}> {weightUnit}</Text>}
+                  <Text style={{ fontSize: 11, color: colors.textHint }}> · </Text>
+                  {(today?.height || today?.watchData?.height) ? `${Math.round(today?.height || today?.watchData?.height)} cm` : '--'}
                 </Text>
-                <Text style={{ fontSize: 11, color: colors.textHint }}>Weight</Text>
+                <Text style={{ fontSize: 10, color: colors.textHint }}>Body (Weight & Height)</Text>
               </View>
             </View>
 
-            {/* Metric 2 */}
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-              <View style={{ backgroundColor: colors.surfaceTint, padding: 8, borderRadius: 10 }}>
-                <Ionicons name="moon" size={15} color={colors.pillLearning.text} />
+            {/* Metric 2: Calories (Replaces Water in Daily Progress) */}
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <View style={{ backgroundColor: colors.surfaceTint, padding: 7, borderRadius: 10 }}>
+                <Ionicons name="flame" size={14} color="#FF6B35" />
               </View>
               <View>
-                <Text style={{ fontSize: 14, fontWeight: '700', color: colors.white }}>
+                <Text style={{ fontSize: 13, fontWeight: '700', color: colors.white }}>
+                  {(today?.calories || today?.watchData?.calories) ? `${Math.round(today?.calories || today?.watchData?.calories)} kcal` : '--'}
+                </Text>
+                <Text style={{ fontSize: 10, color: colors.textHint }}>Calories</Text>
+              </View>
+            </View>
+
+            {/* Metric 3: Sleep */}
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <View style={{ backgroundColor: colors.surfaceTint, padding: 7, borderRadius: 10 }}>
+                <Ionicons name="moon" size={14} color={colors.pillLearning.text} />
+              </View>
+              <View>
+                <Text style={{ fontSize: 13, fontWeight: '700', color: colors.white }}>
                   {today?.sleep ? `${Math.floor(today.sleep)}h ${Math.round((today.sleep % 1) * 60)}m` : '--'}
                 </Text>
-                <Text style={{ fontSize: 11, color: colors.textHint }}>Sleep</Text>
-              </View>
-            </View>
-
-            {/* Metric 3 */}
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-              <View style={{ backgroundColor: colors.surfaceTint, padding: 8, borderRadius: 10 }}>
-                <Ionicons name="water" size={15} color={colors.tealLight} />
-              </View>
-              <View>
-                <Text style={{ fontSize: 14, fontWeight: '700', color: colors.white }}>
-                  {today?.water ? ((today.water) * 0.25).toFixed(1) + 'L' : '--'}
-                </Text>
-                <Text style={{ fontSize: 11, color: colors.textHint }}>Water</Text>
+                <Text style={{ fontSize: 10, color: colors.textHint }}>Sleep</Text>
               </View>
             </View>
 
             {/* Metric 4: Heart Rate */}
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-              <View style={{ backgroundColor: colors.surfaceTint, padding: 8, borderRadius: 10 }}>
-                <Ionicons name="heart" size={15} color="#FF4B4B" />
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <View style={{ backgroundColor: colors.surfaceTint, padding: 7, borderRadius: 10 }}>
+                <Ionicons name="heart" size={14} color="#FF4B4B" />
               </View>
               <View>
-                <Text style={{ fontSize: 14, fontWeight: '700', color: colors.white }}>
+                <Text style={{ fontSize: 13, fontWeight: '700', color: colors.white }}>
                   {(today?.heartRate || today?.watchData?.heartRate) ? `${today?.heartRate || today?.watchData?.heartRate} BPM` : '--'}
                 </Text>
-                <Text style={{ fontSize: 11, color: colors.textHint }}>Heart Rate</Text>
+                <Text style={{ fontSize: 10, color: colors.textHint }}>Heart Rate</Text>
               </View>
             </View>
           </View>
         </View>
       </BentoCard>
 
+      {/* 2. Cycle Tracking & Reminders Bento Card */}
+      <Pressable 
+        onPress={() => openTodayLog(true)}
+        style={({ pressed }) => [
+          {
+            padding: 16,
+            marginBottom: 16,
+            backgroundColor: colors.surface,
+            borderColor: isCycleTrackingOn ? '#FF6B8B' : colors.borderLight,
+            borderRadius: RADIUS.xl,
+            borderWidth: 1.5,
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: 12,
+            opacity: pressed ? 0.9 : 1,
+          },
+          SHADOWS.soft,
+        ]}
+      >
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 }}>
+          <View style={{ backgroundColor: 'rgba(255, 107, 139, 0.15)', padding: 10, borderRadius: 12 }}>
+            <Ionicons name="flower" size={22} color="#FF6B8B" />
+          </View>
+          <View style={{ flex: 1, gap: 2 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+              <Text style={{ fontSize: 15, fontWeight: '800', color: colors.textPrimary }}>Cycle Tracking</Text>
+              <View style={{ backgroundColor: isCycleTrackingOn ? 'rgba(255, 107, 139, 0.2)' : colors.surfaceTint, paddingHorizontal: 8, paddingVertical: 2, borderRadius: 8 }}>
+                <Text style={{ fontSize: 10, fontWeight: '800', color: isCycleTrackingOn ? '#D81B60' : colors.textSecondary }}>
+                  {isCycleTrackingOn ? (summary.cycle?.nextDate ? `Expected ${summary.cycle.nextDate}` : 'Active') : 'Inactive'}
+                </Text>
+              </View>
+            </View>
+            <Text style={{ fontSize: 12, fontWeight: '600', color: colors.textSecondary }} numberOfLines={1}>
+              {isCycleTrackingOn ? (summary.cycle?.title || 'Tracking active') : 'Cycle reminders off'}
+            </Text>
+            <Text style={{ fontSize: 11, color: colors.textHint }} numberOfLines={1}>
+              {summary.cycle?.detail || 'Tap to log period & view cycle info.'}
+            </Text>
+          </View>
+        </View>
+
+        {/* ON / OFF Toggle Switch */}
+        <Pressable
+          onPress={(e) => e.stopPropagation()}
+          style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}
+        >
+          <Text style={{ fontSize: 12, fontWeight: '800', color: isCycleTrackingOn ? '#D81B60' : colors.textSecondary }}>
+            {isCycleTrackingOn ? 'ON' : 'OFF'}
+          </Text>
+          <Switch
+            value={isCycleTrackingOn}
+            onValueChange={handleToggleCycleTracking}
+            trackColor={{ false: colors.border || '#CBD5E1', true: '#FF6B8B' }}
+            thumbColor={colors.white}
+          />
+        </Pressable>
+      </Pressable>
+
       {/* 2. Middle Quick Actions */}
-      <View style={{ flexDirection: 'row', justifyContent: 'space-between', gap: 12, marginBottom: 16 }}>
-        <Pressable onPress={() => navigation.navigate('HealthHistory')} style={[styles.actionSquare, { backgroundColor: colors.surface }]}>
-          <View style={[styles.actionIconBg, { backgroundColor: colors.surfaceTint }]}>
-            <Ionicons name="time" size={20} color={colors.primary} />
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 16 }}>
+        <Pressable onPress={() => navigation.navigate('HealthHistory')} style={[{ flex: 1, minWidth: 70 }, styles.actionSquare, { backgroundColor: colors.surface }]}>
+          <View style={[styles.actionIconBg, { backgroundColor: '#2D6A4F' }]}>
+            <Ionicons name="time" size={20} color="#FFFFFF" />
           </View>
-          <Text style={[styles.actionText, { color: colors.textSecondary }]}>History &{"\n"}Logs</Text>
+          <Text style={[styles.actionText, { color: colors.textPrimary }]}>History &{"\n"}Logs</Text>
         </Pressable>
 
-        <Pressable onPress={() => navigation.navigate('MedicineReminders')} style={[styles.actionSquare, { backgroundColor: colors.surface }]}>
-          <View style={[styles.actionIconBg, { backgroundColor: colors.surfaceTint }]}>
-            <Ionicons name="medkit" size={20} color={colors.pillHealth.text} />
+        <Pressable onPress={() => navigation.navigate('WaterReminders')} style={[{ flex: 1, minWidth: 70 }, styles.actionSquare, { backgroundColor: colors.surface }]}>
+          <View style={[styles.actionIconBg, { backgroundColor: '#0EA5E9' }]}>
+            <Ionicons name="water" size={20} color="#FFFFFF" />
           </View>
-          <Text style={[styles.actionText, { color: colors.textSecondary }]}>Medicine{"\n"}Reminders</Text>
+          <Text style={[styles.actionText, { color: colors.textPrimary }]}>Water{"\n"}Reminders</Text>
         </Pressable>
 
-        <Pressable onPress={openTodayLog} style={[styles.actionSquare, { backgroundColor: colors.surface }]}>
-          <View style={[styles.actionIconBg, { backgroundColor: colors.surfaceTint }]}>
-            <Ionicons name="create" size={20} color={colors.warning} />
+        <Pressable onPress={() => navigation.navigate('MedicineReminders')} style={[{ flex: 1, minWidth: 70 }, styles.actionSquare, { backgroundColor: colors.surface }]}>
+          <View style={[styles.actionIconBg, { backgroundColor: '#10B981' }]}>
+            <Ionicons name="medkit" size={20} color="#FFFFFF" />
           </View>
-          <Text style={[styles.actionText, { color: colors.textSecondary }]}>Add{"\n"}Manual Log</Text>
+          <Text style={[styles.actionText, { color: colors.textPrimary }]}>Medicine{"\n"}Reminders</Text>
+        </Pressable>
+
+        <Pressable onPress={openTodayLog} style={[{ flex: 1, minWidth: 70 }, styles.actionSquare, { backgroundColor: colors.surface }]}>
+          <View style={[styles.actionIconBg, { backgroundColor: '#F59E0B' }]}>
+            <Ionicons name="create" size={20} color="#FFFFFF" />
+          </View>
+          <Text style={[styles.actionText, { color: colors.textPrimary }]}>Add{"\n"}Log</Text>
         </Pressable>
       </View>
 
@@ -728,9 +969,26 @@ export default function HealthDashboard({ navigation }) {
             </View>
             <Text style={{ fontSize: 13, color: colors.textSecondary }}>Steps · Last 7 Days</Text>
           </View>
-          <View style={{ backgroundColor: colors.bgWarm, borderRadius: RADIUS.pill, paddingHorizontal: 12, paddingVertical: 6 }}>
-            <Text style={{ fontSize: 12, fontWeight: '600', color: colors.textPrimary }}>Get Report ▾</Text>
-          </View>
+          <Pressable
+            onPress={() => setReportModalVisible(true)}
+            style={({ pressed }) => [{
+              backgroundColor: colors.accentLight.health,
+              borderColor: colors.health,
+              borderWidth: 1,
+              borderRadius: RADIUS.pill,
+              paddingHorizontal: 12,
+              paddingVertical: 6,
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 4,
+              opacity: pressed ? 0.75 : 1,
+            }]}
+            accessibilityLabel="Extract health data report"
+            accessibilityRole="button"
+          >
+            <Ionicons name="document-text-outline" size={13} color={colors.pillHealth.text} />
+            <Text style={{ fontSize: 12, fontWeight: '800', color: colors.pillHealth.text }}>Get Report ▾</Text>
+          </Pressable>
         </View>
         
         <View style={{ flexDirection: 'row', alignItems: 'flex-end', height: 160, gap: 20, marginTop: 10 }}>
@@ -919,13 +1177,301 @@ export default function HealthDashboard({ navigation }) {
         </Modal>
       )}
 
+      {/* Secondary & All Health Metrics Modal */}
+      {moreMetricsModalVisible && (
+        <Modal
+          visible={moreMetricsModalVisible}
+          transparent
+          animationType="slide"
+          onRequestClose={() => setMoreMetricsModalVisible(false)}
+        >
+          <View style={styles.modalOverlay}>
+            <Pressable style={styles.modalBackdropPress} onPress={() => setMoreMetricsModalVisible(false)} />
+            <View style={[styles.bottomSheetContainer, { backgroundColor: colors.surfaceElevated, borderColor: colors.borderLight, paddingBottom: Math.max(insets.bottom + 20, Platform.OS === 'android' ? 60 : 36) }]}>
+              {/* Handlebar */}
+              <View style={styles.sheetHandleBar} />
+
+              <View style={styles.sheetHeader}>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.sheetTitle, { color: colors.white }]}>Secondary Health Metrics</Text>
+                  <Text style={[styles.sheetSubtitle, { color: colors.textHint }]}>Additional metrics tracked via Google Health Connect & manual logs</Text>
+                </View>
+                <Pressable
+                  onPress={() => setMoreMetricsModalVisible(false)}
+                  style={[styles.closeIconBtn, { backgroundColor: colors.surfaceTint }]}
+                  hitSlop={8}
+                >
+                  <Ionicons name="close" size={20} color={colors.white} />
+                </Pressable>
+              </View>
+
+              <ScrollView showsVerticalScrollIndicator={false} style={{ maxHeight: 360 }} contentContainerStyle={{ paddingVertical: 8, gap: 10 }}>
+                {/* Secondary Metrics Grid */}
+                <View style={styles.secondaryGrid}>
+
+                  {/* Water / Hydration */}
+                  <View style={[styles.secondaryMetricCard, { backgroundColor: colors.surfaceTint }]}>
+                    <View style={[styles.secIconBox, { backgroundColor: 'rgba(78, 205, 196, 0.15)' }]}>
+                      <Ionicons name="water" size={18} color={colors.tealLight} />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={[styles.secMetricLabel, { color: colors.textHint }]}>Water / Hydration</Text>
+                      <Text style={[styles.secMetricValue, { color: colors.white }]}>
+                        {today?.water ? `${((today.water) * 0.25).toFixed(1)} L (${today.water} glasses)` : 'Not recorded'}
+                      </Text>
+                    </View>
+                  </View>
+
+                  {/* Distance */}
+                  <View style={[styles.secondaryMetricCard, { backgroundColor: colors.surfaceTint }]}>
+                    <View style={[styles.secIconBox, { backgroundColor: 'rgba(78, 205, 196, 0.15)' }]}>
+                      <Ionicons name="navigate" size={18} color="#4ECDC4" />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={[styles.secMetricLabel, { color: colors.textHint }]}>Distance</Text>
+                      <Text style={[styles.secMetricValue, { color: colors.white }]}>
+                        {(today?.distance || today?.watchData?.distance) ? `${Number(today?.distance || today?.watchData?.distance).toFixed(2)} km` : 'Not recorded'}
+                      </Text>
+                    </View>
+                  </View>
+
+                  {/* Active Minutes */}
+                  <View style={[styles.secondaryMetricCard, { backgroundColor: colors.surfaceTint }]}>
+                    <View style={[styles.secIconBox, { backgroundColor: 'rgba(255, 209, 102, 0.15)' }]}>
+                      <Ionicons name="stopwatch" size={18} color="#FFD166" />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={[styles.secMetricLabel, { color: colors.textHint }]}>Active Minutes</Text>
+                      <Text style={[styles.secMetricValue, { color: colors.white }]}>
+                        {(today?.activeMinutes || today?.watchData?.activeMinutes) ? `${Math.round(today?.activeMinutes || today?.watchData?.activeMinutes)} mins` : 'Not recorded'}
+                      </Text>
+                    </View>
+                  </View>
+
+                  {/* Blood Oxygen */}
+                  <View style={[styles.secondaryMetricCard, { backgroundColor: colors.surfaceTint }]}>
+                    <View style={[styles.secIconBox, { backgroundColor: 'rgba(6, 214, 160, 0.15)' }]}>
+                      <Ionicons name="pulse" size={18} color="#06D6A0" />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={[styles.secMetricLabel, { color: colors.textHint }]}>Blood Oxygen (SpO2)</Text>
+                      <Text style={[styles.secMetricValue, { color: colors.white }]}>
+                        {(today?.bloodOxygen || today?.watchData?.bloodOxygen) ? `${Math.round(today?.bloodOxygen || today?.watchData?.bloodOxygen)} %` : 'Not recorded'}
+                      </Text>
+                    </View>
+                  </View>
+
+                  {/* Body Fat */}
+                  <View style={[styles.secondaryMetricCard, { backgroundColor: colors.surfaceTint }]}>
+                    <View style={[styles.secIconBox, { backgroundColor: 'rgba(165, 102, 255, 0.15)' }]}>
+                      <Ionicons name="pie-chart" size={18} color="#A566FF" />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={[styles.secMetricLabel, { color: colors.textHint }]}>Body Fat</Text>
+                      <Text style={[styles.secMetricValue, { color: colors.white }]}>
+                        {(today?.bodyFat || today?.watchData?.bodyFat) ? `${Number(today?.bodyFat || today?.watchData?.bodyFat).toFixed(1)} %` : 'Not recorded'}
+                      </Text>
+                    </View>
+                  </View>
+
+                  {/* Exercise / Workout */}
+                  <View style={[styles.secondaryMetricCard, { backgroundColor: colors.surfaceTint }]}>
+                    <View style={[styles.secIconBox, { backgroundColor: 'rgba(17, 138, 178, 0.15)' }]}>
+                      <Ionicons name="barbell" size={18} color="#118AB2" />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={[styles.secMetricLabel, { color: colors.textHint }]}>Workout / Exercise</Text>
+                      <Text style={[styles.secMetricValue, { color: colors.white }]}>
+                        {(today?.workout || today?.watchData?.workout) ? `${today?.workout || today?.watchData?.workout} mins` : 'Not recorded'}
+                      </Text>
+                    </View>
+                  </View>
+
+                  {/* Height */}
+                  <View style={[styles.secondaryMetricCard, { backgroundColor: colors.surfaceTint }]}>
+                    <View style={[styles.secIconBox, { backgroundColor: 'rgba(156, 136, 255, 0.15)' }]}>
+                      <Ionicons name="resize" size={18} color="#9C88FF" />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={[styles.secMetricLabel, { color: colors.textHint }]}>Height</Text>
+                      <Text style={[styles.secMetricValue, { color: colors.white }]}>
+                        {(today?.height || today?.watchData?.height) ? `${Math.round(today?.height || today?.watchData?.height)} cm` : 'Not recorded'}
+                      </Text>
+                    </View>
+                  </View>
+
+                </View>
+
+                {/* Quick actions inside bottom sheet */}
+                <View style={{ flexDirection: 'row', gap: 10, marginTop: 8 }}>
+                  <Pressable
+                    onPress={() => {
+                      setMoreMetricsModalVisible(false);
+                      handleSync();
+                    }}
+                    style={[styles.sheetActionBtn, { backgroundColor: colors.health }]}
+                  >
+                    <Ionicons name="sync" size={16} color={colors.surfaceElevated} />
+                    <Text style={[styles.sheetActionBtnText, { color: colors.surfaceElevated }]}>Sync Health Connect</Text>
+                  </Pressable>
+
+                  <Pressable
+                    onPress={() => {
+                      setMoreMetricsModalVisible(false);
+                      openTodayLog();
+                    }}
+                    style={[styles.sheetActionBtn, { backgroundColor: colors.surfaceTint }]}
+                  >
+                    <Ionicons name="add-circle-outline" size={16} color={colors.white} />
+                    <Text style={[styles.sheetActionBtnText, { color: colors.white }]}>Log Manual Data</Text>
+                  </Pressable>
+                </View>
+              </ScrollView>
+            </View>
+          </View>
+        </Modal>
+      )}
+
+      {/* Extract Health Data & Report Modal */}
+      {reportModalVisible && (
+        <Modal
+          visible={reportModalVisible}
+          transparent
+          animationType="slide"
+          onRequestClose={() => setReportModalVisible(false)}
+        >
+          <View style={styles.modalOverlay}>
+            <Pressable style={styles.modalBackdropPress} onPress={() => setReportModalVisible(false)} />
+            <View style={[styles.bottomSheetContainer, { backgroundColor: colors.surfaceElevated, borderColor: colors.borderLight, paddingBottom: Math.max(insets.bottom + 20, Platform.OS === 'android' ? 60 : 36) }]}>
+              <View style={styles.sheetHandleBar} />
+
+              <View style={styles.sheetHeader}>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.sheetTitle, { color: colors.white }]}>Extract Health Data Report</Text>
+                  <Text style={[styles.sheetSubtitle, { color: colors.textHint }]}>Export analytics, daily logs, and synced metrics</Text>
+                </View>
+                <Pressable
+                  onPress={() => setReportModalVisible(false)}
+                  style={[styles.closeIconBtn, { backgroundColor: colors.surfaceTint }]}
+                  hitSlop={8}
+                >
+                  <Ionicons name="close" size={20} color={colors.white} />
+                </Pressable>
+              </View>
+
+              <ScrollView showsVerticalScrollIndicator={false} style={{ maxHeight: 320 }} contentContainerStyle={{ paddingVertical: 8, gap: 12 }}>
+                {/* 1. Range Selection */}
+                <View>
+                  <Text style={[styles.sectionLabel, { color: colors.textHint, marginTop: 0 }]}>Select Time Period</Text>
+                  <View style={{ flexDirection: 'row', gap: 8, marginTop: 6 }}>
+                    {[
+                      { key: '7', label: 'Last 7 Days' },
+                      { key: '30', label: 'Last 30 Days' },
+                      { key: 'all', label: 'All Time' },
+                    ].map((item) => (
+                      <Pressable
+                        key={item.key}
+                        onPress={() => setReportRange(item.key)}
+                        style={[
+                          styles.reportChip,
+                          {
+                            backgroundColor: reportRange === item.key ? colors.health : colors.surfaceTint,
+                            borderColor: reportRange === item.key ? colors.health : colors.borderLight,
+                          },
+                        ]}
+                      >
+                        <Text
+                          style={[
+                            styles.reportChipText,
+                            { color: reportRange === item.key ? colors.surfaceElevated : colors.white },
+                          ]}
+                        >
+                          {item.label}
+                        </Text>
+                      </Pressable>
+                    ))}
+                  </View>
+                </View>
+
+                {/* 2. Format Selection */}
+                <View>
+                  <Text style={[styles.sectionLabel, { color: colors.textHint, marginTop: 0 }]}>Export Format</Text>
+                  <View style={{ flexDirection: 'row', gap: 8, marginTop: 6 }}>
+                    {[
+                      { key: 'summary', label: 'Summary Text', icon: 'document-text' },
+                      { key: 'csv', label: 'CSV Table', icon: 'grid' },
+                      { key: 'json', label: 'JSON Data', icon: 'code' },
+                    ].map((item) => (
+                      <Pressable
+                        key={item.key}
+                        onPress={() => setReportFormat(item.key)}
+                        style={[
+                          styles.reportChip,
+                          {
+                            flex: 1,
+                            backgroundColor: reportFormat === item.key ? colors.primary : colors.surfaceTint,
+                            borderColor: reportFormat === item.key ? colors.primary : colors.borderLight,
+                          },
+                        ]}
+                      >
+                        <Ionicons name={item.icon} size={14} color={reportFormat === item.key ? colors.white : colors.textHint} />
+                        <Text
+                          style={[
+                            styles.reportChipText,
+                            { color: reportFormat === item.key ? colors.white : colors.white },
+                          ]}
+                        >
+                          {item.label}
+                        </Text>
+                      </Pressable>
+                    ))}
+                  </View>
+                </View>
+
+                {/* 3. Live Preview Card */}
+                <View style={[styles.reportPreviewCard, { backgroundColor: colors.surfaceTint, borderColor: colors.borderLight }]}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                    <Text style={{ fontSize: 11, fontWeight: '800', color: colors.pillHealth.text }}>REPORT PREVIEW</Text>
+                    <Text style={{ fontSize: 11, color: colors.textHint }}>
+                      {reportRange === 'all' ? 'Full History' : `Last ${reportRange} days`}
+                    </Text>
+                  </View>
+
+                  <ScrollView nestedScrollEnabled style={{ maxHeight: 120 }}>
+                    <RNTextInput
+                      multiline
+                      editable={false}
+                      value={generateHealthReport(reportRange, reportFormat)}
+                      style={{
+                        fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
+                        fontSize: 11,
+                        color: colors.white,
+                        lineHeight: 16,
+                      }}
+                    />
+                  </ScrollView>
+                </View>
+
+                {/* 4. Action Button */}
+                <Pressable
+                  onPress={handleExportReport}
+                  style={[styles.exportPrimaryBtn, { backgroundColor: colors.health }]}
+                >
+                  <Ionicons name="share-outline" size={18} color={colors.surfaceElevated} />
+                  <Text style={[styles.exportPrimaryBtnText, { color: colors.surfaceElevated }]}>Export & Share Health Report</Text>
+                </Pressable>
+              </ScrollView>
+            </View>
+          </View>
+        </Modal>
+      )}
+
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
   heroRow: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between' },
-heroRow: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between' },
   heroCopy: { flex: 1, gap: 3 },
   kicker: { fontSize: 11, fontWeight: '700', letterSpacing: 0.8, textTransform: 'uppercase' },
   heroTitle: { fontSize: 22, fontWeight: '800' },
@@ -1624,5 +2170,132 @@ heroRow: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-be
   pairBadgeText: {
     fontSize: 11,
     fontWeight: '700',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.65)',
+    justifyContent: 'flex-end',
+  },
+  modalBackdropPress: {
+    position: 'absolute',
+    top: 0,
+    bottom: 0,
+    left: 0,
+    right: 0,
+  },
+  bottomSheetContainer: {
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    paddingBottom: 28,
+    borderWidth: 1,
+    borderBottomWidth: 0,
+    maxWidth: 740,
+    width: '100%',
+    alignSelf: 'center',
+    ...SHADOWS.soft,
+  },
+  sheetHandleBar: {
+    width: 36,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+    alignSelf: 'center',
+    marginBottom: 16,
+  },
+  sheetHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 12,
+  },
+  sheetTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+  },
+  sheetSubtitle: {
+    fontSize: 12,
+    marginTop: 2,
+  },
+  closeIconBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  secondaryGrid: {
+    gap: 10,
+  },
+  secondaryMetricCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 14,
+    borderRadius: 14,
+    gap: 12,
+  },
+  secIconBox: {
+    width: 38,
+    height: 38,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  secMetricLabel: {
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  secMetricValue: {
+    fontSize: 14,
+    fontWeight: '700',
+    marginTop: 2,
+  },
+  sheetActionBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 12,
+    borderRadius: 14,
+  },
+  sheetActionBtnText: {
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  reportChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: RADIUS.md,
+    borderWidth: 1,
+  },
+  reportChipText: {
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  reportPreviewCard: {
+    borderRadius: RADIUS.lg,
+    borderWidth: 1,
+    padding: 14,
+    marginTop: 4,
+  },
+  exportPrimaryBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 14,
+    borderRadius: RADIUS.xl,
+    marginTop: 4,
+    ...SHADOWS.soft,
+  },
+  exportPrimaryBtnText: {
+    fontSize: 14,
+    fontWeight: '800',
   },
 });

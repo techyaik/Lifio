@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import AsyncStorage from '../storage/safeAsyncStorage';
-import { AccessibilityInfo, Alert, Animated, Easing, Modal, Pressable, ScrollView, StyleSheet, Text as RNText, View, useWindowDimensions,  } from 'react-native';
+import { AccessibilityInfo, Alert, Animated, Easing, Modal, Pressable, ScrollView, StyleSheet, Switch, Text as RNText, View, useWindowDimensions, } from 'react-native';
 import { AppText as Text } from '../components/AppText';
 import { addDays, format, subDays } from 'date-fns';
 import { Ionicons } from '@expo/vector-icons';
@@ -18,6 +18,27 @@ import { useWallet } from '../hooks/useWallet';
 import { useHealthUnits, WEIGHT_UNITS, WATER_UNITS } from '../hooks/useHealthUnits';
 import { useHealth } from '../hooks/useHealth';
 import { WALKTHROUGH_STORAGE_PREFIX } from '../constants/walkthroughs';
+import { scheduleDailyReminderNotification } from '../utils/cycleNotifications';
+import { RadialClockTimePickerModal } from '../components/RadialClockTimePickerModal';
+
+let DateTimePicker = null;
+try {
+  DateTimePicker = require('@react-native-community/datetimepicker').default || require('@react-native-community/datetimepicker');
+} catch (e) {
+  // Fallback to custom RadialClockTimePickerModal
+}
+
+function formatTimeDisplay(timeStr) {
+  if (!timeStr) return '09:00 AM';
+  const [hStr, mStr] = timeStr.split(':');
+  let h = parseInt(hStr, 10);
+  const m = mStr || '00';
+  if (isNaN(h)) return timeStr;
+  const ampm = h >= 12 ? 'PM' : 'AM';
+  h = h % 12;
+  if (h === 0) h = 12;
+  return `${h}:${m} ${ampm}`;
+}
 
 const DUMMY_PREFIX = 'lifio_dummy_';
 const DEVELOPER_PASSCODE = '8080';
@@ -357,10 +378,17 @@ export default function Settings() {
   // Keys
   const DEVELOPER_MODE_KEY = 'lifio_developer_mode';
   const WALLET_CURRENCY_KEY = 'wallet_currency';
+  const DAILY_REMINDER_ENABLED_KEY = 'lifio_daily_reminder_enabled';
+  const DAILY_REMINDER_TIME_KEY = 'lifio_daily_reminder_time';
 
   // UI state
   const [developerMode, setDeveloperMode] = useState(false);
+  const [dailyReminderEnabled, setDailyReminderEnabled] = useState(true);
+  const [dailyReminderTime, setDailyReminderTime] = useState('09:00');
+  const [showRadialModal, setShowRadialModal] = useState(false);
+  const [showNativePicker, setShowNativePicker] = useState(false);
   const [passcodeModalVisible, setPasscodeModalVisible] = useState(false);
+
   const [passcode, setPasscode] = useState('');
   const [passcodeError, setPasscodeError] = useState('');
   const [versionTapCount, setVersionTapCount] = useState(0);
@@ -370,10 +398,48 @@ export default function Settings() {
   const [reduceMotion, setReduceMotion] = useState(false);
 
   useEffect(() => {
-    AsyncStorage.getItem(DEVELOPER_MODE_KEY)
-      .then((val) => { if (val === 'true') setDeveloperMode(true); })
-      .catch((e) => console.error('Error loading developer mode:', e));
+    Promise.all([
+      AsyncStorage.getItem(DEVELOPER_MODE_KEY),
+      AsyncStorage.getItem(DAILY_REMINDER_ENABLED_KEY),
+      AsyncStorage.getItem(DAILY_REMINDER_TIME_KEY),
+    ])
+      .then(([devVal, reminderVal, timeVal]) => {
+        if (devVal === 'true') setDeveloperMode(true);
+        if (reminderVal !== null) setDailyReminderEnabled(reminderVal === 'true');
+        if (timeVal) setDailyReminderTime(timeVal);
+      })
+      .catch((e) => console.error('Error loading settings keys:', e));
   }, []);
+
+  const toggleDailyReminder = async (value) => {
+    setDailyReminderEnabled(value);
+    try {
+      await AsyncStorage.setItem(DAILY_REMINDER_ENABLED_KEY, value ? 'true' : 'false');
+      await scheduleDailyReminderNotification({ enabled: value, timeStr: dailyReminderTime });
+      showToast(value ? 'Daily reminder enabled ✓' : 'Daily reminder disabled');
+    } catch (e) {
+      console.error('Error toggling daily reminder:', e);
+    }
+  };
+
+  const updateReminderTime = async (timeStr) => {
+    setDailyReminderTime(timeStr);
+    try {
+      await AsyncStorage.setItem(DAILY_REMINDER_TIME_KEY, timeStr);
+      if (dailyReminderEnabled) {
+        await scheduleDailyReminderNotification({ enabled: true, timeStr });
+      }
+      showToast(`Reminder time set to ${formatTimeDisplay(timeStr)} ✓`);
+    } catch (e) {
+      console.error('Error updating reminder time:', e);
+    }
+  };
+
+  const openTimePickerModal = () => {
+    setShowRadialModal(true);
+  };
+
+
 
   useEffect(() => {
     let mounted = true;
@@ -867,20 +933,79 @@ export default function Settings() {
         </View>
       </View>
 
-      {/* ── 4. Habits ─────────────────────────────────────────────────── */}
+      {/* ── 4. Notification Card ─────────────────────────────────────── */}
       <View style={styles.section}>
-        <SectionHeader>Habits</SectionHeader>
+        <SectionHeader>Notification Card</SectionHeader>
         <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.borderLight }]}>
-          <InfoRow
-            icon="alarm-outline"
-            iconBg={colors.accentLight.habits}
-            iconColor={colors.habits}
-            title="Reminder Times"
-            subtitle="Set a reminder time individually on each habit via Add or Edit Habit."
-            colors={colors}
-          />
+          {/* Main Option Info */}
+          <View style={styles.optionRow}>
+            <View style={[styles.navIconWrap, { backgroundColor: colors.accentLight.health }]}>
+              <Ionicons name="notifications-outline" size={18} color={colors.pillHealth.text} />
+            </View>
+            <View style={styles.optionInfo}>
+              <Text style={[styles.optionTitle, { color: colors.textPrimary }]}>Notification Card</Text>
+              <Text style={[styles.optionDesc, { color: colors.textSecondary }]}>
+                Daily reminders & notification schedule
+              </Text>
+            </View>
+          </View>
+
+          <View style={[styles.divider, { backgroundColor: colors.borderLight }]} />
+
+          {/* Daily Reminder Option */}
+          <View style={[styles.optionRow, { justifyContent: 'space-between', alignItems: 'center' }]}>
+            <View style={{ flex: 1, paddingRight: 12 }}>
+              <Text style={[styles.optionTitle, { color: colors.textPrimary }]}>Daily Reminder</Text>
+              <Text style={[styles.optionDesc, { color: colors.textSecondary }]}>
+                {dailyReminderEnabled ? 'Active — receive daily app notifications' : 'Disabled — tap toggle to enable'}
+              </Text>
+            </View>
+            <Switch
+              value={dailyReminderEnabled}
+              onValueChange={toggleDailyReminder}
+              trackColor={{ false: colors.borderLight, true: colors.health }}
+              thumbColor={dailyReminderEnabled ? '#FFFFFF' : '#F4F3F4'}
+            />
+          </View>
+
+          {/* Reminder Time Option */}
+          {dailyReminderEnabled ? (
+            <>
+              <View style={[styles.divider, { backgroundColor: colors.borderLight }]} />
+
+              <Pressable onPress={openTimePickerModal} style={[styles.optionRow, { justifyContent: 'space-between', alignItems: 'center' }]}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 }}>
+                  <View style={[styles.navIconWrap, { backgroundColor: colors.accentLight.habits, width: 34, height: 34 }]}>
+                    <Ionicons name="alarm-outline" size={18} color={colors.habits} />
+                  </View>
+                  <View style={styles.optionInfo}>
+                    <Text style={[styles.optionTitle, { color: colors.textPrimary }]}>Reminder Time</Text>
+                    <Text style={[styles.optionDesc, { color: colors.textSecondary }]}>
+                      Tap to open clock picker ({formatTimeDisplay(dailyReminderTime)})
+                    </Text>
+                  </View>
+                </View>
+
+                {/* Time Badge (20:00 / 09:00) */}
+                <Pressable
+                  onPress={openTimePickerModal}
+                  style={[
+                    styles.timeDisplayBadge,
+                    { backgroundColor: colors.surface, borderColor: colors.health }
+                  ]}
+                >
+                  <Text style={[styles.timeDisplayBadgeText, { color: colors.pillHealth.text }]}>
+                    {dailyReminderTime}
+                  </Text>
+                  <Ionicons name="chevron-forward" size={14} color={colors.textSecondary} style={{ marginLeft: 2 }} />
+                </Pressable>
+              </Pressable>
+            </>
+          ) : null}
+
         </View>
       </View>
+
 
       {/* ── 5. Wallet ─────────────────────────────────────────────────── */}
       <View style={styles.section}>
@@ -1041,6 +1166,41 @@ export default function Settings() {
         </View>
       ) : null}
       </Animated.View>
+
+      {/* ── Native DateTimePicker for Android ──────────────────────────── */}
+      {showNativePicker && DateTimePicker && (
+        <DateTimePicker
+          value={(() => {
+            const [h, m] = (dailyReminderTime || '09:00').split(':');
+            const d = new Date();
+            d.setHours(parseInt(h, 10) || 9, parseInt(m, 10) || 0, 0, 0);
+            return d;
+          })()}
+          mode="time"
+          display="clock"
+          is24Hour={true}
+          onChange={(event, date) => {
+            setShowNativePicker(false);
+            if (event.type === 'set' && date) {
+              const hours = String(date.getHours()).padStart(2, '0');
+              const minutes = String(date.getMinutes()).padStart(2, '0');
+              updateReminderTime(`${hours}:${minutes}`);
+            }
+          }}
+        />
+      )}
+
+      {/* ── Custom Radial Clock Modal (matching user's screenshot design) ── */}
+      <RadialClockTimePickerModal
+        visible={showRadialModal}
+        initialTime={dailyReminderTime}
+        colors={colors}
+        onConfirm={(timeStr) => {
+          setShowRadialModal(false);
+          updateReminderTime(timeStr);
+        }}
+        onCancel={() => setShowRadialModal(false)}
+      />
 
       {/* ── Developer Passcode Modal ───────────────────────────────────── */}
       {passcodeModalVisible && (
@@ -1440,4 +1600,41 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
   },
+
+  // Time pills
+  timePillsScroll: {
+    flexDirection: 'row',
+    gap: 8,
+    paddingVertical: 4,
+    paddingRight: 4,
+  },
+  timePill: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: RADIUS.md,
+    borderWidth: 1.5,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  timePillLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+
+  // Time display badge
+  timeDisplayBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: RADIUS.md,
+    borderWidth: 1.5,
+  },
+  timeDisplayBadgeText: {
+    fontSize: 14,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+  },
 });
+
+

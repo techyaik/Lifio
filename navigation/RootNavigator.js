@@ -62,15 +62,15 @@ function CustomTabBar({ state, descriptors, navigation }) {
   return (
     <View style={{
       position: 'absolute',
-      bottom: insets.bottom > 0 ? insets.bottom + 4 : 24,
+      bottom: insets.bottom > 0 ? insets.bottom + 6 : 24,
       alignSelf: 'center',
       flexDirection: 'row',
       backgroundColor: colors.surfaceElevated,
-      borderRadius: 36,
-      height: 64,
+      borderRadius: 40,
+      height: 72,
       alignItems: 'center',
-      paddingHorizontal: 8,
-      gap: 6,
+      paddingHorizontal: 10,
+      gap: 8,
       ...SHADOWS.medium,
       borderWidth: 1,
       borderColor: colors.borderLight,
@@ -106,29 +106,29 @@ function CustomTabBar({ state, descriptors, navigation }) {
           <Pressable
             key={route.key}
             onPress={onPress}
-            hitSlop={{ top: 10, bottom: 10, left: 6, right: 6 }}
+            hitSlop={{ top: 12, bottom: 12, left: 8, right: 8 }}
             style={({ pressed }) => [{
               flexDirection: 'row',
               alignItems: 'center',
               justifyContent: 'center',
-              height: 48,
-              paddingHorizontal: isFocused ? 18 : 12,
-              borderRadius: 24,
+              height: 54,
+              paddingHorizontal: isFocused ? 20 : 14,
+              borderRadius: 28,
               backgroundColor: isFocused ? activeBg : 'transparent',
               transform: [{ scale: pressed ? 0.94 : 1 }],
             }]}
           >
             <Ionicons
               name={isFocused ? meta.activeIcon : meta.icon}
-              size={20}
+              size={24}
               color={isFocused ? activeContentColor : inactiveContentColor}
             />
             {isFocused && (
               <Text
                 style={{
                   color: activeContentColor,
-                  fontSize: 14,
-                  fontWeight: '700',
+                  fontSize: 15,
+                  fontWeight: '800',
                   marginLeft: 8,
                 }}
               >

@@ -75,16 +75,16 @@ export default function Home({ navigation }) {
         {/* 1. Top Header */}
         <View style={{ marginBottom: 32 }}>
           {/* Logo */}
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 32 }}>
-            <Text style={{ fontSize: 26, fontWeight: '400', color: colors.textPrimary, letterSpacing: -0.5 }}>lifio.</Text>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 28 }}>
+            <Text style={{ fontSize: 34, fontWeight: '400', color: colors.textPrimary, letterSpacing: -0.8 }}>lifio.</Text>
           </View>
 
           {/* Greeting */}
           <View>
-            <Text style={{ fontSize: 14, color: colors.textPrimary, fontWeight: '600', marginBottom: 6 }}>
+            <Text style={{ fontSize: 16, color: colors.textPrimary, fontWeight: '800', marginBottom: 4 }}>
               Hi {firstName ? `${firstName},` : 'User,'}
             </Text>
-            <Text style={{ fontSize: 42, fontWeight: '300', color: colors.textPrimary, letterSpacing: -1, marginBottom: 8 }}>
+            <Text style={{ fontSize: 40, fontWeight: '800', color: colors.textPrimary, letterSpacing: -0.8, marginBottom: 8 }}>
               Welcome Back!
             </Text>
             <Text style={{ fontSize: 14, color: colors.textSecondary, fontWeight: '400' }}>
@@ -130,30 +130,86 @@ export default function Home({ navigation }) {
 
         {/* 3. Row 2: Health Metrics */}
         <Pressable onPress={() => navigation.navigate('HealthTab')} style={{ backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.borderLight, borderRadius: RADIUS.xl, padding: 20, marginBottom: 16 }}>
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 18 }}>
             <Text style={{ fontSize: 11, color: colors.textSecondary, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 1 }}>Today's Health Metrics</Text>
-            <Text style={{ fontSize: 13, color: colors.pillHealth.text, fontWeight: '700' }}>More</Text>
+            <Text style={{ fontSize: 13, color: colors.pillHealth.text, fontWeight: '700' }}>Full Dashboard →</Text>
           </View>
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
-            <View style={{ alignItems: 'center', flexBasis: '20%', flexGrow: 1, gap: 8 }}>
-              <Ionicons name="walk" size={24} color={colors.pillHealth.text} />
-              <Text style={{ fontSize: 16, fontWeight: '800', color: colors.textPrimary }} numberOfLines={1}>{today?.steps ? Number(today.steps).toLocaleString() : '—'}</Text>
+
+          {/* Grid Row 1: Primary Daily Activity */}
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12, marginBottom: 16 }}>
+            {/* Steps */}
+            <View style={{ alignItems: 'center', flexBasis: '22%', flexGrow: 1, gap: 6 }}>
+              <Ionicons name="walk" size={22} color={colors.pillHealth.text} />
+              <Text style={{ fontSize: 15, fontWeight: '800', color: colors.textPrimary }} numberOfLines={1}>
+                {today?.steps ? Number(today.steps).toLocaleString() : '—'}
+              </Text>
               <Text style={{ fontSize: 11, color: colors.textSecondary, fontWeight: '600' }}>Steps</Text>
             </View>
-            <View style={{ alignItems: 'center', flexBasis: '20%', flexGrow: 1, gap: 8 }}>
-              <Ionicons name="bed" size={24} color={colors.pillHealth.text} />
-              <Text style={{ fontSize: 16, fontWeight: '800', color: colors.textPrimary }} numberOfLines={1}>{today?.sleep ? `${today.sleep}h` : '—'}</Text>
+
+            {/* Heart Rate */}
+            <View style={{ alignItems: 'center', flexBasis: '22%', flexGrow: 1, gap: 6 }}>
+              <Ionicons name="heart" size={22} color="#FF4B4B" />
+              <Text style={{ fontSize: 15, fontWeight: '800', color: colors.textPrimary }} numberOfLines={1}>
+                {(today?.heartRate || today?.watchData?.heartRate) ? `${today?.heartRate || today?.watchData?.heartRate}` : '—'}
+              </Text>
+              <Text style={{ fontSize: 11, color: colors.textSecondary, fontWeight: '600' }}>Heart Rate</Text>
+            </View>
+
+            {/* Calories */}
+            <View style={{ alignItems: 'center', flexBasis: '22%', flexGrow: 1, gap: 6 }}>
+              <Ionicons name="flame" size={22} color="#FF9500" />
+              <Text style={{ fontSize: 15, fontWeight: '800', color: colors.textPrimary }} numberOfLines={1}>
+                {(today?.calories || today?.watchData?.calories) ? `${today?.calories || today?.watchData?.calories}` : '—'}
+              </Text>
+              <Text style={{ fontSize: 11, color: colors.textSecondary, fontWeight: '600' }}>Calories</Text>
+            </View>
+
+            {/* Sleep */}
+            <View style={{ alignItems: 'center', flexBasis: '22%', flexGrow: 1, gap: 6 }}>
+              <Ionicons name="bed" size={22} color={colors.pillLearning.text} />
+              <Text style={{ fontSize: 15, fontWeight: '800', color: colors.textPrimary }} numberOfLines={1}>
+                {today?.sleep ? `${today.sleep}h` : '—'}
+              </Text>
               <Text style={{ fontSize: 11, color: colors.textSecondary, fontWeight: '600' }}>Sleep</Text>
             </View>
-            <View style={{ alignItems: 'center', flexBasis: '20%', flexGrow: 1, gap: 8 }}>
-              <Ionicons name="water" size={24} color={colors.pillHealth.text} />
-              <Text style={{ fontSize: 16, fontWeight: '800', color: colors.textPrimary }} numberOfLines={1}>{today?.water || '—'}</Text>
-              <Text style={{ fontSize: 11, color: colors.textSecondary, fontWeight: '600' }}>Water</Text>
+          </View>
+
+          {/* Grid Row 2: Secondary Health Essentials */}
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: colors.borderLight }}>
+            {/* Height */}
+            <View style={{ alignItems: 'center', flexBasis: '22%', flexGrow: 1, gap: 6 }}>
+              <Ionicons name="resize-outline" size={20} color={colors.primary} />
+              <Text style={{ fontSize: 14, fontWeight: '800', color: colors.textPrimary }} numberOfLines={1}>
+                {(today?.height || today?.watchData?.height) ? `${Math.round(today?.height || today?.watchData?.height)}cm` : '—'}
+              </Text>
+              <Text style={{ fontSize: 10, color: colors.textSecondary, fontWeight: '600' }}>Height</Text>
             </View>
-            <View style={{ alignItems: 'center', flexBasis: '20%', flexGrow: 1, gap: 8 }}>
-              <MaterialCommunityIcons name="scale-bathroom" size={24} color={colors.pillHealth.text} />
-              <Text style={{ fontSize: 16, fontWeight: '800', color: colors.textPrimary }} numberOfLines={1}>{today?.weight ? `${today.weight}` : '—'}</Text>
-              <Text style={{ fontSize: 11, color: colors.textSecondary, fontWeight: '600' }}>Weight</Text>
+
+            {/* Weight */}
+            <View style={{ alignItems: 'center', flexBasis: '22%', flexGrow: 1, gap: 6 }}>
+              <MaterialCommunityIcons name="scale-bathroom" size={20} color={colors.pillHealth.text} />
+              <Text style={{ fontSize: 14, fontWeight: '800', color: colors.textPrimary }} numberOfLines={1}>
+                {today?.weight ? `${today.weight}kg` : '—'}
+              </Text>
+              <Text style={{ fontSize: 10, color: colors.textSecondary, fontWeight: '600' }}>Weight</Text>
+            </View>
+
+            {/* Distance */}
+            <View style={{ alignItems: 'center', flexBasis: '22%', flexGrow: 1, gap: 6 }}>
+              <Ionicons name="navigate-outline" size={20} color={colors.primary} />
+              <Text style={{ fontSize: 14, fontWeight: '800', color: colors.textPrimary }} numberOfLines={1}>
+                {(today?.distance || today?.watchData?.distance) ? `${today?.distance || today?.watchData?.distance}km` : '—'}
+              </Text>
+              <Text style={{ fontSize: 10, color: colors.textSecondary, fontWeight: '600' }}>Distance</Text>
+            </View>
+
+            {/* Active Minutes */}
+            <View style={{ alignItems: 'center', flexBasis: '22%', flexGrow: 1, gap: 6 }}>
+              <Ionicons name="fitness-outline" size={20} color={colors.warning} />
+              <Text style={{ fontSize: 14, fontWeight: '800', color: colors.textPrimary }} numberOfLines={1}>
+                {(today?.activeMinutes || today?.watchData?.activeMinutes) ? `${today?.activeMinutes || today?.watchData?.activeMinutes}m` : '—'}
+              </Text>
+              <Text style={{ fontSize: 10, color: colors.textSecondary, fontWeight: '600' }}>Active</Text>
             </View>
           </View>
         </Pressable>
