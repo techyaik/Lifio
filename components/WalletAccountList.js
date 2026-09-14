@@ -100,11 +100,11 @@ export function WalletAccountList({ wallets, selectedWalletId, onSelect, onEdit,
 
 const styles = StyleSheet.create({
   container: {
-    marginVertical: 4,
-    gap: 8,
+    marginVertical: 6,
+    gap: 10,
   },
   sectionTitle: {
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: '700',
     textTransform: 'uppercase',
     letterSpacing: 0.8,
@@ -116,11 +116,11 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   card: {
-    width: 124,
-    height: 104,
+    width: 130,
+    height: 110,
     borderRadius: RADIUS.lg,
     borderWidth: 1,
-    padding: 12,
+    padding: 14,
     justifyContent: 'space-between',
   },
   cardHeader: {
@@ -129,9 +129,9 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   iconWrap: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -139,9 +139,9 @@ const styles = StyleSheet.create({
     padding: 4,
   },
   name: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '600',
-    marginTop: 8,
+    marginTop: 10,
   },
   balance: {
     fontSize: 15,
@@ -154,7 +154,7 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
   },
   addText: {
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: '700',
     marginTop: 4,
   },

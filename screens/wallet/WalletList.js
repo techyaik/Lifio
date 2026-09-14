@@ -444,14 +444,14 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   headerContainer: {
-    gap: 12,
+    gap: 16,
     paddingTop: 8,
   },
   filterSection: {
-    gap: 6,
+    gap: 8,
   },
   sectionTitle: {
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: '700',
     textTransform: 'uppercase',
     letterSpacing: 0.8,
@@ -461,20 +461,20 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   historyHeader: {
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: '700',
     textTransform: 'uppercase',
     letterSpacing: 0.8,
     marginTop: 8,
   },
   list: {
-    gap: 12,
+    gap: 16,
     paddingBottom: 160, // Space for FAB + floating navbar
   },
   sectionHeader: {
     paddingHorizontal: 24,
     marginTop: 8,
-    marginBottom: 4,
+    marginBottom: 6,
   },
   itemBox: {
     marginHorizontal: 24,

@@ -168,15 +168,15 @@ const SourceBadge = ({ source, colors }) => {
   if (source === 'HEALTH_CONNECT') {
     return (
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 }}>
-        <Ionicons name="checkmark-circle" size={12} color={colors.pillHealth.text} />
-        <Text style={{ fontSize: 11, fontWeight: '700', color: colors.pillHealth.text }}>Synced</Text>
+        <Ionicons name="checkmark-circle" size={13} color={colors.pillHealth.text} />
+        <Text style={{ fontSize: 12, fontWeight: '700', color: colors.pillHealth.text }}>Synced</Text>
       </View>
     );
   }
   if (source === 'MANUAL') {
     return (
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 }}>
-        <Text style={{ fontSize: 11, fontWeight: '600', color: colors.textSecondary }}>Manual</Text>
+        <Text style={{ fontSize: 12, fontWeight: '600', color: colors.textSecondary }}>Manual</Text>
       </View>
     );
   }
@@ -747,7 +747,7 @@ export default function HealthDashboard({ navigation }) {
       <View style={styles.heroRow}>
         <View style={styles.heroCopy}>
           <Text style={[styles.kicker, { color: colors.textSecondary }]}>Today - {displayDate(todayKey(), 'MMM d')}</Text>
-          <Text style={[styles.heroTitle, { color: colors.textPrimary, letterSpacing: -0.5, fontSize: 26 }]}>Daily health overview</Text>
+          <Text style={[styles.heroTitle, { color: colors.textPrimary }]}>Daily health overview</Text>
         </View>
         <Pressable
           onPress={openTodayLog}
@@ -1471,19 +1471,19 @@ export default function HealthDashboard({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  heroRow: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between' },
-  heroCopy: { flex: 1, gap: 3 },
-  kicker: { fontSize: 11, fontWeight: '700', letterSpacing: 0.8, textTransform: 'uppercase' },
-  heroTitle: { fontSize: 22, fontWeight: '800' },
-  iconButton: { alignItems: 'center', borderRadius: RADIUS.pill, height: 42, justifyContent: 'center', width: 42 },
+  heroRow: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 },
+  heroCopy: { flex: 1, gap: 4 },
+  kicker: { fontSize: 12, fontWeight: '600', letterSpacing: 0.8, textTransform: 'uppercase' },
+  heroTitle: { fontSize: 24, fontWeight: '800' },
+  iconButton: { alignItems: 'center', borderRadius: RADIUS.pill, height: 44, justifyContent: 'center', width: 44 },
   screenContent: { maxWidth: 740, width: '100%', alignSelf: 'center' },
   metricGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   actionSquare: {
     alignItems: 'center',
     borderRadius: RADIUS.xl,
     flex: 1,
-    gap: 12,
-    paddingVertical: 20,
+    gap: 10,
+    paddingVertical: 18,
     paddingHorizontal: 8,
     ...SHADOWS.soft,
   },
@@ -1495,10 +1495,10 @@ const styles = StyleSheet.create({
     width: 48,
   },
   actionText: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '700',
     textAlign: 'center',
-    lineHeight: 18,
+    lineHeight: 17,
   },
   bentoGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 16 },
   bentoCard: {
@@ -1552,13 +1552,13 @@ const styles = StyleSheet.create({
   progressLine: { gap: 6 },
   progressTop: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between', gap: 8 },
   progressLabel: { fontSize: 13, fontWeight: '700', flexShrink: 1 },
-  progressDetail: { fontSize: 12, flexShrink: 1 },
+  progressDetail: { fontSize: 13, flexShrink: 1 },
   progressTrack: { borderRadius: RADIUS.pill, height: 8, overflow: 'hidden' },
   progressFill: { borderRadius: RADIUS.pill, height: 8 },
   miniBars: { alignItems: 'flex-end', flexDirection: 'row', gap: 4, height: 48 },
   miniBar: { borderRadius: 6, width: 10 },
   statRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
-  statText: { fontSize: 12, fontWeight: '600' },
+  statText: { fontSize: 13, fontWeight: '600' },
   dateBubble: { alignItems: 'center', borderRadius: RADIUS.md, justifyContent: 'center', minHeight: 46, minWidth: 64, padding: 8 },
   dateBubbleText: { fontSize: 13, fontWeight: '900' },
   flexOne: { flex: 1 },
@@ -1604,7 +1604,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
-    paddingVertical: 10,
+    paddingVertical: 12,
     borderRadius: RADIUS.md,
     borderWidth: 1,
   },
@@ -1613,7 +1613,7 @@ const styles = StyleSheet.create({
     flexBasis: 120,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 10,
+    paddingVertical: 12,
     borderRadius: RADIUS.md,
     borderWidth: 1,
   },
@@ -1805,8 +1805,8 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   tipCard: {
-    padding: 16,
-    gap: 12,
+    padding: 20,
+    gap: 14,
   },
   tipEyebrowRow: {
     flexDirection: 'row',
@@ -1836,10 +1836,10 @@ const styles = StyleSheet.create({
   },
   tipText: {
     flex: 1,
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '500',
-    lineHeight: 22,
-    letterSpacing: 0.2,
+    lineHeight: 21,
+    letterSpacing: 0.15,
   },
   moodSubtitle: {
     fontSize: 11,
@@ -1879,14 +1879,15 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 10,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
     borderRadius: RADIUS.md,
     borderWidth: 1,
     marginBottom: 10,
   },
   syncStatusText: {
-    fontSize: 11,
-    fontWeight: '700',
+    fontSize: 12,
+    fontWeight: '600',
   },
   syncStatusButtons: {
     flexDirection: 'row',
@@ -1912,35 +1913,36 @@ const styles = StyleSheet.create({
   modalCard: {
     borderRadius: RADIUS.lg,
     borderWidth: 1,
-    gap: 14,
-    padding: 16,
+    gap: 16,
+    padding: 20,
     maxWidth: 380,
     width: '100%',
     ...SHADOWS.soft,
   },
   modalHeader: {
     flexDirection: 'row',
-    gap: 12,
+    gap: 14,
     alignItems: 'flex-start',
   },
   iconWrap: {
     alignItems: 'center',
     borderRadius: RADIUS.pill,
-    height: 40,
+    height: 44,
     justifyContent: 'center',
-    width: 40,
+    width: 44,
   },
   titleColumn: {
     flex: 1,
-    gap: 2,
+    gap: 3,
   },
   modalTitle: {
     fontSize: 16,
     fontWeight: '800',
+    lineHeight: 22,
   },
   modalDesc: {
-    fontSize: 11,
-    lineHeight: 16,
+    fontSize: 13,
+    lineHeight: 18,
   },
   permissionsList: {
     gap: 8,
@@ -1950,11 +1952,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: 6,
+    paddingVertical: 9,
     borderBottomWidth: 1,
   },
   permissionLabel: {
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: '600',
   },
   modalButtonsRow: {
@@ -1966,16 +1968,16 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 10,
+    paddingVertical: 12,
     borderRadius: RADIUS.md,
     borderWidth: 1,
   },
   modalBtnText: {
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: '700',
   },
   sectionLabel: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '700',
     marginTop: 8,
     marginBottom: 4,
@@ -2018,7 +2020,8 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   inputHelp: {
-    fontSize: 10,
+    fontSize: 12,
+    lineHeight: 17,
   },
   deniedIconWrap: {
     alignItems: 'center',
@@ -2036,8 +2039,8 @@ const styles = StyleSheet.create({
     flexShrink: 1,
   },
   deniedScrollBody: {
-    gap: 14,
-    padding: 16,
+    gap: 16,
+    padding: 20,
   },
   deniedBlock: {
     borderRadius: RADIUS.md,
@@ -2053,10 +2056,10 @@ const styles = StyleSheet.create({
     borderRadius: RADIUS.pill,
     borderWidth: 1,
     paddingHorizontal: 10,
-    paddingVertical: 5,
+    paddingVertical: 6,
   },
   chipText: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '600',
   },
   deniedSteps: {
@@ -2106,9 +2109,9 @@ const styles = StyleSheet.create({
   },
   deniedNoteText: {
     flex: 1,
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '600',
-    lineHeight: 15,
+    lineHeight: 17,
   },
   deniedNotNow: {
     alignItems: 'center',
@@ -2213,15 +2216,17 @@ const styles = StyleSheet.create({
   sheetTitle: {
     fontSize: 18,
     fontWeight: '800',
+    lineHeight: 24,
   },
   sheetSubtitle: {
-    fontSize: 12,
-    marginTop: 2,
+    fontSize: 13,
+    marginTop: 3,
+    lineHeight: 18,
   },
   closeIconBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 34,
+    height: 34,
+    borderRadius: 17,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -2243,13 +2248,14 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   secMetricLabel: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '600',
+    lineHeight: 16,
   },
   secMetricValue: {
     fontSize: 14,
     fontWeight: '700',
-    marginTop: 2,
+    marginTop: 3,
   },
   sheetActionBtn: {
     flex: 1,
@@ -2275,7 +2281,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   reportChipText: {
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: '700',
   },
   reportPreviewCard: {

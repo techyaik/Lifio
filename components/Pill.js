@@ -41,9 +41,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderRadius: RADIUS.pill,
     borderWidth: 1,
-    minHeight: 26,
+    minHeight: 28,
     justifyContent: 'center',
-    paddingHorizontal: 10,
+    paddingHorizontal: 12,
   },
-  text: { fontSize: 11, fontWeight: '700' },
+  text: { fontSize: 12, fontWeight: '700' },
 });
