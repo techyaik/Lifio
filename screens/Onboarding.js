@@ -1,13 +1,6 @@
 import React, { useRef, useState } from 'react';
-import {
-  Animated,
-  Image,
-  Pressable,
-  StyleSheet,
-  Text,
-  useWindowDimensions,
-  View,
-} from 'react-native';
+import { Animated, Image, Pressable, StyleSheet, Text as RNText, useWindowDimensions, View,  } from 'react-native';
+import { AppText as Text } from '../components/AppText';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../theme/ThemeContext';
@@ -86,7 +79,7 @@ export default function Onboarding({ onGetStarted }) {
     <Screen scroll={false}>
       <View style={styles.root}>
         <View style={styles.topBar}>
-          <View style={[styles.brandPill, { backgroundColor: colors.white, borderColor: colors.borderLight }]}>
+          <View style={[styles.brandPill, { backgroundColor: colors.surface, borderColor: colors.borderLight }]}>
             <Image source={LOGO} style={styles.tinyLogo} />
             <Text style={[styles.brandPillText, { color: colors.textPrimary }]}>Lifio</Text>
           </View>
@@ -129,13 +122,13 @@ export default function Onboarding({ onGetStarted }) {
                   <Ionicons name={slide.icon} size={20} color={colors.white} />
                 </LinearGradient>
 
-                <View style={[styles.mockCard, styles.mockCardLeft, { backgroundColor: colors.white, borderColor: colors.borderLight }]}>
+                <View style={[styles.mockCard, styles.mockCardLeft, { backgroundColor: colors.surface, borderColor: colors.borderLight }]}>
                   <Text style={[styles.mockLabel, { color: colors.textHint }]}>Today</Text>
                   <Text style={[styles.mockValue, { color: colors.textPrimary }]}>{slide.metrics[0].value}</Text>
                   <Text style={[styles.mockCaption, { color: colors.textSecondary }]}>{slide.metrics[0].label}</Text>
                 </View>
 
-                <View style={[styles.mockCard, styles.mockCardRight, { backgroundColor: colors.white, borderColor: colors.borderLight }]}>
+                <View style={[styles.mockCard, styles.mockCardRight, { backgroundColor: colors.surface, borderColor: colors.borderLight }]}>
                   <View style={styles.miniBars}>
                     {[0.38, 0.58, 0.76, 0.48, 0.92].map((bar, barIndex) => (
                       <View
@@ -200,7 +193,7 @@ export default function Onboarding({ onGetStarted }) {
               disabled={index === 0}
               style={[
                 styles.backButton,
-                { backgroundColor: colors.white, borderColor: colors.borderLight },
+                { backgroundColor: colors.surface, borderColor: colors.borderLight },
                 index === 0 ? styles.backButtonDisabled : null
               ]}
             >

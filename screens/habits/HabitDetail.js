@@ -1,5 +1,6 @@
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text as RNText, View } from 'react-native';
+import { AppText as Text } from '../../components/AppText';
 import { format, isSameMonth, parseISO } from 'date-fns';
 import { useTheme } from '../../theme/ThemeContext';
 import { AppHeader } from '../../components/AppHeader';
@@ -42,7 +43,7 @@ export default function HabitDetail({ navigation, route }) {
         <MetricCard value={`${getDayCompletionPercent(todayKey())}%`} label="Today all habits" accent={colors.habits} />
         <MetricCard value={getBestStreak(habit)} label="Best streak" accent={colors.habits} />
       </View>
-      <View style={[styles.calendarCard, { backgroundColor: colors.white, borderColor: colors.borderLight }]}>
+      <View style={[styles.calendarCard, { backgroundColor: colors.surface, borderColor: colors.borderLight }]}>
         <SectionHeader>{format(month, 'MMMM yyyy')}</SectionHeader>
         <View style={styles.weekHeader}>
           {['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((d, index) => (
@@ -83,7 +84,7 @@ export default function HabitDetail({ navigation, route }) {
           <Text style={[styles.legendText, { color: colors.textSecondary }]}>Missed</Text>
         </View>
       </View>
-      <View style={[styles.infoCard, { backgroundColor: colors.white, borderColor: colors.borderLight }]}>
+      <View style={[styles.infoCard, { backgroundColor: colors.surface, borderColor: colors.borderLight }]}>
         <Ionicons name="information-circle-outline" size={16} color={colors.textSecondary} />
         <Text selectable style={[styles.info, { color: colors.textSecondary }]}>Started on {displayDate(habit.createdAt)} · Goal is {habit.goal}</Text>
       </View>

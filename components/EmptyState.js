@@ -1,5 +1,6 @@
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text as RNText, View } from 'react-native';
+import { AppText as Text } from './AppText';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../theme/ThemeContext';
 import { RADIUS, SHADOWS } from '../constants/theme';
@@ -11,7 +12,7 @@ export function EmptyState({ icon, message, action, actionLabel, accent }) {
   const activeAccent = accent ? resolveThemeColor(accent) : colors.health;
 
   return (
-    <View style={[styles.empty, { backgroundColor: colors.white, borderColor: colors.borderLight }]}>
+    <View style={[styles.empty, { backgroundColor: colors.surface, borderColor: colors.borderLight }]}>
       <View style={[styles.iconWrap, { backgroundColor: colors.surface }]}>
         <Ionicons name={icon} size={36} color={activeAccent} />
       </View>

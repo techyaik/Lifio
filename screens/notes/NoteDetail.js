@@ -1,5 +1,6 @@
 import React from 'react';
-import { StyleSheet, Text, View, Alert, Platform } from 'react-native';
+import { StyleSheet, Text as RNText, View, Alert, Platform } from 'react-native';
+import { AppText as Text } from '../../components/AppText';
 import { useTheme } from '../../theme/ThemeContext';
 import { AppHeader } from '../../components/AppHeader';
 import { Pill } from '../../components/Pill';
@@ -43,7 +44,7 @@ export default function NoteDetail({ navigation, route }) {
   return (
     <Screen>
       <AppHeader title="Note" onBack={() => navigation.goBack()} rightText="Edit" accent={colors.notes} onRight={() => navigation.navigate('NoteEditor', { note })} />
-      <View style={[styles.card, { backgroundColor: colors.white, borderColor: colors.borderLight, marginBottom: 16 }]}>
+      <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.borderLight, marginBottom: 16 }]}>
         <Text selectable style={[styles.title, { color: colors.textPrimary }]}>{note.title || 'Untitled'}</Text>
         <Text selectable style={[styles.date, { color: colors.textHint }]}>Updated {displayDate(note.updatedAt)}</Text>
         <View style={styles.tags}>

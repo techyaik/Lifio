@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Alert, StyleSheet, Text, View, Switch, Share, Platform } from 'react-native';
+import { Alert, StyleSheet, Text as RNText, View, Switch, Share, Platform } from 'react-native';
+import { AppText as Text } from '../components/AppText';
 import { Ionicons } from '@expo/vector-icons';
 import * as LocalAuthentication from 'expo-local-authentication';
 import { useTheme } from '../theme/ThemeContext';
@@ -104,10 +105,10 @@ export default function PrivacyManagement({ navigation }) {
       <AppHeader title="Privacy Management" onBack={() => navigation.navigate('Main')} />
 
       {/* Security Status Card */}
-      <View style={[styles.card, { backgroundColor: colors.white, borderColor: colors.borderLight }]}>
+      <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.borderLight }]}>
         <View style={styles.headerRow}>
           <View style={[styles.iconWrap, { backgroundColor: colors.accentLight.health }]}>
-            <Ionicons name="shield-checkmark" size={24} color={colors.health} />
+            <Ionicons name="shield-checkmark" size={24} color={colors.pillHealth.text} />
           </View>
           <View style={styles.titleColumn}>
             <Text style={[styles.title, { color: colors.textPrimary }]}>Local Isolation Mode</Text>
@@ -123,7 +124,7 @@ export default function PrivacyManagement({ navigation }) {
       <View style={styles.section}>
         <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>Data Controls</Text>
         
-        <View style={[styles.controlCard, { backgroundColor: colors.white, borderColor: colors.borderLight }]}>
+        <View style={[styles.controlCard, { backgroundColor: colors.surface, borderColor: colors.borderLight }]}>
           <View style={styles.switchRow}>
             <View style={styles.switchInfo}>
               <Text style={[styles.switchTitle, { color: colors.textPrimary }]}>Biometric App Lock</Text>
@@ -188,10 +189,10 @@ export default function PrivacyManagement({ navigation }) {
       <View style={styles.section}>
         <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>Export & Resets</Text>
         
-        <View style={[styles.controlCard, { backgroundColor: colors.white, borderColor: colors.borderLight }]}>
+        <View style={[styles.controlCard, { backgroundColor: colors.surface, borderColor: colors.borderLight }]}>
           <View style={styles.actionRow}>
             <Text style={[styles.actionLabel, { color: colors.textPrimary }]}>Export All App Data</Text>
-            <PrimaryButton title="Export JSON" onPress={exportData} color={colors.health} />
+            <PrimaryButton title="Export JSON" onPress={exportData} color={colors.pillHealth.text} />
           </View>
 
           <View style={[styles.divider, { backgroundColor: colors.borderLight }]} />

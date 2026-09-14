@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Alert, Platform, StyleSheet, Text, View, KeyboardAvoidingView } from 'react-native';
+import { Alert, Platform, StyleSheet, Text as RNText, View, KeyboardAvoidingView } from 'react-native';
+import { AppText as Text } from '../../components/AppText';
 import { useTheme } from '../../theme/ThemeContext';
 import { CATEGORIES, GOALS } from '../../constants/categories';
 import { AppHeader } from '../../components/AppHeader';
@@ -128,9 +129,9 @@ export default function HabitEdit({ navigation, route }) {
                     styles.segmentText,
                     { color: colors.textSecondary },
                     active && {
-                      backgroundColor: colors.white,
+                      backgroundColor: colors.surface,
                       borderRadius: RADIUS.sm,
-                      color: colors.habits,
+                      color: colors.pillLearning.text,
                       ...SHADOWS.subtle,
                     },
                   ]}
@@ -143,7 +144,7 @@ export default function HabitEdit({ navigation, route }) {
         </View>
         <PrimaryButton
           title={saving ? 'Saving changes...' : 'Save changes'}
-          color={colors.habits}
+          color={colors.pillLearning.text}
           onPress={save}
           disabled={saving}
         />

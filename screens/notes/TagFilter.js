@@ -1,5 +1,6 @@
 import React from 'react';
-import { StyleSheet, Text, View, Pressable } from 'react-native';
+import { StyleSheet, Text as RNText, View, Pressable } from 'react-native';
+import { AppText as Text } from '../../components/AppText';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../theme/ThemeContext';
 import { AppHeader } from '../../components/AppHeader';
@@ -23,10 +24,10 @@ export default function TagFilter({ navigation }) {
           {tags.map((tag) => (
             <Pressable
               key={tag}
-              style={[styles.card, { backgroundColor: colors.white, borderColor: colors.borderLight }]}
+              style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.borderLight }]}
               onPress={() => navigation.navigate('NotesList', { tag })}
             >
-              <Ionicons name="pricetag" size={22} color={colors.notes} />
+              <Ionicons name="pricetag" size={22} color={colors.pillFitness.text} />
               <Text selectable style={[styles.tag, { color: colors.textPrimary }]}>{tag}</Text>
               <Text selectable style={[styles.count, { color: colors.textSecondary }]}>{count(tag)} notes</Text>
             </Pressable>

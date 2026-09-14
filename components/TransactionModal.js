@@ -1,15 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import {
-  Modal,
-  StyleSheet,
-  Text,
-  View,
-  Pressable,
-  ScrollView,
-  KeyboardAvoidingView,
-  Platform,
-  Alert,
-} from 'react-native';
+import { Modal, StyleSheet, Text as RNText, View, Pressable, ScrollView, KeyboardAvoidingView, Platform, Alert,  } from 'react-native';
+import { AppText as Text } from './AppText';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../theme/ThemeContext';
 import { InputField } from './InputField';
@@ -173,7 +164,7 @@ export function TransactionModal({
         style={[styles.overlay, { backgroundColor: colors.overlay }]}
       >
         <Pressable style={styles.dismissArea} onPress={onClose} />
-        <View style={[styles.sheet, { backgroundColor: colors.white }]}>
+        <View style={[styles.sheet, { backgroundColor: colors.surface }]}>
           {/* Header */}
           <View style={[styles.header, { borderBottomColor: colors.borderLight }]}>
             <Text style={[styles.title, { color: colors.textPrimary }]}>
@@ -186,13 +177,13 @@ export function TransactionModal({
 
           <ScrollView style={styles.form} contentContainerStyle={styles.formContent} keyboardShouldPersistTaps="handled">
             {/* 1. Transaction Type Toggle Row */}
-            <View style={[styles.typeRow, { backgroundColor: colors.surface, borderColor: colors.borderLight }]}>
+            <View style={[styles.typeRow, { backgroundColor: colors.bg, borderColor: colors.borderLight }]}>
               <Pressable
                 onPress={() => setType('out')}
                 style={[
                   styles.typeTab,
                   type === 'out' && {
-                    backgroundColor: colors.white,
+                    backgroundColor: colors.surface,
                     borderRadius: RADIUS.sm,
                     ...SHADOWS.subtle,
                   },
@@ -212,7 +203,7 @@ export function TransactionModal({
                 style={[
                   styles.typeTab,
                   type === 'in' && {
-                    backgroundColor: colors.white,
+                    backgroundColor: colors.surface,
                     borderRadius: RADIUS.sm,
                     ...SHADOWS.subtle,
                   },
@@ -232,7 +223,7 @@ export function TransactionModal({
                 style={[
                   styles.typeTab,
                   type === 'transfer' && {
-                    backgroundColor: colors.white,
+                    backgroundColor: colors.surface,
                     borderRadius: RADIUS.sm,
                     ...SHADOWS.subtle,
                   },
@@ -241,7 +232,7 @@ export function TransactionModal({
                 <Text
                   style={[
                     styles.typeText,
-                    { color: type === 'transfer' ? colors.habits : colors.textSecondary },
+                    { color: type === 'transfer' ? colors.pillLearning.text : colors.textSecondary },
                   ]}
                 >
                   Transfer
@@ -425,7 +416,7 @@ export function TransactionModal({
               <PrimaryButton
                 title={transaction ? "Save Transaction" : "Add Transaction"}
                 onPress={handleSave}
-                color={type === 'out' ? colors.wallet : type === 'in' ? colors.tealMid : colors.habits}
+                color={type === 'out' ? colors.wallet : type === 'in' ? colors.tealMid : colors.pillLearning.text}
               />
             </View>
           </View>

@@ -165,13 +165,41 @@ export function useHealth() {
     const todayDate = todayKey();
     const existingToday = items.find((log) => log.date === todayDate);
 
+    const reconcileField = (existingRecord, field, syncedValue) => {
+      const sources = existingRecord?.sources || {};
+      const isManual = sources[field] === 'MANUAL';
+      
+      // If user hasn't manually entered it, and we have a valid synced value, overwrite with Health Connect
+      if (!isManual && syncedValue != null) {
+        // Only set if > 0 so we don't overwrite null with 0
+        if (syncedValue > 0) {
+           return { value: syncedValue, source: 'HEALTH_CONNECT' };
+        }
+      }
+      return { value: existingRecord?.[field] ?? null, source: sources[field] || null };
+    };
+
     let updatedLogs;
     if (existingToday) {
-      updatedLogs = items.map((log) =>
-        log.date === todayDate
-          ? { ...log, watchData: syncedMetrics }
-          : log
-      );
+      updatedLogs = items.map((log) => {
+        if (log.date === todayDate) {
+          const stepsData = reconcileField(log, 'steps', syncedMetrics.steps);
+          const sleepData = reconcileField(log, 'sleep', syncedMetrics.sleep);
+          
+          return {
+            ...log,
+            steps: stepsData.value,
+            sleep: sleepData.value,
+            watchData: syncedMetrics,
+            sources: {
+              ...(log.sources || {}),
+              steps: stepsData.source,
+              sleep: sleepData.source,
+            }
+          };
+        }
+        return log;
+      });
     } else {
       updatedLogs = [
         ...items,
@@ -179,7 +207,13 @@ export function useHealth() {
           id: Date.now().toString(),
           date: todayDate,
           createdAt: new Date().toISOString(),
+          steps: syncedMetrics.steps > 0 ? syncedMetrics.steps : null,
+          sleep: syncedMetrics.sleep > 0 ? syncedMetrics.sleep : null,
           watchData: syncedMetrics,
+          sources: {
+            steps: syncedMetrics.steps > 0 ? 'HEALTH_CONNECT' : null,
+            sleep: syncedMetrics.sleep > 0 ? 'HEALTH_CONNECT' : null,
+          }
         },
       ];
     }

@@ -1,15 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import {
-  Modal,
-  StyleSheet,
-  Text,
-  View,
-  Pressable,
-  ScrollView,
-  KeyboardAvoidingView,
-  Platform,
-  Alert,
-} from 'react-native';
+import { Modal, StyleSheet, Text as RNText, View, Pressable, ScrollView, KeyboardAvoidingView, Platform, Alert,  } from 'react-native';
+import { AppText as Text } from './AppText';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../theme/ThemeContext';
 import { InputField } from './InputField';
@@ -106,7 +97,7 @@ export function WalletModal({ visible, onClose, wallet, onSave, onDelete, curren
         style={[styles.overlay, { backgroundColor: colors.overlay }]}
       >
         <Pressable style={styles.dismissArea} onPress={onClose} />
-        <View style={[styles.sheet, { backgroundColor: colors.white }]}>
+        <View style={[styles.sheet, { backgroundColor: colors.surface }]}>
           {/* Header */}
           <View style={[styles.header, { borderBottomColor: colors.borderLight }]}>
             <Text style={[styles.title, { color: colors.textPrimary }]}>

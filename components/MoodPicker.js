@@ -1,5 +1,6 @@
 import React from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text as RNText, View } from 'react-native';
+import { AppText as Text } from './AppText';
 import { useTheme } from '../theme/ThemeContext';
 import { MOODS } from '../constants/categories';
 import { RADIUS, SHADOWS } from '../constants/theme';
@@ -19,10 +20,10 @@ export function MoodPicker({ value, onChange }) {
             style={[
               styles.circle,
               {
-                backgroundColor: colors.white,
+                backgroundColor: colors.surface,
                 borderColor: colors.borderLight,
               },
-              selected ? [SHADOWS.subtle, { borderColor: activeAccent, backgroundColor: colors.white }] : null,
+              selected ? [SHADOWS.subtle, { borderColor: activeAccent, backgroundColor: colors.surface }] : null,
             ]}
           >
             <Text style={styles.emoji}>{mood.emoji}</Text>

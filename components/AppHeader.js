@@ -1,5 +1,6 @@
 import React from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text as RNText, View } from 'react-native';
+import { AppText as Text } from './AppText';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { useNavigation, DrawerActions } from '@react-navigation/native';
 import { useTheme } from '../theme/ThemeContext';
@@ -48,7 +49,7 @@ export function AppHeader({
     <View style={styles.header}>
       <View style={styles.side}>
         {onBack ? (
-          <Pressable onPress={onBack} style={[styles.iconButton, { borderColor: colors.borderLight, backgroundColor: colors.white }]} hitSlop={10}>
+          <Pressable onPress={onBack} style={[styles.iconButton, { borderColor: colors.borderLight, backgroundColor: colors.surface }]} hitSlop={10}>
             <Ionicons name="chevron-back" size={22} color={colors.textPrimary} />
           </Pressable>
         ) : canShowMenu ? (
@@ -60,7 +61,7 @@ export function AppHeader({
       <Text style={[styles.title, { color: colors.textPrimary }]} numberOfLines={1}>{title}</Text>
       <View style={[styles.side, styles.right]}>
         {canShowSettings ? (
-          <Pressable onPress={openSettings} style={[styles.iconButton, { borderColor: colors.borderLight, backgroundColor: colors.white }, SHADOWS.subtle]} hitSlop={10}>
+          <Pressable onPress={openSettings} style={[styles.iconButton, { borderColor: colors.borderLight, backgroundColor: colors.surface }, SHADOWS.subtle]} hitSlop={10}>
             <Ionicons name="settings-outline" size={19} color={colors.textPrimary} />
           </Pressable>
         ) : null}

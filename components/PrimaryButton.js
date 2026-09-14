@@ -1,25 +1,17 @@
 import React from 'react';
-import { Pressable, StyleSheet, Text } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
+import { Pressable, StyleSheet, Text as RNText, View } from 'react-native';
+import { AppText as Text } from './AppText';
 import { useTheme } from '../theme/ThemeContext';
 import { RADIUS, SHADOWS } from '../constants/theme';
 
 export function PrimaryButton({ title, onPress, color, disabled = false, icon, style }) {
-  const { colors, gradients, resolveThemeColor } = useTheme();
+  const { colors, resolveThemeColor } = useTheme();
 
   const activeColor = color ? resolveThemeColor(color) : colors.health;
   const buttonTextColor = colors.onAccent;
   const buttonIcon = React.isValidElement(icon)
     ? React.cloneElement(icon, { color: buttonTextColor })
     : icon;
-
-  const gradientForColor = () => {
-    if (activeColor === colors.habits) return gradients.habits;
-    if (activeColor === colors.notes) return gradients.notes;
-    if (activeColor === colors.wallet) return gradients.wallet;
-    if (activeColor === colors.danger) return [colors.gradientDangerStart, colors.danger];
-    return gradients.health;
-  };
 
   return (
     <Pressable
@@ -32,31 +24,31 @@ export function PrimaryButton({ title, onPress, color, disabled = false, icon, s
         style,
       ]}
     >
-      <LinearGradient
-        colors={disabled ? [colors.textHint, colors.textHint] : gradientForColor()}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={styles.gradient}
+      <View
+        style={[
+          styles.solidBackground,
+          { backgroundColor: disabled ? colors.textHint : activeColor }
+        ]}
       >
         {buttonIcon}
         <Text style={[styles.text, { color: buttonTextColor }]}>{title}</Text>
-      </LinearGradient>
+      </View>
     </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
   button: {
-    borderRadius: RADIUS.md,
-    minHeight: 50,
+    borderRadius: RADIUS.pill,
+    minHeight: 56,
   },
-  gradient: {
+  solidBackground: {
     alignItems: 'center',
-    borderRadius: RADIUS.md,
+    borderRadius: RADIUS.pill,
     flexDirection: 'row',
     gap: 8,
     justifyContent: 'center',
-    minHeight: 50,
+    minHeight: 56,
     paddingHorizontal: 14,
   },
   disabled: { opacity: 0.7 },

@@ -1,5 +1,6 @@
 import React from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text as RNText, View } from 'react-native';
+import { AppText as Text } from './AppText';
 import { Ionicons } from '@expo/vector-icons';
 import { Swipeable } from 'react-native-gesture-handler';
 import { useTheme } from '../theme/ThemeContext';
@@ -25,11 +26,11 @@ export function NoteCard({ note, onPress, onDelete }) {
         onPress={onPress}
         style={[
           styles.card,
-          { backgroundColor: colors.white, borderColor: colors.borderLight }
+          { backgroundColor: colors.surface, borderColor: colors.borderLight }
         ]}
       >
         <View style={styles.titleRow}>
-          {note.pinned ? <Ionicons name="pin" size={14} color={colors.notes} /> : null}
+          {note.pinned ? <Ionicons name="pin" size={14} color={colors.pillFitness.text} /> : null}
           <Text selectable style={[styles.title, { color: colors.textPrimary }]} numberOfLines={1}>
             {note.title || 'Untitled'}
           </Text>
@@ -50,23 +51,23 @@ export function NoteCard({ note, onPress, onDelete }) {
 
 const styles = StyleSheet.create({
   card: {
-    borderRadius: RADIUS.lg,
+    borderRadius: RADIUS.xl,
     borderWidth: 1,
     gap: 12,
-    padding: 16,
-    ...SHADOWS.subtle,
+    padding: 24,
+    ...SHADOWS.soft,
   },
   titleRow: { alignItems: 'center', flexDirection: 'row', gap: 6 },
-  title: { flex: 1, fontSize: 15, fontWeight: '600' },
-  preview: { fontSize: 13, lineHeight: 18 },
-  footer: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between' },
-  date: { fontSize: 10 },
+  title: { flex: 1, fontSize: 16, fontWeight: '700' },
+  preview: { fontSize: 14, lineHeight: 20 },
+  footer: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between', marginTop: 8 },
+  date: { fontSize: 11 },
   delete: {
     alignItems: 'center',
-    borderRadius: RADIUS.lg,
+    borderRadius: RADIUS.xl,
     justifyContent: 'center',
     marginLeft: 12,
-    width: 76,
+    width: 80,
     height: '100%',
   },
 });

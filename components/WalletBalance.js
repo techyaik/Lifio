@@ -1,5 +1,6 @@
 import React from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text as RNText, View } from 'react-native';
+import { AppText as Text } from './AppText';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../theme/ThemeContext';
 import { RADIUS, SHADOWS } from '../constants/theme';
@@ -24,7 +25,7 @@ export function WalletBalance({
   };
 
   return (
-    <View style={[styles.card, { backgroundColor: colors.white, borderColor: colors.borderLight }]}>
+    <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.borderLight }]}>
       <View style={styles.headerRow}>
         <View>
           <Text style={[styles.label, { color: colors.textSecondary }]}>
@@ -39,7 +40,7 @@ export function WalletBalance({
             onPress={onPrevMonth}
             style={({ pressed }) => [
               styles.navBtn,
-              { borderColor: colors.borderLight, backgroundColor: pressed ? colors.surface : colors.white },
+              { borderColor: colors.borderLight, backgroundColor: pressed ? colors.surfaceElevated : colors.surface },
               SHADOWS.subtle,
             ]}
           >
@@ -49,7 +50,7 @@ export function WalletBalance({
             onPress={onNextMonth}
             style={({ pressed }) => [
               styles.navBtn,
-              { borderColor: colors.borderLight, backgroundColor: pressed ? colors.surface : colors.white },
+              { borderColor: colors.borderLight, backgroundColor: pressed ? colors.surfaceElevated : colors.surface },
               SHADOWS.subtle,
             ]}
           >
@@ -78,11 +79,11 @@ export function WalletBalance({
 
 const styles = StyleSheet.create({
   card: {
-    borderRadius: RADIUS.lg,
-    borderWidth: 1,
-    padding: 20,
-    gap: 16,
-    ...SHADOWS.subtle,
+    borderRadius: RADIUS.xl,
+    borderWidth: 0,
+    padding: 24,
+    gap: 20,
+    ...SHADOWS.soft,
   },
   headerRow: {
     flexDirection: 'row',
@@ -90,48 +91,48 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
   },
   label: {
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: '600',
-    marginBottom: 4,
+    marginBottom: 6,
     textTransform: 'capitalize',
   },
   balanceText: {
-    fontSize: 32,
-    fontWeight: '700',
-    letterSpacing: -0.5,
+    fontSize: 40,
+    fontWeight: '800',
+    letterSpacing: -1,
   },
   navButtons: {
     flexDirection: 'row',
     gap: 8,
   },
   navBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: RADIUS.sm,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
   },
   statsRow: {
     flexDirection: 'row',
-    gap: 18,
+    gap: 24,
     borderTopWidth: 0.5,
-    paddingTop: 12,
+    paddingTop: 16,
   },
   statGroup: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 8,
   },
   indicatorDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
+    width: 10,
+    height: 10,
+    borderRadius: 5,
   },
   statText: {
-    fontSize: 13,
+    fontSize: 14,
   },
   statValue: {
-    fontWeight: '600',
+    fontWeight: '700',
   },
 });

@@ -1,5 +1,6 @@
 import React from 'react';
-import { StyleSheet, TextInput } from 'react-native';
+import { StyleSheet, TextInput as RNTextInput } from 'react-native';
+import { AppTextInput as TextInput } from './AppTextInput';
 import { useTheme } from '../theme/ThemeContext';
 import { RADIUS } from '../constants/theme';
 
@@ -13,7 +14,7 @@ export function InputField(props) {
       style={[
         styles.input,
         {
-          backgroundColor: colors.white,
+          backgroundColor: colors.surface,
           borderColor: colors.borderLight,
           color: colors.textPrimary,
         },

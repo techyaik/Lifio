@@ -1,6 +1,8 @@
 import React from 'react';
-import { Alert, StyleSheet, Text, View } from 'react-native';
+import { Alert, StyleSheet, Text as RNText, View } from 'react-native';
+import { AppText as Text } from '../../components/AppText';
 import { useTheme } from '../../theme/ThemeContext';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { CATEGORIES } from '../../constants/categories';
 import { AppHeader } from '../../components/AppHeader';
 import { EmptyState } from '../../components/EmptyState';
@@ -18,6 +20,7 @@ import { showToast } from '../../utils/feedback';
 export default function HabitsToday({ navigation }) {
   const { habits, loading, isDone, toggleCompletion, getStreak, getWeekPercents, deleteHabit } = useHabits();
   const { colors, triggerDataRefresh } = useTheme();
+  const insets = useSafeAreaInsets();
   
   const activeHabits = habits.filter((h) => shouldCountForGoal(todayKey(), h.goal));
   const doneCount = activeHabits.filter((habit) => isDone(habit.id)).length;
@@ -53,8 +56,8 @@ export default function HabitsToday({ navigation }) {
 
   return (
     <View style={styles.container}>
-      <Screen loading={loading}>
-        <AppHeader title="Habits" />
+      <Screen loading={loading} withBottomNav>
+        <AppHeader title="Habits" showMenu={false} showSettings={false} />
         <View style={styles.section}>
           <SectionHeader>Today — {doneCount} of {activeHabits.length} done</SectionHeader>
           {activeHabits.length ? (
@@ -86,7 +89,7 @@ export default function HabitsToday({ navigation }) {
         {habits.length ? (
           <View style={styles.section}>
             <SectionHeader>Weekly completion</SectionHeader>
-            <View style={[styles.weekBars, { backgroundColor: colors.white, borderColor: colors.borderLight }]}>
+            <View style={[styles.weekBars, { backgroundColor: colors.surface, borderColor: colors.borderLight }]}>
               {week.map((day) => {
                 const isToday = day.date === todayKey();
                 return (
@@ -103,7 +106,7 @@ export default function HabitsToday({ navigation }) {
                         ]}
                       />
                     </View>
-                    <Text style={[styles.dayLabel, { color: colors.textSecondary }, isToday ? { color: colors.habits, fontWeight: '800' } : null]}>
+                    <Text style={[styles.dayLabel, { color: colors.textSecondary }, isToday ? { color: colors.pillLearning.text, fontWeight: '800' } : null]}>
                       {displayDate(day.date, 'EEE')}
                     </Text>
                   </View>
@@ -112,13 +115,10 @@ export default function HabitsToday({ navigation }) {
             </View>
           </View>
         ) : null}
-
-        {/* Spacer for FAB so it doesn't cover content */}
-        <View style={{ height: 88 }} />
       </Screen>
       {!loading && habits.length > 0 && (
-        <View style={styles.fabWrap}>
-          <FAB color={colors.habits} onPress={() => navigation.navigate('AddHabit')} />
+        <View style={[styles.fabWrap, { bottom: insets.bottom + 104 }]}>
+          <FAB color={colors.pillLearning.text} onPress={() => navigation.navigate('AddHabit')} />
         </View>
       )}
       <FeatureWalkthrough screenKey="habits" steps={WALKTHROUGH_STEPS.habits} />
@@ -131,24 +131,24 @@ const styles = StyleSheet.create({
   section: { gap: 12, marginBottom: 8 },
   weekBars: {
     alignItems: 'flex-end',
-    borderRadius: RADIUS.lg,
-    borderWidth: 1,
+    borderRadius: RADIUS.xl,
+    borderWidth: 0,
     flexDirection: 'row',
     gap: 8,
     justifyContent: 'space-between',
-    minHeight: 136,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    ...SHADOWS.subtle,
+    minHeight: 160,
+    paddingHorizontal: 24,
+    paddingVertical: 20,
+    ...SHADOWS.soft,
   },
-  barItem: { alignItems: 'center', flex: 1, gap: 8 },
-  barTrack: { borderRadius: RADIUS.pill, height: 80, justifyContent: 'flex-end', overflow: 'hidden', width: 14 },
-  barFill: { borderRadius: RADIUS.pill, width: 14 },
-  dayLabel: { fontSize: 10, fontWeight: '500' },
+  barItem: { alignItems: 'center', flex: 1, gap: 10 },
+  barTrack: { borderRadius: RADIUS.pill, height: 100, justifyContent: 'flex-end', overflow: 'hidden', width: 16 },
+  barFill: { borderRadius: RADIUS.pill, width: 16 },
+  dayLabel: { fontSize: 11, fontWeight: '600' },
   fabWrap: {
     position: 'absolute',
-    right: 20,
-    bottom: 20,
+    right: 24,
+    bottom: 24,
     ...SHADOWS.glow,
   },
 });

@@ -1,22 +1,21 @@
 import React from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, View } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../theme/ThemeContext';
 import { SPACING } from '../constants/theme';
 
-export function Screen({ children, scroll = true, loading = false, style, contentStyle }) {
-  const { colors, gradients } = useTheme();
+export function Screen({ children, scroll = true, loading = false, style, contentStyle, withBottomNav = false }) {
+  const { colors } = useTheme();
 
   const insets = useSafeAreaInsets();
+  const bottomNavPadding = withBottomNav ? 180 : SPACING.screen;
 
   if (loading) {
     return (
       <View style={[styles.root, { backgroundColor: colors.bg }, style]}>
-        <LinearGradient colors={gradients.page} style={StyleSheet.absoluteFill} pointerEvents="none" />
         <View style={[styles.root, styles.center, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
-          <View style={[styles.loader, { backgroundColor: colors.white, borderColor: colors.border }]}>
-            <ActivityIndicator color={colors.health} />
+          <View style={[styles.loader, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <ActivityIndicator color={colors.pillHealth.text} />
           </View>
         </View>
       </View>
@@ -26,8 +25,7 @@ export function Screen({ children, scroll = true, loading = false, style, conten
   if (!scroll) {
     return (
       <View style={[styles.root, { backgroundColor: colors.bg }, style]}>
-        <LinearGradient colors={gradients.page} style={StyleSheet.absoluteFill} pointerEvents="none" />
-        <View style={[styles.root, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
+        <View style={[styles.root, { paddingTop: insets.top, paddingBottom: insets.bottom + (withBottomNav ? 88 : 0) }]}>
           {children}
         </View>
       </View>
@@ -36,13 +34,12 @@ export function Screen({ children, scroll = true, loading = false, style, conten
 
   return (
     <View style={[styles.root, { backgroundColor: colors.bg }, style]}>
-      <LinearGradient colors={gradients.page} style={StyleSheet.absoluteFill} pointerEvents="none" />
       <ScrollView
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={[
           styles.content, 
-          { paddingTop: insets.top + SPACING.screen, paddingBottom: insets.bottom + SPACING.screen },
+          { paddingTop: insets.top + SPACING.screen, paddingBottom: insets.bottom + bottomNavPadding },
           contentStyle
         ]}
       >
@@ -54,7 +51,7 @@ export function Screen({ children, scroll = true, loading = false, style, conten
 
 const styles = StyleSheet.create({
   root: { flex: 1 },
-  content: { padding: SPACING.screen, gap: SPACING.section },
+  content: { paddingHorizontal: 24, gap: SPACING.section },
   center: { alignItems: 'center', justifyContent: 'center' },
   loader: {
     alignItems: 'center',

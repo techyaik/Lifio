@@ -1,16 +1,6 @@
 import React, { useMemo, useState } from 'react';
-import {
-  Alert,
-  KeyboardAvoidingView,
-  Modal,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Switch,
-  Text,
-  View,
-} from 'react-native';
+import { Alert, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Switch, Text as RNText, View,  } from 'react-native';
+import { AppText as Text } from '../../components/AppText';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../theme/ThemeContext';
 import { AppHeader } from '../../components/AppHeader';
@@ -134,7 +124,7 @@ export default function MedicineReminders({ navigation }) {
               return (
                 <View
                   key={reminder.id}
-                  style={[styles.card, { backgroundColor: colors.white, borderColor: colors.borderLight }]}
+                  style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.borderLight }]}
                 >
                   <View style={styles.cardTopRow}>
                     <View style={styles.flexOne}>
@@ -146,7 +136,7 @@ export default function MedicineReminders({ navigation }) {
                       </Text>
                     </View>
                     <View style={[styles.timeChip, { backgroundColor: colors.accentLight.health }]}>
-                      <Text style={[styles.timeChipText, { color: colors.health }]}>{reminder.time}</Text>
+                      <Text style={[styles.timeChipText, { color: colors.pillHealth.text }]}>{reminder.time}</Text>
                     </View>
                   </View>
 
@@ -163,7 +153,7 @@ export default function MedicineReminders({ navigation }) {
                             styles.actionChip,
                             {
                               backgroundColor: takenToday ? colors.accentLight.health : colors.surface,
-                              borderColor: takenToday ? colors.health : colors.borderLight,
+                              borderColor: takenToday ? colors.pillHealth.text : colors.borderLight,
                               opacity: takenToday ? 0.88 : 1,
                             },
                           ]}
@@ -171,9 +161,9 @@ export default function MedicineReminders({ navigation }) {
                           <Ionicons
                             name={takenToday ? 'checkmark-circle' : 'checkmark-circle-outline'}
                             size={14}
-                            color={takenToday ? colors.health : colors.textSecondary}
+                            color={takenToday ? colors.pillHealth.text : colors.textSecondary}
                           />
-                          <Text style={[styles.actionText, { color: takenToday ? colors.health : colors.textPrimary }]}>
+                          <Text style={[styles.actionText, { color: takenToday ? colors.pillHealth.text : colors.textPrimary }]}>
                             {takenToday ? 'Taken' : 'Mark taken'}
                           </Text>
                         </Pressable>
@@ -231,7 +221,7 @@ export default function MedicineReminders({ navigation }) {
           style={[styles.modalBackdrop, { backgroundColor: colors.overlay }]}
         >
           <Pressable style={StyleSheet.absoluteFill} onPress={closeEditor} />
-          <View style={[styles.modalCard, { backgroundColor: colors.white, borderColor: colors.borderLight }]}>
+          <View style={[styles.modalCard, { backgroundColor: colors.surface, borderColor: colors.borderLight }]}>
             <View style={styles.modalHeader}>
               <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>
                 {form.id ? 'Edit reminder' : 'Add medicine reminder'}
@@ -315,7 +305,7 @@ export default function MedicineReminders({ navigation }) {
                 />
               </View>
 
-              <PrimaryButton title={form.id ? 'Save changes' : 'Add reminder'} color={colors.health} onPress={saveReminder} disabled={saving} />
+              <PrimaryButton title={form.id ? 'Save changes' : 'Add reminder'} color={colors.pillHealth.text} onPress={saveReminder} disabled={saving} />
             </ScrollView>
           </View>
         </KeyboardAvoidingView>

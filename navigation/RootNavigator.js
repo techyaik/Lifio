@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, View, Share, Image, StatusBar } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, Text as RNText, View, Share, Image, StatusBar, Keyboard } from 'react-native';
+import { AppText as Text } from '../components/AppText';
 import AsyncStorage from '../storage/safeAsyncStorage';
 import { NavigationContainer, DefaultTheme, DarkTheme } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { createDrawerNavigator, DrawerContentScrollView } from '@react-navigation/drawer';
+import { createStackNavigator } from '@react-navigation/stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme, ThemeProvider } from '../theme/ThemeContext';
@@ -23,143 +24,100 @@ import About from '../screens/About';
 import { AppLockOverlay } from '../components/AppLockOverlay';
 
 const Tab = createBottomTabNavigator();
-const Drawer = createDrawerNavigator();
+const Stack = createStackNavigator();
 const ONBOARDING_KEY = 'lifio_onboarded_v2';
 const LOGO = require('../assets/lifio-logo.png');
 
 const TAB_META = {
-  HealthTab: { label: 'Health', icon: 'heart-outline', activeIcon: 'heart', color: 'health' },
-  HabitsTab: { label: 'Habits', icon: 'checkmark-circle-outline', activeIcon: 'checkmark-circle', color: 'habits' },
-  HomeTab: { label: 'Home', icon: 'home-outline', activeIcon: 'home', color: 'health' },
-  NotesTab: { label: 'Notes', icon: 'document-text-outline', activeIcon: 'document-text', color: 'notes' },
-  JournalTab: { label: 'Wallet', icon: 'wallet-outline', activeIcon: 'wallet', color: 'wallet' },
+  HomeTab: { icon: 'home' },
+  JournalTab: { icon: 'wallet' },
+  HealthTab: { icon: 'heart' }, 
+  SettingsTab: { icon: 'settings' }, 
+  HabitsTab: { icon: 'checkmark-circle' },
+  NotesTab: { icon: 'document-text' },
 };
 
-function MainTabs() {
-  const { colors, resolveThemeColor } = useTheme();
+function CustomTabBar({ state, descriptors, navigation }) {
   const insets = useSafeAreaInsets();
-  
-  const themedTabBarStyle = [
-    styles.tabBar,
-    {
-      backgroundColor: colors.surfaceElevated,
-      borderTopColor: colors.borderLight,
-      shadowColor: colors.overlay,
-      height: 60 + insets.bottom,
-      paddingBottom: insets.bottom + 10,
-    },
-  ];
+  const [keyboardVisible, setKeyboardVisible] = useState(false);
+  const { colors } = useTheme();
+
+  useEffect(() => {
+    const showSub = Keyboard.addListener('keyboardDidShow', () => setKeyboardVisible(true));
+    const hideSub = Keyboard.addListener('keyboardDidHide', () => setKeyboardVisible(false));
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
+
+  if (keyboardVisible) return null;
 
   return (
-    <Tab.Navigator
-      initialRouteName="HomeTab"
-      screenOptions={({ route }) => {
+    <View style={{
+      position: 'absolute',
+      bottom: insets.bottom > 0 ? insets.bottom : 32,
+      alignSelf: 'center',
+      flexDirection: 'row',
+      backgroundColor: colors.surfaceElevated,
+      borderRadius: RADIUS.pill,
+      height: 72,
+      alignItems: 'center',
+      paddingHorizontal: 8,
+      gap: 4,
+    }}>
+      {state.routes.map((route, index) => {
+        if (route.name === 'HabitsTab' || route.name === 'NotesTab') return null;
+
+        const isFocused = state.index === index;
         const meta = TAB_META[route.name];
-        const tabColor = meta ? resolveThemeColor(colors[meta.color]) : colors.health;
-        return {
-          headerShown: false,
-          tabBarActiveTintColor: tabColor,
-          tabBarInactiveTintColor: colors.textHint,
-          tabBarStyle: themedTabBarStyle,
-          tabBarLabel: meta?.label || '',
-          tabBarLabelStyle: styles.tabLabel,
-          tabBarItemStyle: styles.tabItem,
-          tabBarHideOnKeyboard: true,
-          tabBarIcon: ({ color, size, focused }) => {
-            const iconName = focused ? meta.activeIcon : meta.icon;
-            return <Ionicons name={iconName} size={size} color={color} />;
-          },
+
+        const onPress = () => {
+          const event = navigation.emit({
+            type: 'tabPress',
+            target: route.key,
+            canPreventDefault: true,
+          });
+          if (!isFocused && !event.defaultPrevented) {
+            navigation.navigate(route.name);
+          }
         };
-      }}
-    >
-      <Tab.Screen name="HealthTab" component={HealthStack} />
-      <Tab.Screen name="HabitsTab" component={HabitsStack} />
-      <Tab.Screen name="HomeTab" component={HomeStack} />
-      <Tab.Screen name="NotesTab" component={NotesStack} />
-      <Tab.Screen name="JournalTab" component={WalletStack} />
-    </Tab.Navigator>
+
+        return (
+          <Pressable
+            key={route.key}
+            onPress={onPress}
+            style={{
+              height: 56,
+              width: 56,
+              borderRadius: 28,
+              alignItems: 'center',
+              justifyContent: 'center',
+              backgroundColor: isFocused ? colors.white : 'transparent',
+            }}
+          >
+            <Ionicons name={meta.icon} size={24} color={isFocused ? colors.textPrimary : colors.white} />
+          </Pressable>
+        );
+      })}
+    </View>
   );
 }
 
-function CustomDrawerContent(props) {
-  const { state, navigation } = props;
-  const { colors, profileName } = useTheme();
-  const insets = useSafeAreaInsets();
-
-  const activeRoute = state.routes[state.index];
-  const activeName = activeRoute.name;
-
-  const handleShare = async () => {
-    try {
-      await Share.share({
-        message: 'Lifio - A bento-style companion for mindful habits, health logging, and wallet tracking. Download it today!',
-      });
-    } catch (error) {
-      console.error('Share error:', error);
-    }
-  };
-
-  const menuItems = [
-    { name: 'MyPlan', label: 'My Plan', icon: 'calendar-outline', activeIcon: 'calendar' },
-    { name: 'Settings', label: 'Settings', icon: 'settings-outline', activeIcon: 'settings' },
-    { name: 'PrivacyManagement', label: 'Privacy Management', icon: 'shield-checkmark-outline', activeIcon: 'shield-checkmark' },
-    { name: 'Help', label: 'Help', icon: 'help-circle-outline', activeIcon: 'help-circle' },
-    { name: 'About', label: 'About', icon: 'information-circle-outline', activeIcon: 'information-circle' },
-  ];
-
+function MainTabs() {
   return (
-    <View style={[styles.drawerContainer, { backgroundColor: colors.bgWarm }]}>
-      {/* Drawer Header */}
-      <View style={[styles.drawerHeader, { borderBottomColor: colors.borderLight, paddingTop: insets.top }]}>
-        <Image source={LOGO} style={styles.drawerLogo} />
-        <Text style={[styles.appName, { color: colors.textPrimary }]} numberOfLines={1}>
-          Lifio
-        </Text>
-        <Text style={[styles.appSubtitle, { color: colors.textSecondary }]} numberOfLines={1}>
-          {profileName ? `Welcome, ${profileName}` : 'Personal Tracker'}
-        </Text>
-      </View>
-
-      <DrawerContentScrollView {...props} contentContainerStyle={styles.scrollContent}>
-        {menuItems.map((item) => {
-          const isActive = activeName === item.name;
-          return (
-            <Pressable
-              key={item.name}
-              onPress={() => {
-                navigation.navigate(item.name);
-              }}
-              style={[
-                styles.drawerItem,
-                isActive && { backgroundColor: colors.accentLight.health }
-              ]}
-            >
-              <Ionicons
-                name={isActive ? item.activeIcon : item.icon}
-                size={20}
-                color={isActive ? colors.health : colors.textSecondary}
-              />
-              <Text
-                style={[
-                  styles.drawerLabelText,
-                  { color: isActive ? colors.health : colors.textPrimary }
-                ]}
-              >
-                {item.label}
-              </Text>
-            </Pressable>
-          );
-        })}
-      </DrawerContentScrollView>
-
-      {/* Share Application Footer */}
-      <View style={[styles.drawerFooter, { borderTopColor: colors.borderLight, paddingBottom: insets.bottom + 16 }]}>
-        <Pressable onPress={handleShare} style={styles.shareItem}>
-          <Ionicons name="share-social-outline" size={20} color={colors.health} />
-          <Text style={[styles.shareLabel, { color: colors.health }]}>Share Application</Text>
-        </Pressable>
-      </View>
-    </View>
+    <Tab.Navigator
+      initialRouteName="HomeTab"
+      tabBar={props => <CustomTabBar {...props} />}
+      screenOptions={{ headerShown: false }}
+    >
+      <Tab.Screen name="HomeTab" component={HomeStack} />
+      <Tab.Screen name="JournalTab" component={WalletStack} />
+      <Tab.Screen name="HealthTab" component={HealthStack} />
+      <Tab.Screen name="SettingsTab" component={Settings} />
+      <Tab.Screen name="HabitsTab" component={HabitsStack} />
+      <Tab.Screen name="NotesTab" component={NotesStack} />
+    </Tab.Navigator>
   );
 }
 
@@ -214,7 +172,7 @@ function NavigatorContent() {
   if (!ready || !themeReady) {
     return (
       <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.bg }}>
-        <ActivityIndicator color={colors.health} />
+        <ActivityIndicator color={colors.pillHealth.text} />
       </View>
     );
   }
@@ -225,21 +183,19 @@ function NavigatorContent() {
       <NavigationContainer theme={navigationTheme}>
         {onboarded ? (
         profileName ? (
-          <Drawer.Navigator
-            id="RootDrawer"
-            drawerContent={(props) => <CustomDrawerContent {...props} />}
+          <Stack.Navigator
+            id="RootStack"
             screenOptions={{
               headerShown: false,
-              drawerStyle: [styles.drawer, { backgroundColor: colors.bgWarm }],
             }}
           >
-            <Drawer.Screen name="Main" component={MainTabs} />
-            <Drawer.Screen name="MyPlan" component={MyPlan} />
-            <Drawer.Screen name="Settings" component={Settings} />
-            <Drawer.Screen name="PrivacyManagement" component={PrivacyManagement} />
-            <Drawer.Screen name="Help" component={Help} />
-            <Drawer.Screen name="About" component={About} />
-          </Drawer.Navigator>
+            <Stack.Screen name="Main" component={MainTabs} />
+            <Stack.Screen name="MyPlan" component={MyPlan} />
+            <Stack.Screen name="Settings" component={Settings} />
+            <Stack.Screen name="PrivacyManagement" component={PrivacyManagement} />
+            <Stack.Screen name="Help" component={Help} />
+            <Stack.Screen name="About" component={About} />
+          </Stack.Navigator>
         ) : (
           <EnterName onSave={completeNameSetup} />
         )

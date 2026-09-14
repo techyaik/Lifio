@@ -2,6 +2,7 @@ import React from 'react';
 import { Pressable, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../theme/ThemeContext';
+import { SHADOWS } from '../constants/theme';
 
 export function FAB({ onPress, color, icon = 'add' }) {
   const { colors, resolveThemeColor } = useTheme();
@@ -16,5 +17,12 @@ export function FAB({ onPress, color, icon = 'add' }) {
 }
 
 const styles = StyleSheet.create({
-  fab: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center', borderRadius: 18 },
+  fab: { 
+    width: 64, 
+    height: 64, 
+    alignItems: 'center', 
+    justifyContent: 'center', 
+    borderRadius: 32,
+    ...SHADOWS.soft,
+  },
 });

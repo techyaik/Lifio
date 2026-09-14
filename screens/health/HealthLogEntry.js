@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Alert, KeyboardAvoidingView, Platform, StyleSheet, Switch, Text, View } from 'react-native';
+import { Alert, KeyboardAvoidingView, Platform, StyleSheet, Switch, Text as RNText, View } from 'react-native';
+import { AppText as Text } from '../../components/AppText';
 import { parseISO } from 'date-fns';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../theme/ThemeContext';
@@ -150,6 +151,13 @@ export default function HealthLogEntry({ navigation, route }) {
       if (!validateNumber('periodReminderDays', 'reminder days', { min: 0, max: 14 })) return;
     }
 
+    const existingSources = editing?.sources || existingForDate?.sources || {};
+    const newSources = { ...existingSources };
+    if (form.weight !== '') newSources.weight = 'MANUAL';
+    if (form.sleep !== '') newSources.sleep = 'MANUAL';
+    if (form.steps !== '') newSources.steps = 'MANUAL';
+    if (form.water !== '') newSources.water = 'MANUAL';
+
     const payload = {
       date: trimmedDate,
       weight: form.weight ? Number(form.weight) : null,
@@ -172,6 +180,7 @@ export default function HealthLogEntry({ navigation, route }) {
       periodReminderDays: Number.parseInt(form.periodReminderDays || DEFAULTS.periodReminderDays, 10),
       flowIntensity: form.flowIntensity,
       cycleSymptoms: form.cycleSymptoms,
+      sources: newSources,
     };
 
     try {
@@ -226,7 +235,7 @@ export default function HealthLogEntry({ navigation, route }) {
       <Screen contentStyle={styles.content}>
         <AppHeader title={editing ? 'Edit health' : 'Log health'} onBack={() => navigation.goBack()} />
 
-        <View style={[styles.card, { backgroundColor: colors.white, borderColor: colors.borderLight }]}>
+        <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.borderLight }]}>
           <SectionHeader>Daily overview</SectionHeader>
           <InputField value={form.date} onChangeText={(v) => setValue('date', v)} placeholder="Date (YYYY-MM-DD)" />
           <View style={styles.twoCol}>
@@ -239,7 +248,7 @@ export default function HealthLogEntry({ navigation, route }) {
           </View>
         </View>
 
-        <View style={[styles.card, { backgroundColor: colors.white, borderColor: colors.borderLight }]}>
+        <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.borderLight }]}>
           <SectionHeader>Mood and body</SectionHeader>
           <Text style={[styles.label, { color: colors.textSecondary }]}>Mood</Text>
           <View style={styles.pillWrap}>
@@ -262,7 +271,7 @@ export default function HealthLogEntry({ navigation, route }) {
           <InputField value={form.medication} onChangeText={(v) => setValue('medication', v)} placeholder="Medication or supplement reminder" />
         </View>
 
-        <View style={[styles.card, { backgroundColor: colors.white, borderColor: colors.borderLight }]}>
+        <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.borderLight }]}>
           <SectionHeader>Health goals</SectionHeader>
           <View style={styles.threeCol}>
             <InputField style={styles.inputFlex} value={form.waterGoal} onChangeText={(v) => setValue('waterGoal', v)} placeholder="Water goal" keyboardType="number-pad" />
@@ -271,7 +280,7 @@ export default function HealthLogEntry({ navigation, route }) {
           </View>
         </View>
 
-        <View style={[styles.card, { backgroundColor: colors.white, borderColor: colors.borderLight }]}>
+        <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.borderLight }]}>
           <View style={styles.switchRow}>
             <View style={styles.switchCopy}>
               <SectionHeader>Cycle reminder</SectionHeader>
@@ -324,14 +333,14 @@ export default function HealthLogEntry({ navigation, route }) {
           ) : null}
         </View>
 
-        <View style={[styles.card, { backgroundColor: colors.white, borderColor: colors.borderLight }]}>
+        <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.borderLight }]}>
           <SectionHeader>Notes</SectionHeader>
           <InputField value={form.notes} onChangeText={(v) => setValue('notes', v)} placeholder="Anything else about today..." multiline />
         </View>
 
         <PrimaryButton
           title={saving ? (editing ? 'Updating log...' : 'Saving log...') : 'Save log'}
-          color={colors.health}
+          color={colors.pillHealth.text}
           onPress={save}
           disabled={saving}
           icon={<Ionicons name="checkmark-circle" size={18} color={colors.white} />}

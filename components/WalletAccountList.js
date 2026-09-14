@@ -1,5 +1,6 @@
 import React from 'react';
-import { ScrollView, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, Pressable, StyleSheet, Text as RNText, View } from 'react-native';
+import { AppText as Text } from './AppText';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../theme/ThemeContext';
 import { RADIUS, SHADOWS } from '../constants/theme';
@@ -30,14 +31,14 @@ export function WalletAccountList({ wallets, selectedWalletId, onSelect, onEdit,
           onPress={() => onSelect('all')}
           style={[
             styles.card,
-            { backgroundColor: colors.white, borderColor: colors.borderLight },
+            { backgroundColor: colors.surface, borderColor: colors.borderLight },
             selectedWalletId === 'all' && { borderColor: colors.health, borderWidth: 2 },
             SHADOWS.subtle,
           ]}
         >
           <View style={styles.cardHeader}>
             <View style={[styles.iconWrap, { backgroundColor: colors.accentLight.health }]}>
-              <Ionicons name="grid-outline" size={16} color={colors.health} />
+              <Ionicons name="grid-outline" size={16} color={colors.pillHealth.text} />
             </View>
           </View>
           <Text style={[styles.name, { color: colors.textPrimary }]}>All Accounts</Text>
@@ -53,7 +54,7 @@ export function WalletAccountList({ wallets, selectedWalletId, onSelect, onEdit,
               onPress={() => onSelect(w.id)}
               style={[
                 styles.card,
-                { backgroundColor: colors.white, borderColor: colors.borderLight },
+                { backgroundColor: colors.surface, borderColor: colors.borderLight },
                 isSelected && { borderColor: w.color, borderWidth: 2 },
                 SHADOWS.subtle,
               ]}
@@ -107,10 +108,10 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     textTransform: 'uppercase',
     letterSpacing: 0.8,
-    marginLeft: 16,
+    marginLeft: 24,
   },
   scrollContainer: {
-    paddingHorizontal: 16,
+    paddingHorizontal: 24,
     paddingVertical: 4,
     gap: 10,
   },

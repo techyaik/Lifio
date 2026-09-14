@@ -1,5 +1,6 @@
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text as RNText, View } from 'react-native';
+import { AppText as Text } from '../components/AppText';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../theme/ThemeContext';
 import { AppHeader } from '../components/AppHeader';
@@ -14,10 +15,10 @@ export default function About({ navigation }) {
       <AppHeader title="About Application" onBack={() => navigation.navigate('Main')} />
 
       {/* Main Branding Card */}
-      <View style={[styles.card, { backgroundColor: colors.white, borderColor: colors.borderLight }]}>
+      <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.borderLight }]}>
         <View style={styles.headerRow}>
           <View style={[styles.iconWrap, { backgroundColor: colors.accentLight.health }]}>
-            <Ionicons name="sparkles" size={24} color={colors.health} />
+            <Ionicons name="sparkles" size={24} color={colors.pillHealth.text} />
           </View>
           <View style={styles.titleColumn}>
             <Text style={[styles.title, { color: colors.textPrimary }]}>Lifio</Text>
@@ -34,24 +35,24 @@ export default function About({ navigation }) {
         <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>Technical Details</Text>
 
         <View style={styles.grid}>
-          <View style={[styles.specCard, { backgroundColor: colors.white, borderColor: colors.borderLight }]}>
+          <View style={[styles.specCard, { backgroundColor: colors.surface, borderColor: colors.borderLight }]}>
             <Text style={[styles.specLabel, { color: colors.textSecondary }]}>Version</Text>
             <Text style={[styles.specValue, { color: colors.textPrimary }]}>1.0.0</Text>
           </View>
 
-          <View style={[styles.specCard, { backgroundColor: colors.white, borderColor: colors.borderLight }]}>
+          <View style={[styles.specCard, { backgroundColor: colors.surface, borderColor: colors.borderLight }]}>
             <Text style={[styles.specLabel, { color: colors.textSecondary }]}>Platform</Text>
             <Text style={[styles.specValue, { color: colors.textPrimary }]}>Expo SDK 51</Text>
           </View>
         </View>
 
         <View style={styles.grid}>
-          <View style={[styles.specCard, { backgroundColor: colors.white, borderColor: colors.borderLight }]}>
+          <View style={[styles.specCard, { backgroundColor: colors.surface, borderColor: colors.borderLight }]}>
             <Text style={[styles.specLabel, { color: colors.textSecondary }]}>Database</Text>
             <Text style={[styles.specValue, { color: colors.textPrimary }]}>AsyncStorage</Text>
           </View>
 
-          <View style={[styles.specCard, { backgroundColor: colors.white, borderColor: colors.borderLight }]}>
+          <View style={[styles.specCard, { backgroundColor: colors.surface, borderColor: colors.borderLight }]}>
             <Text style={[styles.specLabel, { color: colors.textSecondary }]}>Release Date</Text>
             <Text style={[styles.specValue, { color: colors.textPrimary }]}>June 2026</Text>
           </View>
@@ -59,7 +60,7 @@ export default function About({ navigation }) {
       </View>
 
       {/* Ethics statement */}
-      <View style={[styles.card, { backgroundColor: colors.white, borderColor: colors.borderLight }]}>
+      <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.borderLight }]}>
         <Text style={[styles.infoTitle, { color: colors.textPrimary }]}>Our Design Values</Text>
         <Text style={[styles.body, { color: colors.textSecondary, lineHeight: 18 }]}>
           • **No Ads**: We believe diagnostic environments should remain distraction-free.{"\n"}

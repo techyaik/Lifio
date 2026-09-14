@@ -1,48 +1,48 @@
 import { COLORS } from './colors';
 
 export const RADIUS = {
-  sm: 10,
-  md: 14,
-  lg: 18,
-  xl: 26,
+  sm: 12,
+  md: 18,
+  lg: 24,
+  xl: 36,     // Venzer massive rounded corners
   pill: 999,
 };
 
 export const SPACING = {
-  screen: 18,
-  card: 14,
-  gap: 10,
-  section: 18,
+  screen: 24, // More generous padding
+  card: 20,
+  gap: 16,
+  section: 24,
 };
 
 export const SHADOWS = {
   soft: {
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.08,
-    shadowRadius: 18,
-    elevation: 4,
+    shadowColor: 'transparent',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0,
+    shadowRadius: 0,
+    elevation: 0,
   },
   subtle: {
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.06,
-    shadowRadius: 10,
-    elevation: 2,
+    shadowColor: 'transparent',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0,
+    shadowRadius: 0,
+    elevation: 0,
   },
   glow: {
-    shadowColor: COLORS.health,
-    shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.18,
-    shadowRadius: 24,
-    elevation: 5,
+    shadowColor: 'transparent',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0,
+    shadowRadius: 0,
+    elevation: 0,
   },
 };
 
 export const GRADIENTS = {
   page: [COLORS.bgWarm, COLORS.bg],
-  health: ['#2E7BBE', COLORS.health],
-  habits: ['#7B72DA', COLORS.habits],
-  notes: ['#D9902E', COLORS.notes],
-  wallet: ['#B24B2B', COLORS.wallet],
+  health: [COLORS.gradientHealthStart, COLORS.health],
+  habits: [COLORS.gradientHabitsStart, COLORS.habits],
+  notes: [COLORS.gradientNotesStart, COLORS.notes],
+  wallet: [COLORS.gradientWalletStart, COLORS.wallet],
 };

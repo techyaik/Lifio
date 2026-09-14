@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
-import { Alert, StyleSheet, Text, useWindowDimensions, View, Platform } from 'react-native';
+import { Alert, StyleSheet, Text as RNText, useWindowDimensions, View, Platform } from 'react-native';
+import { AppText as Text } from '../../components/AppText';
 import { BarChart } from 'react-native-chart-kit';
 import { Ionicons } from '@expo/vector-icons';
 import { addDays, differenceInCalendarDays, parseISO } from 'date-fns';
@@ -79,13 +80,13 @@ export default function HealthDayDetail({ navigation, route }) {
           value={entry.weight != null ? (formatWeight(entry.weight) || `${entry.weight} kg`) : '—'}
           label={`Weight ${weightUnit}`}
           accent={colors.health}
-          icon={<Ionicons name="scale-outline" size={16} color={colors.health} />}
+          icon={<Ionicons name="scale-outline" size={16} color={colors.pillHealth.text} />}
         />
         <MetricCard
           value={entry.sleep ?? '—'}
           label="Sleep hrs"
           accent={colors.health}
-          icon={<Ionicons name="bed-outline" size={16} color={colors.health} />}
+          icon={<Ionicons name="bed-outline" size={16} color={colors.pillHealth.text} />}
         />
       </View>
       <View style={styles.grid}>
@@ -93,19 +94,19 @@ export default function HealthDayDetail({ navigation, route }) {
           value={entry.steps?.toLocaleString?.() ?? '—'}
           label="Steps"
           accent={colors.health}
-          icon={<Ionicons name="walk-outline" size={16} color={colors.health} />}
+          icon={<Ionicons name="walk-outline" size={16} color={colors.pillHealth.text} />}
         />
         <MetricCard
           value={entry.water != null ? (formatWater(entry.water) || `${entry.water} glasses`) : '—'}
           label={`Water ${waterUnit}`}
           accent={colors.health}
-          icon={<Ionicons name="water-outline" size={16} color={colors.health} />}
+          icon={<Ionicons name="water-outline" size={16} color={colors.pillHealth.text} />}
         />
       </View>
       {entry.period ? (
         <View style={[styles.periodBanner, { backgroundColor: colors.accentLight.health, borderColor: colors.health }]}>
-          <Ionicons name="water" size={18} color={colors.health} />
-          <Text style={[styles.periodBannerText, { color: colors.health }]}>
+          <Ionicons name="water" size={18} color={colors.pillHealth.text} />
+          <Text style={[styles.periodBannerText, { color: colors.pillHealth.text }]}>
             Period started on this day{entry.flowIntensity ? ` · ${entry.flowIntensity} flow` : ''}
           </Text>
         </View>
@@ -117,22 +118,22 @@ export default function HealthDayDetail({ navigation, route }) {
             value={entry.mood || '—'}
             label="Mood"
             accent={colors.health}
-            icon={<Ionicons name="happy-outline" size={16} color={colors.health} />}
+            icon={<Ionicons name="happy-outline" size={16} color={colors.pillHealth.text} />}
           />
           <MetricCard
             value={entry.energy || '—'}
             label="Energy"
             accent={colors.health}
-            icon={<Ionicons name="flash-outline" size={16} color={colors.health} />}
+            icon={<Ionicons name="flash-outline" size={16} color={colors.pillHealth.text} />}
           />
         </View>
-        <View style={[styles.infoCard, { backgroundColor: colors.white, borderColor: colors.borderLight }]}>
+        <View style={[styles.infoCard, { backgroundColor: colors.surface, borderColor: colors.borderLight }]}>
           <Text style={[styles.infoTitle, { color: colors.textPrimary }]}>Symptoms</Text>
           <Text style={[styles.infoText, { color: colors.textSecondary }]}>
             {entry.symptoms?.length ? entry.symptoms.join(', ') : 'No symptoms logged.'}
           </Text>
         </View>
-        <View style={[styles.infoCard, { backgroundColor: colors.white, borderColor: colors.borderLight }]}>
+        <View style={[styles.infoCard, { backgroundColor: colors.surface, borderColor: colors.borderLight }]}>
           <Text style={[styles.infoTitle, { color: colors.textPrimary }]}>Medication or supplements</Text>
           <Text style={[styles.infoText, { color: colors.textSecondary }]}>
             {entry.medication || 'No reminder logged.'}
@@ -142,7 +143,7 @@ export default function HealthDayDetail({ navigation, route }) {
       {cycleInfo ? (
         <View style={styles.section}>
           <SectionHeader>Cycle reminder</SectionHeader>
-          <View style={[styles.infoCard, { backgroundColor: colors.white, borderColor: colors.borderLight }]}>
+          <View style={[styles.infoCard, { backgroundColor: colors.surface, borderColor: colors.borderLight }]}>
             <Text style={[styles.infoTitle, { color: colors.textPrimary }]}>Next expected period</Text>
             <Text style={[styles.infoText, { color: colors.textSecondary }]}>
               {cycleInfo.expected} · {cycleInfo.daysUntil < 0 ? `${Math.abs(cycleInfo.daysUntil)} days overdue from this log` : `${cycleInfo.daysUntil} days from this log`}
@@ -169,13 +170,13 @@ export default function HealthDayDetail({ navigation, route }) {
             decimalPlaces: 0,
             propsForBackgroundLines: { stroke: colors.borderLight },
           }}
-          style={[styles.chart, { backgroundColor: colors.white }]}
+          style={[styles.chart, { backgroundColor: colors.surface }]}
         />
       </View>
       {entry.notes ? (
         <View style={styles.section}>
           <SectionHeader>Notes</SectionHeader>
-          <Text selectable style={[styles.notes, { backgroundColor: colors.white, borderColor: colors.borderLight, color: colors.textPrimary }]}>
+          <Text selectable style={[styles.notes, { backgroundColor: colors.surface, borderColor: colors.borderLight, color: colors.textPrimary }]}>
             {entry.notes}
           </Text>
         </View>

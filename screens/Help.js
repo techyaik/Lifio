@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text as RNText, View } from 'react-native';
+import { AppText as Text } from '../components/AppText';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../theme/ThemeContext';
 import { AppHeader } from '../components/AppHeader';
@@ -55,10 +56,10 @@ export default function Help({ navigation }) {
       <AppHeader title="Help & Support" onBack={() => navigation.navigate('Main')} />
 
       {/* Support Card */}
-      <View style={[styles.card, { backgroundColor: colors.white, borderColor: colors.borderLight }]}>
+      <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.borderLight }]}>
         <View style={styles.headerRow}>
           <View style={[styles.iconWrap, { backgroundColor: colors.accentLight.health }]}>
-            <Ionicons name="help-buoy" size={24} color={colors.health} />
+            <Ionicons name="help-buoy" size={24} color={colors.pillHealth.text} />
           </View>
           <View style={styles.titleColumn}>
             <Text style={[styles.title, { color: colors.textPrimary }]}>How can we help?</Text>
@@ -68,8 +69,8 @@ export default function Help({ navigation }) {
         <Text style={[styles.body, { color: colors.textSecondary }]}>
           Browse common topics below. For custom requests or feedback, tap the button to submit a message to our developers.
         </Text>
-        <PrimaryButton title="Send Feedback / Ticket" onPress={contactSupport} color={colors.health} />
-        <PrimaryButton title="Replay Walkthrough Guides" onPress={handleReplay} color={colors.health} style={{ marginTop: 8 }} />
+        <PrimaryButton title="Send Feedback / Ticket" onPress={contactSupport} color={colors.pillHealth.text} />
+        <PrimaryButton title="Replay Walkthrough Guides" onPress={handleReplay} color={colors.pillHealth.text} style={{ marginTop: 8 }} />
       </View>
 
       {/* FAQs */}
@@ -85,7 +86,7 @@ export default function Help({ navigation }) {
                 onPress={() => toggleExpand(index)}
                 style={[
                   styles.faqCard,
-                  { backgroundColor: colors.white, borderColor: colors.borderLight }
+                  { backgroundColor: colors.surface, borderColor: colors.borderLight }
                 ]}
               >
                 <View style={styles.faqHeader}>

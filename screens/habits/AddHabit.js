@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Alert, StyleSheet, Text, View, KeyboardAvoidingView, Platform } from 'react-native';
+import { Alert, StyleSheet, Text as RNText, View, KeyboardAvoidingView, Platform } from 'react-native';
+import { AppText as Text } from '../../components/AppText';
 import { useTheme } from '../../theme/ThemeContext';
 import { CATEGORIES, GOALS } from '../../constants/categories';
 import { AppHeader } from '../../components/AppHeader';
@@ -123,9 +124,9 @@ export default function AddHabit({ navigation }) {
                     styles.segmentText,
                     { color: colors.textSecondary },
                     active && {
-                      backgroundColor: colors.white,
+                      backgroundColor: colors.surface,
                       borderRadius: RADIUS.sm,
-                      color: colors.habits,
+                      color: colors.pillLearning.text,
                       ...SHADOWS.subtle,
                     },
                   ]}
@@ -138,7 +139,7 @@ export default function AddHabit({ navigation }) {
         </View>
         <PrimaryButton
           title={saving ? 'Adding habit...' : 'Add habit'}
-          color={colors.habits}
+          color={colors.pillLearning.text}
           onPress={save}
           disabled={saving}
         />

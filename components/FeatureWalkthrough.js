@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Modal, Pressable, StyleSheet, Text as RNText, View } from 'react-native';
+import { AppText as Text } from './AppText';
 import AsyncStorage from '../storage/safeAsyncStorage';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../theme/ThemeContext';
@@ -73,10 +74,10 @@ export function FeatureWalkthrough({ screenKey, steps = [] }) {
   return visible ? (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={complete}>
       <View style={[styles.overlay, { backgroundColor: colors.overlay }]}>
-        <View style={[styles.card, { backgroundColor: colors.white, borderColor: colors.borderLight }]}>
+        <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.borderLight }]}>
           <View style={styles.headerRow}>
             <View style={[styles.iconWrap, { backgroundColor: colors.accentLight.health }]}>
-              <Ionicons name={step.icon || 'sparkles-outline'} size={22} color={colors.health} />
+              <Ionicons name={step.icon || 'sparkles-outline'} size={22} color={colors.pillHealth.text} />
             </View>
             <View style={styles.headerCopy}>
               <Text style={[styles.eyebrow, { color: colors.textSecondary }]}>

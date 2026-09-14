@@ -1,5 +1,6 @@
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text as RNText, View } from 'react-native';
+import { AppText as Text } from '../components/AppText';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../theme/ThemeContext';
 import { AppHeader } from '../components/AppHeader';
@@ -21,10 +22,10 @@ export default function MyPlan({ navigation }) {
       <AppHeader title="My Plan" onBack={() => navigation.navigate('Main')} />
 
       {/* Plan Overview Card */}
-      <View style={[styles.card, { backgroundColor: colors.white, borderColor: colors.borderLight }]}>
+      <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.borderLight }]}>
         <View style={styles.headerRow}>
           <View style={[styles.iconWrap, { backgroundColor: colors.accentLight.health }]}>
-            <Ionicons name="compass" size={24} color={colors.health} />
+            <Ionicons name="compass" size={24} color={colors.pillHealth.text} />
           </View>
           <View style={styles.titleColumn}>
             <Text style={[styles.label, { color: colors.textSecondary }]}>Strategic Compass</Text>
@@ -41,28 +42,28 @@ export default function MyPlan({ navigation }) {
         <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>Health Targets</Text>
         
         <View style={styles.grid}>
-          <View style={[styles.bentoCard, { backgroundColor: colors.white, borderColor: colors.borderLight }]}>
-            <Ionicons name="walk" size={24} color={colors.health} />
+          <View style={[styles.bentoCard, { backgroundColor: colors.surface, borderColor: colors.borderLight }]}>
+            <Ionicons name="walk" size={24} color={colors.pillHealth.text} />
             <Text style={[styles.bentoValue, { color: colors.textPrimary }]}>10,000</Text>
             <Text style={[styles.bentoLabel, { color: colors.textSecondary }]}>Steps Daily</Text>
           </View>
 
-          <View style={[styles.bentoCard, { backgroundColor: colors.white, borderColor: colors.borderLight }]}>
-            <Ionicons name="bed" size={24} color={colors.health} />
+          <View style={[styles.bentoCard, { backgroundColor: colors.surface, borderColor: colors.borderLight }]}>
+            <Ionicons name="bed" size={24} color={colors.pillHealth.text} />
             <Text style={[styles.bentoValue, { color: colors.textPrimary }]}>8.0 hrs</Text>
             <Text style={[styles.bentoLabel, { color: colors.textSecondary }]}>Ideal Sleep</Text>
           </View>
         </View>
 
         <View style={styles.grid}>
-          <View style={[styles.bentoCard, { backgroundColor: colors.white, borderColor: colors.borderLight }]}>
-            <Ionicons name="water" size={24} color={colors.health} />
+          <View style={[styles.bentoCard, { backgroundColor: colors.surface, borderColor: colors.borderLight }]}>
+            <Ionicons name="water" size={24} color={colors.pillHealth.text} />
             <Text style={[styles.bentoValue, { color: colors.textPrimary }]}>8 glasses</Text>
             <Text style={[styles.bentoLabel, { color: colors.textSecondary }]}>Hydration Goal</Text>
           </View>
 
-          <View style={[styles.bentoCard, { backgroundColor: colors.white, borderColor: colors.borderLight }]}>
-            <Ionicons name="flag" size={24} color={colors.habits} />
+          <View style={[styles.bentoCard, { backgroundColor: colors.surface, borderColor: colors.borderLight }]}>
+            <Ionicons name="flag" size={24} color={colors.pillLearning.text} />
             <Text style={[styles.bentoValue, { color: colors.textPrimary }]}>{habits.length}</Text>
             <Text style={[styles.bentoLabel, { color: colors.textSecondary }]}>Active Habits</Text>
           </View>
@@ -70,7 +71,7 @@ export default function MyPlan({ navigation }) {
       </View>
 
       {/* Habits Breakdown */}
-      <View style={[styles.card, { backgroundColor: colors.white, borderColor: colors.borderLight }]}>
+      <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.borderLight }]}>
         <Text style={[styles.cardTitle, { color: colors.textPrimary }]}>Habits Categories</Text>
         <View style={styles.breakdownList}>
           {['health', 'learning', 'fitness', 'mindfulness'].map((cat) => {

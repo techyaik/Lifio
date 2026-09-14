@@ -1,5 +1,6 @@
 import React from 'react';
-import { Text } from 'react-native';
+import { Text as RNText } from 'react-native';
+import { AppText as Text } from './AppText';
 import { useTheme } from '../theme/ThemeContext';
 import { TYPOGRAPHY } from '../constants/typography';
 

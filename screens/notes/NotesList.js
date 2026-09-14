@@ -57,15 +57,15 @@ export default function NotesList({ navigation, route }) {
 
   const header = (
     <View style={styles.headerContainer}>
-      <AppHeader title="Notes" />
+      <AppHeader title="Notes" showMenu={false} showSettings={false} />
       <View style={styles.searchRow}>
         <Ionicons name="search" size={18} color={colors.textHint} />
         <InputField value={query} onChangeText={setQuery} placeholder="Search notes" style={styles.searchInput} />
         <Pressable
           onPress={() => navigation.navigate('TagFilter')}
-          style={[styles.tagButton, { backgroundColor: colors.white, borderColor: colors.borderLight }]}
+          style={[styles.tagButton, { backgroundColor: colors.surface, borderColor: colors.borderLight }]}
         >
-          <Ionicons name="pricetags-outline" size={18} color={colors.notes} />
+          <Ionicons name="pricetags-outline" size={18} color={colors.pillFitness.text} />
         </Pressable>
       </View>
       <View style={styles.tags}>
@@ -78,7 +78,7 @@ export default function NotesList({ navigation, route }) {
 
   return (
     <View style={styles.container}>
-      <Screen loading={loading} scroll={false}>
+      <Screen loading={loading} scroll={false} withBottomNav>
         <FlatList
           data={filtered}
           keyExtractor={(item) => item.id}
@@ -99,7 +99,7 @@ export default function NotesList({ navigation, route }) {
               accent={colors.notes}
             />
           }
-          contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + 88 }]}
+          contentContainerStyle={styles.list}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
           initialNumToRender={8}
@@ -108,8 +108,8 @@ export default function NotesList({ navigation, route }) {
         />
       </Screen>
       {!loading && notes.length > 0 && (
-        <View style={styles.fabWrap}>
-          <FAB color={colors.notes} onPress={() => navigation.navigate('NoteEditor')} />
+        <View style={[styles.fabWrap, { bottom: insets.bottom + 104 }]}>
+          <FAB color={colors.pillFitness.text} onPress={() => navigation.navigate('NoteEditor')} />
         </View>
       )}
       <FeatureWalkthrough screenKey="notes" steps={WALKTHROUGH_STEPS.notes} />
@@ -124,19 +124,19 @@ const styles = StyleSheet.create({
   searchInput: { flex: 1 },
   tagButton: {
     alignItems: 'center',
-    borderRadius: RADIUS.lg,
-    borderWidth: 1,
-    height: 46,
+    borderRadius: RADIUS.xl,
+    borderWidth: 0,
+    height: 52,
     justifyContent: 'center',
-    width: 46,
-    ...SHADOWS.subtle,
+    width: 52,
+    ...SHADOWS.soft,
   },
   tags: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 4 },
   list: { gap: 16, paddingVertical: SPACING.screen, paddingHorizontal: SPACING.screen },
   fabWrap: {
     position: 'absolute',
-    right: 20,
-    bottom: 20,
+    right: 24,
+    bottom: 24,
     ...SHADOWS.glow,
   },
 });

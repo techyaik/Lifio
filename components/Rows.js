@@ -1,5 +1,6 @@
 import React from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text as RNText, View } from 'react-native';
+import { AppText as Text } from './AppText';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../theme/ThemeContext';
 import { TYPOGRAPHY } from '../constants/typography';
@@ -15,7 +16,7 @@ export function ListRow({ title, subtitle, right, onPress, onLongPress }) {
       onLongPress={onLongPress}
       style={[
         styles.row,
-        { backgroundColor: colors.white, borderColor: colors.borderLight }
+        { backgroundColor: colors.surface, borderColor: colors.borderLight }
       ]}
     >
       <View style={styles.rowText}>
@@ -42,7 +43,7 @@ export function HabitRow({ habit, done, streak, category, onToggle, onPress, onL
       onLongPress={onLongPress}
       style={[
         styles.row,
-        { backgroundColor: colors.white, borderColor: colors.borderLight }
+        { backgroundColor: colors.surface, borderColor: colors.borderLight }
       ]}
     >
       <Pressable
@@ -69,22 +70,22 @@ export function HabitRow({ habit, done, streak, category, onToggle, onPress, onL
 const styles = StyleSheet.create({
   row: {
     alignItems: 'center',
-    borderRadius: RADIUS.lg,
-    borderWidth: 1,
+    borderRadius: RADIUS.xl,
+    borderWidth: 0,
     flexDirection: 'row',
-    gap: 10,
-    minHeight: 56,
-    padding: 12,
-    ...SHADOWS.subtle,
+    gap: 12,
+    minHeight: 64,
+    padding: 16,
+    ...SHADOWS.soft,
   },
   rowText: { flex: 1, gap: 5 },
-  rowTitle: { fontSize: 14, fontWeight: '600' },
+  rowTitle: { fontSize: 15, fontWeight: '700' },
   check: {
     alignItems: 'center',
-    borderRadius: 13,
+    borderRadius: 16,
     borderWidth: 1.5,
-    height: 26,
+    height: 32,
     justifyContent: 'center',
-    width: 26,
+    width: 32,
   },
 });

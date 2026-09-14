@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Alert, KeyboardAvoidingView, Modal, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, KeyboardAvoidingView, Modal, Platform, Pressable, StyleSheet, Text as RNText, View } from 'react-native';
+import { AppText as Text } from '../../components/AppText';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../theme/ThemeContext';
 import { AppHeader } from '../../components/AppHeader';
@@ -124,7 +125,7 @@ export default function NoteEditor({ navigation, route }) {
           <Pill label="+ Add tag" onPress={() => setTagModal(true)} palette={colors.pillFitness} />
         </View>
       </Screen>
-      <View style={[styles.toolbar, { backgroundColor: colors.white, borderTopColor: colors.borderLight }]}>
+      <View style={[styles.toolbar, { backgroundColor: colors.surface, borderTopColor: colors.borderLight }]}>
         <Tool label="B" onPress={() => setBody((current) => wrap(current, '**'))} colors={colors} />
         <Tool label="I" onPress={() => setBody((current) => wrap(current, '*'))} colors={colors} />
         <Tool icon="list" onPress={() => setBody((current) => `${current}\n- `)} colors={colors} />
@@ -136,7 +137,7 @@ export default function NoteEditor({ navigation, route }) {
         <Modal visible={tagModal} transparent animationType="fade">
           <View style={[styles.modalBackdrop, { backgroundColor: colors.overlay }]}>
             <Pressable style={StyleSheet.absoluteFill} onPress={() => setTagModal(false)} />
-            <Pressable style={[styles.modalCard, { backgroundColor: colors.white }]}>
+            <Pressable style={[styles.modalCard, { backgroundColor: colors.surface }]}>
               <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>Add tag</Text>
               <InputField value={newTag} onChangeText={setNewTag} placeholder="Tag name" autoFocus />
               <Pressable onPress={addTag} style={[styles.modalButton, { backgroundColor: colors.notes }]}>
@@ -154,9 +155,9 @@ function Tool({ icon, label, onPress, danger, active, colors }) {
   return (
     <Pressable onPress={onPress} style={[styles.tool, active ? [styles.toolActive, { backgroundColor: colors.surface }] : null]}>
       {icon ? (
-        <Ionicons name={icon} size={20} color={danger ? colors.danger : active ? colors.notes : colors.textSecondary} />
+        <Ionicons name={icon} size={20} color={danger ? colors.danger : active ? colors.pillFitness.text : colors.textSecondary} />
       ) : (
-        <Text style={[styles.toolLabel, { color: active ? colors.notes : colors.textSecondary }]}>{label}</Text>
+        <Text style={[styles.toolLabel, { color: active ? colors.pillFitness.text : colors.textSecondary }]}>{label}</Text>
       )}
     </Pressable>
   );

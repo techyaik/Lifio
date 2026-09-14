@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, Pressable, StyleSheet, Text as RNText, View } from 'react-native';
+import { AppText as Text } from './AppText';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../theme/ThemeContext';
 import { InputField } from './InputField';
@@ -45,7 +46,7 @@ export function QuickAddForm({ onAdd }) {
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.white, borderColor: colors.borderLight }]}>
+    <View style={[styles.container, { backgroundColor: colors.surface, borderColor: colors.borderLight }]}>
       {/* 1. Transaction Type Toggle Row */}
       <View style={[styles.typeRow, { backgroundColor: colors.surface, borderColor: colors.borderLight }]}>
         <Pressable
@@ -53,7 +54,7 @@ export function QuickAddForm({ onAdd }) {
           style={[
             styles.typeTab,
             type === 'out' && {
-              backgroundColor: colors.white,
+              backgroundColor: colors.surface,
               borderRadius: RADIUS.sm,
               ...SHADOWS.subtle,
             },
@@ -73,7 +74,7 @@ export function QuickAddForm({ onAdd }) {
           style={[
             styles.typeTab,
             type === 'in' && {
-              backgroundColor: colors.white,
+              backgroundColor: colors.surface,
               borderRadius: RADIUS.sm,
               ...SHADOWS.subtle,
             },

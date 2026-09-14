@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
-import { Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { Pressable, StyleSheet, Text as RNText, View, useWindowDimensions } from 'react-native';
+import { AppText as Text } from '../components/AppText';
 import { Ionicons } from '@expo/vector-icons';
 import Svg, { Polyline } from 'react-native-svg';
 import {
@@ -207,9 +208,9 @@ export default function Analytics({ navigation }) {
           </View>
 
           <View style={[styles.heroStatsRow, isCompact ? styles.heroStatsRowCompact : null]}>
-            <TopMetric label="Health logs" value={healthSummary.totalLogs} color={colors.health} textColor={dashboardText} mutedColor={dashboardMuted} />
-            <TopMetric label="Habit streak" value={`${topHabitStreak}d`} color={colors.habits} textColor={dashboardText} mutedColor={dashboardMuted} />
-            <TopMetric label="Notes" value={notesSummary.total} color={colors.notes} textColor={dashboardText} mutedColor={dashboardMuted} />
+            <TopMetric label="Health logs" value={healthSummary.totalLogs} color={colors.pillHealth.text} textColor={dashboardText} mutedColor={dashboardMuted} />
+            <TopMetric label="Habit streak" value={`${topHabitStreak}d`} color={colors.pillLearning.text} textColor={dashboardText} mutedColor={dashboardMuted} />
+            <TopMetric label="Notes" value={notesSummary.total} color={colors.pillFitness.text} textColor={dashboardText} mutedColor={dashboardMuted} />
             <TopMetric label="Wallet" value={wallets.length || 0} color={colors.wallet} textColor={dashboardText} mutedColor={dashboardMuted} />
           </View>
         </View>
@@ -289,7 +290,7 @@ export default function Analytics({ navigation }) {
             <>
               <Text style={[styles.metricDisplay, { color: dashboardText }]}>{habitsDoneToday}/{activeHabits.length}</Text>
               <Text style={[styles.metricSubtext, { color: dashboardMuted }]}>completed today</Text>
-              <ProgressBar percent={habitCompletionPercent} color={colors.habits} trackColor={dashboardTrack} />
+              <ProgressBar percent={habitCompletionPercent} color={colors.pillLearning.text} trackColor={dashboardTrack} />
               <MiniLineStats data={habitsWeekSeries} accent={colors.habits} muted={dashboardHint} />
               <Text style={[styles.detailLine, { color: dashboardMuted }]}>
                 Best active streak <Text style={{ color: dashboardText }}>{topHabitStreak} days</Text>
@@ -327,7 +328,7 @@ export default function Analytics({ navigation }) {
                   <Text style={[styles.chartMetaValue, { color: dashboardText }]}>{notesSummary.pinned}</Text>
                 </View>
               </View>
-              <BarsChart data={notesWeekSeries} color={colors.notes} trackColor={dashboardTrack} labelColor={dashboardHint} compact />
+              <BarsChart data={notesWeekSeries} color={colors.pillFitness.text} trackColor={dashboardTrack} labelColor={dashboardHint} compact />
               <View style={[styles.notePreviewCard, { backgroundColor: dashboardCardAlt, borderColor: dashboardBorder }]}>
                 <Text style={[styles.notePreviewTitle, { color: dashboardText }]} numberOfLines={1}>
                   {notesSummary.latestTitle || 'Untitled'}
@@ -385,7 +386,7 @@ export default function Analytics({ navigation }) {
           <Text style={[styles.lowerSectionTitle, { color: dashboardMuted }]}>Recent activity</Text>
           <View style={[styles.activityPanel, { backgroundColor: dashboardCardBg, borderColor: dashboardBorder }]}>
             <TimelineRow
-              color={colors.health}
+              color={colors.pillHealth.text}
               label="Health"
               value={today?.createdAt ? `${displayDate(today.createdAt, 'MMM d')} log updated` : 'No health entry today'}
               text={dashboardText}
@@ -394,7 +395,7 @@ export default function Analytics({ navigation }) {
               last={false}
             />
             <TimelineRow
-              color={colors.habits}
+              color={colors.pillLearning.text}
               label="Habits"
               value={activeHabits.length ? `${habitsDoneToday} completions today` : 'No habits scheduled'}
               text={dashboardText}
@@ -403,7 +404,7 @@ export default function Analytics({ navigation }) {
               last={false}
             />
             <TimelineRow
-              color={colors.notes}
+              color={colors.pillFitness.text}
               label="Notes"
               value={notesSummary.latestUpdated ? `Latest note ${displayDate(notesSummary.latestUpdated, 'MMM d')}` : 'No notes yet'}
               text={dashboardText}

@@ -1,18 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import AsyncStorage from '../storage/safeAsyncStorage';
-import {
-  AccessibilityInfo,
-  Alert,
-  Animated,
-  Easing,
-  Modal,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-  useWindowDimensions,
-} from 'react-native';
+import { AccessibilityInfo, Alert, Animated, Easing, Modal, Pressable, ScrollView, StyleSheet, Text as RNText, View, useWindowDimensions,  } from 'react-native';
+import { AppText as Text } from '../components/AppText';
 import { addDays, format, subDays } from 'date-fns';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
@@ -296,7 +285,7 @@ function SegmentedPicker({ options, value, onSelect, colors }) {
             <Text
               style={[
                 styles.segmentedLabel,
-                { color: active ? colors.health : colors.textPrimary },
+                { color: active ? colors.pillHealth.text : colors.textPrimary },
               ]}
             >
               {option.label}
@@ -319,7 +308,7 @@ function NavRow({ icon, iconBg, iconColor, title, subtitle, onPress, colors, rig
     >
       {icon ? (
         <View style={[styles.navIconWrap, { backgroundColor: iconBg || colors.accentLight.health }]}>
-          <Ionicons name={icon} size={18} color={iconColor || colors.health} />
+          <Ionicons name={icon} size={18} color={iconColor || colors.pillHealth.text} />
         </View>
       ) : null}
       <View style={styles.navRowInfo}>
@@ -649,7 +638,7 @@ export default function Settings() {
       {/* ── 1. Appearance ─────────────────────────────────────────────── */}
       <View style={styles.section}>
         <SectionHeader>Appearance</SectionHeader>
-        <View style={[styles.card, { backgroundColor: colors.white, borderColor: colors.borderLight }]}>
+        <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.borderLight }]}>
           <Text style={[styles.cardDesc, { color: colors.textSecondary }]}>
             Choose how Lifio looks on your device.
           </Text>
@@ -676,9 +665,9 @@ export default function Settings() {
                         : 'phone-portrait-outline'
                     }
                     size={20}
-                    color={active ? colors.health : colors.textSecondary}
+                    color={active ? colors.pillHealth.text : colors.textSecondary}
                   />
-                  <Text style={[styles.themeOptionLabel, { color: active ? colors.health : colors.textPrimary }]}>
+                  <Text style={[styles.themeOptionLabel, { color: active ? colors.pillHealth.text : colors.textPrimary }]}>
                     {mode.charAt(0).toUpperCase() + mode.slice(1)}
                   </Text>
                 </Pressable>
@@ -691,10 +680,10 @@ export default function Settings() {
       {/* ── 2. Profile ────────────────────────────────────────────────── */}
       <View style={styles.section}>
         <SectionHeader>Profile</SectionHeader>
-        <View style={[styles.card, { backgroundColor: colors.white, borderColor: colors.borderLight }]}>
+        <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.borderLight }]}>
           <View style={[styles.optionRow, isCompact ? styles.optionRowCompact : null]}>
             <View style={[styles.navIconWrap, { backgroundColor: colors.accentLight.health }]}>
-              <Ionicons name="person-outline" size={18} color={colors.health} />
+              <Ionicons name="person-outline" size={18} color={colors.pillHealth.text} />
             </View>
             <View style={styles.optionInfo}>
               <Text style={[styles.optionTitle, { color: colors.textPrimary }]}>Display Name</Text>
@@ -706,7 +695,7 @@ export default function Settings() {
               onPress={openNameModal}
               style={[styles.inlineButton, { backgroundColor: colors.accentLight.health, borderColor: colors.health }]}
             >
-              <Text style={[styles.inlineButtonText, { color: colors.health }]}>
+              <Text style={[styles.inlineButtonText, { color: colors.pillHealth.text }]}>
                 {profileName ? 'Edit' : 'Set'}
               </Text>
             </Pressable>
@@ -717,7 +706,7 @@ export default function Settings() {
       {/* ── 3. Health ─────────────────────────────────────────────────── */}
       <View style={styles.section}>
         <SectionHeader>Health</SectionHeader>
-        <View style={[styles.card, { backgroundColor: colors.white, borderColor: colors.borderLight }]}>
+        <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.borderLight }]}>
           <Text style={[styles.cardDesc, { color: colors.textSecondary }]}>
             Select the units used when logging and viewing your health metrics.
           </Text>
@@ -725,7 +714,7 @@ export default function Settings() {
           {/* Weight */}
           <View style={[styles.unitRow, isCompact ? styles.unitRowCompact : null]}>
             <View style={[styles.unitIconWrap, { backgroundColor: colors.accentLight.health }]}>
-              <Ionicons name="barbell-outline" size={16} color={colors.health} />
+              <Ionicons name="barbell-outline" size={16} color={colors.pillHealth.text} />
             </View>
             <View style={[styles.unitLabelWrap, isCompact ? styles.unitLabelWrapCompact : null]}>
               <Text style={[styles.optionTitle, { color: colors.textPrimary }]}>Weight</Text>
@@ -745,7 +734,7 @@ export default function Settings() {
           {/* Water */}
           <View style={[styles.unitRow, isCompact ? styles.unitRowCompact : null]}>
             <View style={[styles.unitIconWrap, { backgroundColor: colors.accentLight.health }]}>
-              <Ionicons name="water-outline" size={16} color={colors.health} />
+              <Ionicons name="water-outline" size={16} color={colors.pillHealth.text} />
             </View>
             <View style={[styles.unitLabelWrap, isCompact ? styles.unitLabelWrapCompact : null]}>
               <Text style={[styles.optionTitle, { color: colors.textPrimary }]}>Water</Text>
@@ -765,7 +754,7 @@ export default function Settings() {
       {/* ── 4. Habits ─────────────────────────────────────────────────── */}
       <View style={styles.section}>
         <SectionHeader>Habits</SectionHeader>
-        <View style={[styles.card, { backgroundColor: colors.white, borderColor: colors.borderLight }]}>
+        <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.borderLight }]}>
           <InfoRow
             icon="alarm-outline"
             iconBg={colors.accentLight.habits}
@@ -780,7 +769,7 @@ export default function Settings() {
       {/* ── 5. Wallet ─────────────────────────────────────────────────── */}
       <View style={styles.section}>
         <SectionHeader>Wallet</SectionHeader>
-        <View style={[styles.card, { backgroundColor: colors.white, borderColor: colors.borderLight }]}>
+        <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.borderLight }]}>
           {/* Currency */}
           <Text style={[styles.cardDesc, { color: colors.textSecondary }]}>
             Currency used for wallet balance, spending, and transaction history.
@@ -802,10 +791,10 @@ export default function Settings() {
                     selected && { backgroundColor: colors.accentLight.health, borderColor: colors.health },
                   ]}
                 >
-                  <Text style={[styles.currencySymbol, { color: selected ? colors.health : colors.textPrimary }]}>
+                  <Text style={[styles.currencySymbol, { color: selected ? colors.pillHealth.text : colors.textPrimary }]}>
                     {item.symbol}
                   </Text>
-                  <Text style={[styles.currencyLabel, { color: selected ? colors.health : colors.textSecondary }]}>
+                  <Text style={[styles.currencyLabel, { color: selected ? colors.pillHealth.text : colors.textSecondary }]}>
                     {item.code}
                   </Text>
                 </Pressable>
@@ -818,12 +807,12 @@ export default function Settings() {
       {/* ── 6. Data & Privacy ─────────────────────────────────────────── */}
       <View style={styles.section}>
         <SectionHeader>Data & Privacy</SectionHeader>
-        <View style={[styles.card, { backgroundColor: colors.white, borderColor: colors.borderLight }]}>
+        <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.borderLight }]}>
 
           {/* Local-storage notice */}
           <View style={[styles.privacyNotice, { backgroundColor: colors.accentLight.health, borderColor: colors.health }]}>
-            <Ionicons name="shield-checkmark-outline" size={16} color={colors.health} />
-            <Text style={[styles.privacyNoticeText, { color: colors.health }]}>
+            <Ionicons name="shield-checkmark-outline" size={16} color={colors.pillHealth.text} />
+            <Text style={[styles.privacyNoticeText, { color: colors.pillHealth.text }]}>
               All your data is stored privately on this device. Nothing is sent to any server.
             </Text>
           </View>
@@ -832,7 +821,7 @@ export default function Settings() {
           <NavRow
             icon="download-outline"
             iconBg={colors.accentLight.health}
-            iconColor={colors.health}
+            iconColor={colors.pillHealth.text}
             title="Export App Data"
             subtitle="Share a full JSON backup of all your tracked data"
             onPress={exportAllData}
@@ -846,7 +835,7 @@ export default function Settings() {
           <NavRow
             icon="shield-outline"
             iconBg={colors.accentLight.health}
-            iconColor={colors.health}
+            iconColor={colors.pillHealth.text}
             title="Manage Privacy"
             subtitle="Reset wallet passcode or clear individual data sections"
             onPress={() => navigation.navigate('PrivacyManagement')}
@@ -871,11 +860,11 @@ export default function Settings() {
       {/* ── 7. About ──────────────────────────────────────────────────── */}
       <View style={styles.section}>
         <SectionHeader>About</SectionHeader>
-        <View style={[styles.card, { backgroundColor: colors.white, borderColor: colors.borderLight }]}>
+        <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.borderLight }]}>
           <NavRow
             icon="information-circle-outline"
             iconBg={colors.accentLight.habits}
-            iconColor={colors.habits}
+            iconColor={colors.pillLearning.text}
             title="About Lifio"
             subtitle="Version, design values, and app details"
             onPress={() => navigation.navigate('About')}
@@ -887,7 +876,7 @@ export default function Settings() {
           <NavRow
             icon="help-circle-outline"
             iconBg={colors.accentLight.notes}
-            iconColor={colors.notes}
+            iconColor={colors.pillFitness.text}
             title="Help & FAQ"
             subtitle="Tips, frequently asked questions, and feature guidance"
             onPress={() => navigation.navigate('Help')}
@@ -904,7 +893,7 @@ export default function Settings() {
       {developerMode ? (
         <View style={styles.section}>
           <SectionHeader>Developer Tools</SectionHeader>
-          <View style={[styles.card, { backgroundColor: colors.white, borderColor: colors.borderLight }]}>
+          <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.borderLight }]}>
             <Text style={[styles.cardDesc, { color: colors.textSecondary }]}>
               Dummy records are tagged separately and removed independently from real user data.
             </Text>
@@ -913,8 +902,8 @@ export default function Settings() {
                 onPress={confirmFill}
                 style={[styles.actionButton, { backgroundColor: colors.accentLight.health, borderColor: colors.health }]}
               >
-                <Ionicons name="cloud-upload-outline" size={18} color={colors.health} />
-                <Text style={[styles.actionButtonText, { color: colors.health }]}>Input Dummy Data</Text>
+                <Ionicons name="cloud-upload-outline" size={18} color={colors.pillHealth.text} />
+                <Text style={[styles.actionButtonText, { color: colors.pillHealth.text }]}>Input Dummy Data</Text>
               </Pressable>
 
               <Pressable
@@ -946,10 +935,10 @@ export default function Settings() {
           onRequestClose={() => setPasscodeModalVisible(false)}
         >
           <View style={[styles.modalBackdrop, { backgroundColor: colors.overlay }]}>
-            <View style={[styles.modalCard, { backgroundColor: colors.white, borderColor: colors.borderLight }]}>
+            <View style={[styles.modalCard, { backgroundColor: colors.surface, borderColor: colors.borderLight }]}>
               <View style={styles.headerRow}>
                 <View style={[styles.iconWrap, { backgroundColor: colors.accentLight.health }]}>
-                  <Ionicons name="lock-closed-outline" size={22} color={colors.health} />
+                  <Ionicons name="lock-closed-outline" size={22} color={colors.pillHealth.text} />
                 </View>
                 <View style={styles.titleColumn}>
                   <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>Enable Developer Mode</Text>
@@ -983,7 +972,7 @@ export default function Settings() {
                   onPress={enableDeveloperMode}
                   style={[styles.actionButton, { backgroundColor: colors.accentLight.health, borderColor: colors.health }]}
                 >
-                  <Text style={[styles.actionButtonText, { color: colors.health }]}>Enable</Text>
+                  <Text style={[styles.actionButtonText, { color: colors.pillHealth.text }]}>Enable</Text>
                 </Pressable>
               </View>
             </View>
@@ -1000,10 +989,10 @@ export default function Settings() {
           onRequestClose={() => setNameModalVisible(false)}
         >
           <View style={[styles.modalBackdrop, { backgroundColor: colors.overlay }]}>
-            <View style={[styles.modalCard, { backgroundColor: colors.white, borderColor: colors.borderLight }]}>
+            <View style={[styles.modalCard, { backgroundColor: colors.surface, borderColor: colors.borderLight }]}>
               <View style={styles.headerRow}>
                 <View style={[styles.iconWrap, { backgroundColor: colors.accentLight.health }]}>
-                  <Ionicons name="person-outline" size={22} color={colors.health} />
+                  <Ionicons name="person-outline" size={22} color={colors.pillHealth.text} />
                 </View>
                 <View style={styles.titleColumn}>
                   <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>Your display name</Text>
@@ -1037,7 +1026,7 @@ export default function Settings() {
                   onPress={saveProfileDisplayName}
                   style={[styles.actionButton, { backgroundColor: colors.accentLight.health, borderColor: colors.health }]}
                 >
-                  <Text style={[styles.actionButtonText, { color: colors.health }]}>Save</Text>
+                  <Text style={[styles.actionButtonText, { color: colors.pillHealth.text }]}>Save</Text>
                 </Pressable>
               </View>
             </View>
@@ -1052,7 +1041,7 @@ export default function Settings() {
 
 const styles = StyleSheet.create({
   screenContent: {
-    paddingBottom: 28,
+    paddingBottom: 110, // Increased padding to clear bottom navigation and safe area
   },
   animatedContent: {
     gap: 16,

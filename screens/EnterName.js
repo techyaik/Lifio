@@ -1,13 +1,6 @@
 import React, { useMemo, useState } from 'react';
-import {
-  Image,
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { Image, KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text as RNText, View,  } from 'react-native';
+import { AppText as Text } from '../components/AppText';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../theme/ThemeContext';
 import { Screen } from '../components/Screen';
@@ -60,10 +53,10 @@ export default function EnterName({ onSave }) {
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
         <View style={styles.root}>
-          <View style={[styles.brandCard, { backgroundColor: colors.white, borderColor: colors.borderLight }]}>
+          <View style={[styles.brandCard, { backgroundColor: colors.surface, borderColor: colors.borderLight }]}>
             <Image source={LOGO} style={styles.logo} />
             <View style={styles.copyBlock}>
-              <Text style={[styles.eyebrow, { color: colors.health }]}>Welcome to Lifio</Text>
+              <Text style={[styles.eyebrow, { color: colors.pillHealth.text }]}>Welcome to Lifio</Text>
               <Text style={[styles.title, { color: colors.textPrimary }]}>What should we call you?</Text>
               <Text style={[styles.body, { color: colors.textSecondary }]}>
                 No account setup, no password. Just your name, saved on this device, so the app feels more personal from the start.
@@ -71,7 +64,7 @@ export default function EnterName({ onSave }) {
             </View>
           </View>
 
-          <View style={[styles.formCard, { backgroundColor: colors.white, borderColor: colors.borderLight }]}>
+          <View style={[styles.formCard, { backgroundColor: colors.surface, borderColor: colors.borderLight }]}>
             <Text style={[styles.label, { color: colors.textSecondary }]}>Your name</Text>
             <InputField
               value={name}
@@ -91,7 +84,7 @@ export default function EnterName({ onSave }) {
             />
 
             <View style={[styles.hintRow, { backgroundColor: colors.surface, borderColor: colors.borderLight }]}>
-              <Ionicons name="sparkles-outline" size={15} color={colors.health} />
+              <Ionicons name="sparkles-outline" size={15} color={colors.pillHealth.text} />
               <Text style={[styles.hintText, { color: colors.textSecondary }]}>{hintText}</Text>
             </View>
 
@@ -101,7 +94,7 @@ export default function EnterName({ onSave }) {
               title={saving ? 'Saving...' : 'Continue'}
               onPress={handleSave}
               disabled={saving}
-              color={colors.health}
+              color={colors.pillHealth.text}
               icon={<Ionicons name="arrow-forward" size={17} />}
             />
 

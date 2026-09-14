@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
-import { Alert, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, FlatList, Pressable, StyleSheet, Text as RNText, View } from 'react-native';
+import { AppText as Text } from '../../components/AppText';
 import { Ionicons } from '@expo/vector-icons';
 import { addMonths, format, isToday, isYesterday, parseISO } from 'date-fns';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -177,14 +178,10 @@ export default function WalletList({ navigation }) {
     const sortedDates = Object.keys(grouped).sort((a, b) => b.localeCompare(a));
 
     sortedDates.forEach((date) => {
-      const dateItems = grouped[date];
-      dateItems.forEach((tx, idx) => {
-        data.push({
-          type: 'item',
-          tx,
-          showHeader: idx === 0,
-          date,
-        });
+      data.push({
+        type: 'dateGroup',
+        date,
+        transactions: grouped[date],
       });
     });
 
@@ -289,7 +286,9 @@ export default function WalletList({ navigation }) {
 
   const header = (
     <View style={styles.headerContainer}>
-      <AppHeader title="Wallet" />
+      <View style={{ paddingHorizontal: 24 }}>
+        <AppHeader title="Wallet" showMenu={false} showSettings={false} />
+      </View>
 
       {/* 1. Accounts Scroll list */}
       <WalletAccountList
@@ -302,18 +301,20 @@ export default function WalletList({ navigation }) {
       />
 
       {/* 2. Monthly Balance Tracker Card */}
-      <WalletBalance
-        balance={activeBalance}
-        totalIn={totals.totalIn}
-        totalOut={totals.totalOut}
-        monthLabel={monthLabel}
-        onPrevMonth={handlePrevMonth}
-        onNextMonth={handleNextMonth}
-        formatMoney={formatMoney}
-      />
+      <View style={{ paddingHorizontal: 24 }}>
+        <WalletBalance
+          balance={activeBalance}
+          totalIn={totals.totalIn}
+          totalOut={totals.totalOut}
+          monthLabel={monthLabel}
+          onPrevMonth={handlePrevMonth}
+          onNextMonth={handleNextMonth}
+          formatMoney={formatMoney}
+        />
+      </View>
 
       {/* 3. Transaction Type Filters */}
-      <View style={styles.filterSection}>
+      <View style={[styles.filterSection, { paddingHorizontal: 24 }]}>
         <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>Type</Text>
         <View style={styles.filterBar}>
           {TYPE_FILTERS.map((f) => (
@@ -330,7 +331,7 @@ export default function WalletList({ navigation }) {
 
       {/* 4. Category Filters Scrollbar */}
       <View style={styles.filterSection}>
-        <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>Category</Text>
+        <Text style={[styles.sectionTitle, { color: colors.textSecondary, marginLeft: 24 }]}>Category</Text>
         <FlatList
           horizontal
           showsHorizontalScrollIndicator={false}
@@ -346,46 +347,50 @@ export default function WalletList({ navigation }) {
               />
             </View>
           )}
-          contentContainerStyle={{ paddingVertical: 2 }}
+          contentContainerStyle={{ paddingHorizontal: 24, paddingVertical: 2 }}
         />
       </View>
 
-      <Text style={[styles.historyHeader, { color: colors.textSecondary }]}>History</Text>
+      <Text style={[styles.historyHeader, { color: colors.textSecondary, marginLeft: 24 }]}>History</Text>
     </View>
   );
 
   return (
     <View style={styles.container}>
-      <Screen loading={loading} scroll={false}>
+      <Screen loading={loading} scroll={false} withBottomNav>
         <FlatList
           data={listData}
-          keyExtractor={(item) => item.tx.id}
+          keyExtractor={(item) => item.date}
           ListHeaderComponent={header}
           renderItem={({ item }) => (
             <View>
-              {item.showHeader ? (
-                <View style={styles.sectionHeader}>
-                  <SectionHeader>{getDayHeaderLabel(item.date)}</SectionHeader>
-                </View>
-              ) : null}
-              <View style={[styles.itemBox, { backgroundColor: colors.white }]}>
-                <TransactionItem
-                  transaction={item.tx}
-                  onPress={() => handleEditTxClick(item.tx)}
-                  onDelete={() => handleDeleteTxClick(item.tx)}
-                  formatMoney={formatMoney}
-                />
+              <View style={styles.sectionHeader}>
+                <SectionHeader>{getDayHeaderLabel(item.date)}</SectionHeader>
+              </View>
+              <View style={[styles.itemBox, { backgroundColor: colors.surface }]}>
+                {item.transactions.map((tx, idx) => (
+                  <TransactionItem
+                    key={tx.id}
+                    transaction={tx}
+                    onPress={() => handleEditTxClick(tx)}
+                    onDelete={() => handleDeleteTxClick(tx)}
+                    formatMoney={formatMoney}
+                    isLast={idx === item.transactions.length - 1}
+                  />
+                ))}
               </View>
             </View>
           )}
           ListEmptyComponent={
-            <EmptyState
-              icon="wallet-outline"
-              message="No transactions logged for these filters."
-              accent={colors.wallet}
-            />
+            <View style={{ paddingHorizontal: 24 }}>
+              <EmptyState
+                icon="wallet-outline"
+                message="No transactions logged for these filters."
+                accent={colors.wallet}
+              />
+            </View>
           }
-          contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + 88 }]}
+          contentContainerStyle={styles.list}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         />
@@ -396,6 +401,7 @@ export default function WalletList({ navigation }) {
           style={({ pressed }) => [
             styles.fab,
             { backgroundColor: colors.wallet, opacity: pressed ? 0.9 : 1 },
+            { bottom: insets.bottom + 104 }
           ]}
         >
           <Ionicons name="add" size={28} color={colors.white} />
@@ -438,7 +444,6 @@ const styles = StyleSheet.create({
   },
   headerContainer: {
     gap: 12,
-    paddingHorizontal: 16,
     paddingTop: 8,
   },
   filterSection: {
@@ -449,7 +454,6 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     textTransform: 'uppercase',
     letterSpacing: 0.8,
-    marginLeft: 2,
   },
   filterBar: {
     flexDirection: 'row',
@@ -460,7 +464,6 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     textTransform: 'uppercase',
     letterSpacing: 0.8,
-    marginLeft: 2,
     marginTop: 8,
   },
   list: {
@@ -468,22 +471,23 @@ const styles = StyleSheet.create({
     paddingBottom: 88, // Space for FAB
   },
   sectionHeader: {
-    paddingHorizontal: 16,
+    paddingHorizontal: 24,
     marginTop: 8,
     marginBottom: 4,
   },
   itemBox: {
-    marginHorizontal: 16,
-    borderRadius: RADIUS.md,
+    marginHorizontal: 24,
+    borderRadius: RADIUS.xl,
+    paddingVertical: 4,
     ...SHADOWS.subtle,
   },
   fab: {
     position: 'absolute',
-    right: 20,
-    bottom: 20,
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    right: 24,
+    bottom: 24,
+    width: 64,
+    height: 64,
+    borderRadius: 32,
     alignItems: 'center',
     justifyContent: 'center',
     zIndex: 999,

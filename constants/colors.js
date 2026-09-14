@@ -1,113 +1,133 @@
 export const LIGHT_COLORS = {
-  health: '#185FA5',
-  habits: '#534AB7',
-  notes: '#BA7517',
-  wallet: '#993C1D',
-  gradientHealthStart: '#2E7BBE',
-  gradientHabitsStart: '#7B72DA',
-  gradientNotesStart: '#D9902E',
-  gradientWalletStart: '#B24B2B',
-  gradientDangerStart: '#D95D35',
-  warning: '#B87418',
-  success: '#1D9E75',
-  info: '#185FA5',
+  // Venzer Premium Fintech Palette
+  health: '#BCE47D', // Venzer Lime Green
+  habits: '#A4C3A2', // Soft Sage
+  notes: '#D2D8C6',  // Warm Silver/Sage
+  wallet: '#0A1913', // Deep Forest Green
 
-  tealDark: '#0F6E56',
-  tealLight: '#E1F5EE',
-  tealMid: '#1D9E75',
+  gradientHealthStart: '#A8D366',
+  gradientHabitsStart: '#92B591',
+  gradientNotesStart: '#BFC6B2',
+  gradientWalletStart: '#142A20',
+  gradientDangerStart: '#E87D7D',
+  
+  warning: '#E2B86B',
+  success: '#BCE47D',
+  info: '#11291E',
 
-  bg: '#F5F5F0',
-  bgWarm: '#FBFAF5',
-  surface: '#F7F7F4',
-  surfaceElevated: '#FFFFFF',
-  surfaceTint: '#F3F2EC',
+  tealDark: '#0A1913',
+  tealLight: '#EAF1E7',
+  tealMid: '#163327',
+
+  // Backgrounds
+  bg: '#EAF1E7',      // Soft mint/grey background from reference
+  bgWarm: '#F1F7EE',  // Lighter tint for gradients
+  
+  // Surfaces
+  surface: '#FFFFFF',         // Crisp white for secondary cards
+  surfaceElevated: '#0A1913', // Deep forest green (almost black) for primary cards
+  surfaceTint: '#11291E',     // Slightly lighter forest green for nested elements inside primary cards
+  
   white: '#FFFFFF',
-  border: '#E8E8E8',
-  borderLight: '#F0F0F0',
+  border: '#D8E2D5',
+  borderLight: '#E3EBE0',
 
-  textPrimary: '#1A1A1A',
-  textSecondary: '#888888',
-  textHint: '#BBBBBB',
-  onAccent: '#FFFFFF',
-  danger: '#C2410C',
-  dangerBg: '#FFF1EC',
-  warningBg: '#FAEEDA',
-  infoBg: '#E6F1FB',
-  infoBorder: '#B9D4EF',
-  overlay: 'rgba(26,26,26,0.35)',
-  chartSleepDeep: '#3A2E8B',
-  chartSleepAwake: '#4C3FAF',
-  chartRingMove: '#129A7D',
-  chartRingStand: '#E35885',
+  // Text
+  textPrimary: '#0A1913',     // Dark forest green for text on light
+  textSecondary: '#6A7D73',   // Muted green-grey
+  textHint: '#9CAD9F',
+  onAccent: '#0A1913',        // Dark text on the lime green accent
+  
+  danger: '#D95D5D',
+  dangerBg: '#FCECEC',
+  warningBg: '#FDF7E6',
+  infoBg: '#E9F1EC',
+  infoBorder: '#C1D8CD',
+  overlay: 'rgba(10, 25, 19, 0.4)',
+  
+  chartSleepDeep: '#11291E',
+  chartSleepAwake: '#2E503F',
+  chartRingMove: '#BCE47D',
+  chartRingStand: '#E5C97D',
 
   accentLight: {
-    health: '#E6F1FB',
-    habits: '#EEEDFE',
-    notes: '#FAEEDA',
-    wallet: '#FAECE7',
+    health: '#E1F1CF',
+    habits: '#DFEAE2',
+    notes: '#F0F3EC',
+    wallet: '#C5D6CD',
   },
 
-  pillHealth: { bg: '#E1F5EE', text: '#0F6E56' },
-  pillLearning: { bg: '#E6F1FB', text: '#185FA5' },
-  pillFitness: { bg: '#FAEEDA', text: '#854F0B' },
-  pillMindful: { bg: '#EEEDFE', text: '#534AB7' },
-  pillOther: { bg: '#F1EFE8', text: '#5F5E5A' },
+  pillHealth: { bg: '#E1F1CF', text: '#3E5C1C' },
+  pillLearning: { bg: '#DFEAE2', text: '#2B4A34' },
+  pillFitness: { bg: '#F0F3EC', text: '#4A5541' },
+  pillMindful: { bg: '#E9F1EC', text: '#11291E' },
+  pillOther: { bg: '#FFFFFF', text: '#6A7D73' },
 };
 
 export const DARK_COLORS = {
-  health: '#84B4DE',
-  habits: '#A89BDB',
-  notes: '#D2A36B',
-  wallet: '#D08A73',
-  gradientHealthStart: '#466783',
-  gradientHabitsStart: '#5B567D',
-  gradientNotesStart: '#735B43',
-  gradientWalletStart: '#7A5349',
-  gradientDangerStart: '#6C4446',
-  warning: '#D8A85A',
-  success: '#79C1AB',
-  info: '#93BFE7',
+  // Venzer Dark Mode (Inverted logic)
+  health: '#BCE47D',
+  habits: '#83A582',
+  notes: '#A5AE99',
+  wallet: '#FFFFFF', 
 
-  tealDark: '#7FC2AE',
-  tealLight: '#1A2B26',
-  tealMid: '#6AB89F',
+  gradientHealthStart: '#A8D366',
+  gradientHabitsStart: '#739572',
+  gradientNotesStart: '#909A84',
+  gradientWalletStart: '#E0E0E0',
+  gradientDangerStart: '#C25D5D',
+  
+  warning: '#D4A853',
+  success: '#BCE47D',
+  info: '#FFFFFF',
 
-  bg: '#0F1318',
-  bgWarm: '#141A20',
-  surface: '#1A2027',
-  surfaceElevated: '#202833',
-  surfaceTint: '#262F3A',
-  white: '#1F2731',
-  border: '#34404D',
-  borderLight: '#2A3440',
+  tealDark: '#0A1913',
+  tealLight: '#182C23',
+  tealMid: '#2B4A3A',
 
-  textPrimary: '#F2F5F8',
-  textSecondary: '#C0C9D3',
-  textHint: '#909BA7',
-  onAccent: '#F8FAFC',
-  danger: '#E69A93',
-  dangerBg: '#3A2527',
-  warningBg: '#3A2E22',
-  infoBg: '#1E2B38',
-  infoBorder: '#355574',
-  overlay: 'rgba(4,8,12,0.8)',
-  chartSleepDeep: '#7A72D8',
-  chartSleepAwake: '#9A90F5',
-  chartRingMove: '#65C3A5',
-  chartRingStand: '#E18BB1',
+  // Backgrounds
+  bg: '#050D0A',      // True deep dark green/black
+  bgWarm: '#0A140F',
+  
+  // Surfaces
+  surface: '#11291E',         // Dark forest for secondary cards
+  surfaceElevated: '#183628', // Lighter forest for primary cards
+  surfaceTint: '#214232',     
+  
+  white: '#FFFFFF',
+  border: '#234131',
+  borderLight: '#1A3325',
+
+  // Text
+  textPrimary: '#EAF1E7',     
+  textSecondary: '#9CAD9F',   
+  textHint: '#6A7D73',
+  onAccent: '#0A1913',        
+  
+  danger: '#E87D7D',
+  dangerBg: '#3A1E1E',
+  warningBg: '#3D311B',
+  infoBg: '#1A2922',
+  infoBorder: '#2B4A3A',
+  overlay: 'rgba(5, 13, 10, 0.8)',
+  
+  chartSleepDeep: '#4A695A',
+  chartSleepAwake: '#709483',
+  chartRingMove: '#BCE47D',
+  chartRingStand: '#E5C97D',
 
   accentLight: {
-    health: '#223242',
-    habits: '#2E2B45',
-    notes: '#392E23',
-    wallet: '#3A2924',
+    health: '#1F3D27',
+    habits: '#1A3626',
+    notes: '#27382B',
+    wallet: '#11291E',
   },
 
-  pillHealth: { bg: '#1A2D27', text: '#7FC2AE' },
-  pillLearning: { bg: '#203140', text: '#84B4DE' },
-  pillFitness: { bg: '#372B21', text: '#D2A36B' },
-  pillMindful: { bg: '#2C2941', text: '#A89BDB' },
-  pillOther: { bg: '#29313A', text: '#B6BFC9' },
+  pillHealth: { bg: '#1F3D27', text: '#BCE47D' },
+  pillLearning: { bg: '#1A3626', text: '#83A582' },
+  pillFitness: { bg: '#27382B', text: '#A5AE99' },
+  pillMindful: { bg: '#11291E', text: '#EAF1E7' },
+  pillOther: { bg: '#14251C', text: '#9CAD9F' },
 };
 
 export const COLORS = LIGHT_COLORS;

@@ -1,5 +1,6 @@
 import React from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text as RNText, View } from 'react-native';
+import { AppText as Text } from './AppText';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../theme/ThemeContext';
 import { RADIUS, SHADOWS } from '../constants/theme';
@@ -15,7 +16,7 @@ const getCategoryMeta = (cat, colors) => {
     case 'Transport':
       return {
         icon: 'car',
-        color: colors.health,
+        color: colors.pillHealth.text,
         bg: colors.accentLight.health,
       };
     case 'Bills':
@@ -27,13 +28,13 @@ const getCategoryMeta = (cat, colors) => {
     case 'Fun':
       return {
         icon: 'sparkles',
-        color: colors.habits,
+        color: colors.pillLearning.text,
         bg: colors.accentLight.habits,
       };
     case 'Transfer':
       return {
         icon: 'swap-horizontal',
-        color: colors.habits,
+        color: colors.pillLearning.text,
         bg: colors.accentLight.habits,
       };
     case 'Income':
@@ -45,13 +46,13 @@ const getCategoryMeta = (cat, colors) => {
     default: // 'Other'
       return {
         icon: 'card',
-        color: colors.notes,
+        color: colors.pillFitness.text,
         bg: colors.accentLight.notes,
       };
   }
 };
 
-export function TransactionItem({ transaction, onDelete, onPress, formatMoney }) {
+export function TransactionItem({ transaction, onDelete, onPress, formatMoney, isLast }) {
   const { colors } = useTheme();
   const { label, cat, amount, type, paymentMethod, notes } = transaction;
   const meta = getCategoryMeta(cat, colors);
@@ -73,6 +74,7 @@ export function TransactionItem({ transaction, onDelete, onPress, formatMoney })
       style={({ pressed }) => [
         styles.row,
         { borderBottomColor: colors.borderLight },
+        isLast && { borderBottomWidth: 0 },
         pressed ? { backgroundColor: colors.surface } : null
       ]}
     >
@@ -122,7 +124,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 10,
-    paddingHorizontal: 20,
+    paddingHorizontal: 24,
     borderBottomWidth: 0.5,
     gap: 12,
   },

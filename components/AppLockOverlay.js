@@ -1,85 +1,24 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { View, Text, StyleSheet, AppState, Pressable, ActivityIndicator, Modal, Animated, Dimensions, Image } from 'react-native';
+import { View, Text as RNText, StyleSheet, AppState, Pressable, ActivityIndicator, Modal } from 'react-native';
+import { AppText as Text } from './AppText';
 import * as LocalAuthentication from 'expo-local-authentication';
 import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../theme/ThemeContext';
-import { RADIUS, SHADOWS } from '../constants/theme';
-
-const { width, height } = Dimensions.get('window');
+import { RADIUS } from '../constants/theme';
 
 export function AppLockOverlay({ children }) {
-  const { colors, gradients, appLockEnabled, ready, theme } = useTheme();
-  const insets = useSafeAreaInsets();
+  const { colors, appLockEnabled, ready } = useTheme();
   
   const appState = useRef(AppState.currentState);
   const [isLocked, setIsLocked] = useState(false);
   const [isAuthenticating, setIsAuthenticating] = useState(false);
-  
-  // Animation Values
-  const pulseAnim1 = useRef(new Animated.Value(0)).current;
-  const pulseAnim2 = useRef(new Animated.Value(0)).current;
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-  const slideAnim = useRef(new Animated.Value(30)).current;
 
-  const isDark = theme === 'dark';
-
-  useEffect(() => {
-    if (isLocked) {
-      // Entry Animation
-      Animated.parallel([
-        Animated.timing(fadeAnim, {
-          toValue: 1,
-          duration: 600,
-          useNativeDriver: true,
-        }),
-        Animated.spring(slideAnim, {
-          toValue: 0,
-          friction: 8,
-          tension: 40,
-          useNativeDriver: true,
-        })
-      ]).start();
-
-      if (!isAuthenticating) {
-        // Dual pulse effect for richer biometric scanner feel
-        const startPulse = (anim, delay) => {
-          Animated.loop(
-            Animated.sequence([
-              Animated.delay(delay),
-              Animated.timing(anim, {
-                toValue: 1,
-                duration: 2500,
-                useNativeDriver: true,
-              }),
-              Animated.timing(anim, {
-                toValue: 0,
-                duration: 0,
-                useNativeDriver: true,
-              }),
-            ])
-          ).start();
-        };
-
-        startPulse(pulseAnim1, 0);
-        startPulse(pulseAnim2, 1250);
-      }
-    } else {
-      pulseAnim1.stopAnimation();
-      pulseAnim1.setValue(0);
-      pulseAnim2.stopAnimation();
-      pulseAnim2.setValue(0);
-      fadeAnim.setValue(0);
-      slideAnim.setValue(30);
-    }
-  }, [isLocked, isAuthenticating]);
-
+  // When app Lock is enabled for the very first time (or loaded),
+  // we should start locked. We do this when the `ready` flag from theme is true.
   useEffect(() => {
     if (ready && appLockEnabled) {
       setIsLocked(true);
-      // Slight delay before auto-authenticating for a smooth entry
-      setTimeout(() => authenticate(), 600);
+      authenticate(); // auto-prompt on launch
     }
   }, [ready, appLockEnabled]);
 
@@ -89,6 +28,7 @@ export function AppLockOverlay({ children }) {
         appState.current.match(/active/) &&
         (nextAppState === 'inactive' || nextAppState === 'background')
       ) {
+        // App went to background
         if (appLockEnabled) {
           setIsLocked(true);
         }
@@ -109,6 +49,8 @@ export function AppLockOverlay({ children }) {
       const hasHardware = await LocalAuthentication.hasHardwareAsync();
       const isEnrolled = await LocalAuthentication.isEnrolledAsync();
 
+      // If they turned on App Lock but removed their device passcode/biometrics,
+      // we gracefully let them in or handle it. Let's let them in for safety.
       if (!hasHardware || !isEnrolled) {
         setIsLocked(false);
         return;
@@ -130,222 +72,79 @@ export function AppLockOverlay({ children }) {
     }
   };
 
-  const getRingStyle = (anim) => ({
-    transform: [
-      {
-        scale: anim.interpolate({
-          inputRange: [0, 1],
-          outputRange: [0.95, 1.4],
-        }),
-      },
-    ],
-    opacity: anim.interpolate({
-      inputRange: [0, 0.5, 1],
-      outputRange: [0.15, 0.4, 0.0],
-    }),
-  });
-
   return (
     <View style={{ flex: 1 }}>
-      {children}
+      {/* We always render children so navigation state isn't lost, but we hide them from accessibility when locked */}
+      <View style={{ flex: 1, display: isLocked ? 'none' : 'flex' }}>
+        {children}
+      </View>
 
-      <Modal
-        visible={isLocked}
-        transparent={false}
-        animationType="fade"
-        onRequestClose={() => {}} 
-      >
-        <View style={[styles.container, { backgroundColor: isDark ? '#050505' : '#FAFAFA' }]}>
-          {/* Subtle Ambient Glow */}
-          <View style={[styles.ambientGlow, { backgroundColor: colors.health, top: -height * 0.1, left: -width * 0.3 }]} />
-          <View style={[styles.ambientGlow, { backgroundColor: colors.habits, bottom: -height * 0.1, right: -width * 0.3, opacity: 0.1 }]} />
+      {isLocked && (
+        <View style={[StyleSheet.absoluteFill, styles.classicOverlay, { backgroundColor: colors.bg }]}>
+          <View style={styles.classicContent}>
+            <Ionicons name="lock-closed-outline" size={64} color={colors.textPrimary} style={{ marginBottom: 24 }} />
+            <Text style={[styles.classicTitle, { color: colors.textPrimary }]}>Lifio is Locked</Text>
+            <Text style={[styles.classicSubtitle, { color: colors.textSecondary }]}>
+              Please authenticate to continue
+            </Text>
 
-          <Animated.View style={[
-            styles.content,
-            {
-              paddingTop: Math.max(insets.top + 30, 40),
-              paddingBottom: Math.max(insets.bottom + 20, 30),
-              opacity: fadeAnim,
-              transform: [{ translateY: slideAnim }]
-            }
-          ]}>
-            
-            <View style={styles.topSection}>
-              <View style={[styles.logoContainer, { shadowColor: isDark ? '#000' : colors.textPrimary }]}>
-                <Image 
-                  source={require('../assets/lifio-icon.png')} 
-                  style={styles.logoImage} 
-                  resizeMode="cover" 
-                />
-              </View>
-              <Text style={[styles.greeting, { color: isDark ? '#FFFFFF' : '#111111' }]}>Lifio</Text>
-              <Text style={[styles.subtitle, { color: colors.textSecondary }]}>Secured by Biometrics</Text>
-            </View>
-
-            <View style={styles.centerSection}>
-              <Animated.View style={[styles.pulseRing, { backgroundColor: colors.health }, getRingStyle(pulseAnim1)]} />
-              <Animated.View style={[styles.pulseRing, { backgroundColor: colors.health }, getRingStyle(pulseAnim2)]} />
-              
-              <Pressable
-                onPress={authenticate}
-                disabled={isAuthenticating}
-                style={({pressed}) => [
-                  styles.iconButton,
-                  { shadowColor: colors.health },
-                  pressed && { transform: [{ scale: 0.96 }] }
-                ]}
-              >
-                <LinearGradient
-                  colors={gradients.health || [colors.health, colors.health]}
-                  style={styles.iconGradient}
-                >
-                  <Ionicons name="finger-print" size={54} color="#FFFFFF" />
-                </LinearGradient>
-              </Pressable>
-            </View>
-
-            <View style={styles.footerWrap}>
-              <View style={styles.bottomSection}>
-                {isAuthenticating ? (
-                  <View style={styles.loadingRow}>
-                    <ActivityIndicator color={colors.health} size="small" />
-                    <Text style={[styles.loadingText, { color: colors.textSecondary }]}>Authenticating...</Text>
-                  </View>
-                ) : (
-                  <Pressable onPress={authenticate} style={({pressed}) => [pressed && {opacity: 0.6}]}>
-                    <Text style={[styles.tapText, { color: colors.health }]}>Tap to Unlock</Text>
-                  </Pressable>
-                )}
-              </View>
-              
-              <View style={styles.securityMessageContainer}>
-                <Ionicons name="lock-closed" size={12} color={colors.textHint} style={{ marginRight: 6 }} />
-                <Text style={[styles.securityMessage, { color: colors.textHint }]}>
-                  Your personal data is encrypted and securely stored on device.
-                </Text>
-              </View>
-            </View>
-
-          </Animated.View>
+            <Pressable
+              style={({ pressed }) => [
+                styles.classicButton,
+                { borderColor: colors.border },
+                pressed && { backgroundColor: colors.surface },
+              ]}
+              onPress={authenticate}
+              disabled={isAuthenticating}
+            >
+              {isAuthenticating ? (
+                <ActivityIndicator color={colors.textPrimary} />
+              ) : (
+                <Text style={[styles.classicButtonText, { color: colors.textPrimary }]}>Unlock</Text>
+              )}
+            </Pressable>
+          </View>
         </View>
-      </Modal>
+      )}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
+  classicOverlay: {
     justifyContent: 'center',
     alignItems: 'center',
-    overflow: 'hidden',
+    zIndex: 99999,
+    elevation: 99999,
   },
-  ambientGlow: {
-    position: 'absolute',
-    width: width * 1.5,
-    height: width * 1.5,
-    borderRadius: width * 0.75,
-    opacity: 0.12, // slightly softer
-  },
-  content: {
-    flex: 1,
-    width: '100%',
-    justifyContent: 'space-between',
+  classicContent: {
     alignItems: 'center',
-    zIndex: 10,
-  },
-  topSection: {
-    alignItems: 'center',
-    marginTop: 20,
-  },
-  logoContainer: {
-    width: 68,
-    height: 68,
-    marginBottom: 24,
-    borderRadius: 18,
-    overflow: 'hidden',
-    backgroundColor: 'transparent',
-    elevation: 6,
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.12,
-    shadowRadius: 12,
-  },
-  logoImage: {
+    padding: 32,
+    maxWidth: 320,
     width: '100%',
-    height: '100%',
   },
-  greeting: {
-    fontSize: 40,
-    fontWeight: '400', // Better cross-platform support than 300
-    letterSpacing: 1.5,
-    marginBottom: 8,
-  },
-  subtitle: {
-    fontSize: 13,
+  classicTitle: {
+    fontSize: 24,
     fontWeight: '600',
-    letterSpacing: 1,
-    textTransform: 'uppercase',
+    marginBottom: 12,
   },
-  centerSection: {
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  pulseRing: {
-    position: 'absolute',
-    width: 110,
-    height: 110,
-    borderRadius: 55,
-  },
-  iconButton: {
-    width: 110,
-    height: 110,
-    borderRadius: 55,
-    shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.35,
-    shadowRadius: 24,
-    elevation: 12,
-  },
-  iconGradient: {
-    flex: 1,
-    borderRadius: 55,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  footerWrap: {
-    width: '100%',
-    alignItems: 'center',
-    paddingHorizontal: 24,
-  },
-  bottomSection: {
-    height: 50,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  loadingRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  loadingText: {
-    marginLeft: 12,
-    fontSize: 16,
-    fontWeight: '500',
-  },
-  tapText: {
-    fontSize: 17,
-    fontWeight: '600',
-    letterSpacing: 0.5,
-  },
-  securityMessageContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    opacity: 0.8,
-  },
-  securityMessage: {
-    fontSize: 12,
+  classicSubtitle: {
+    fontSize: 15,
     textAlign: 'center',
-    lineHeight: 16,
-    fontWeight: '500',
+    marginBottom: 40,
+  },
+  classicButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 14,
+    paddingHorizontal: 32,
+    borderRadius: 8,
+    borderWidth: 1,
+    minWidth: 200,
+  },
+  classicButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
   },
 });
