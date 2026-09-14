@@ -38,6 +38,10 @@ const PERMISSION_LABELS = {
   calories: 'Calories',
   heartRate: 'Heart rate',
   sleep: 'Sleep',
+  weight: 'Weight',
+  height: 'Height',
+  hydration: 'Water / Hydration',
+  bodyFat: 'Body fat',
   bloodOxygen: 'Blood oxygen',
   workout: 'Exercise',
 };
@@ -279,6 +283,10 @@ export default function HealthDashboard({ navigation }) {
     heartRate: true,
     calories: true,
     distance: true,
+    weight: true,
+    height: true,
+    hydration: true,
+    bodyFat: true,
     activeMinutes: true,
     bloodOxygen: true,
     workout: true,
@@ -419,11 +427,13 @@ export default function HealthDashboard({ navigation }) {
 
   const closeDeniedModal = () => setDeniedModal(null);
 
+  const isWatchConnected = !!(watchConfig && watchConfig.connected);
+
   useEffect(() => {
     const subscription = AppState.addEventListener('change', (nextState) => {
       if (nextState === 'active') {
-        if (watchConfig && watchConfig.connected) {
-          syncWatch(devMode).catch((e) => console.warn('Auto sync on resume failed:', e));
+        if (isWatchConnected) {
+          syncWatch(devMode, null, false).catch((e) => console.warn('Auto sync on resume failed:', e));
         }
         if (awaitingHealthConnectReturn.current) {
           awaitingHealthConnectReturn.current = false;
@@ -434,19 +444,19 @@ export default function HealthDashboard({ navigation }) {
       }
     });
     return () => subscription.remove();
-  }, [watchConfig, syncWatch, devMode]);
+  }, [isWatchConnected, syncWatch, devMode]);
 
   useFocusEffect(
     useCallback(() => {
-      if (watchConfig && watchConfig.connected) {
-        syncWatch(devMode).catch((e) => console.warn('Auto sync on focus failed:', e));
+      if (isWatchConnected) {
+        syncWatch(devMode, null, false).catch((e) => console.warn('Auto sync on focus failed:', e));
       }
-    }, [watchConfig, syncWatch, devMode])
+    }, [isWatchConnected, syncWatch, devMode])
   );
 
   const handleSync = async () => {
     try {
-      await syncWatch(devMode);
+      await syncWatch(devMode, null, true);
       showToast('Wearable synced ✓');
     } catch (error) {
       if (Platform.OS === 'web') {
@@ -627,44 +637,57 @@ export default function HealthDashboard({ navigation }) {
             </View>
           </View>
           
-          <View style={{ flex: 1, paddingLeft: 24, gap: 20 }}>
+          <View style={{ flex: 1, paddingLeft: 20, gap: 14 }}>
             {/* Metric 1 */}
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-              <View style={{ backgroundColor: colors.surfaceTint, padding: 10, borderRadius: 12 }}>
-                <Ionicons name="scale" size={16} color={colors.pillHealth.text} />
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+              <View style={{ backgroundColor: colors.surfaceTint, padding: 8, borderRadius: 10 }}>
+                <Ionicons name="scale" size={15} color={colors.pillHealth.text} />
               </View>
               <View>
-                <Text style={{ fontSize: 15, fontWeight: '700', color: colors.white }}>
+                <Text style={{ fontSize: 14, fontWeight: '700', color: colors.white }}>
                   {today?.weight ? (formatWeight(today.weight) || today.weight) : '--'}
                   {today?.weight && !formatWeight(today.weight) && <Text style={{ fontSize: 10 }}> {weightUnit}</Text>}
                 </Text>
-                <Text style={{ fontSize: 12, color: colors.textHint }}>Weight</Text>
+                <Text style={{ fontSize: 11, color: colors.textHint }}>Weight</Text>
               </View>
             </View>
 
             {/* Metric 2 */}
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-              <View style={{ backgroundColor: colors.surfaceTint, padding: 10, borderRadius: 12 }}>
-                <Ionicons name="moon" size={16} color={colors.pillLearning.text} />
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+              <View style={{ backgroundColor: colors.surfaceTint, padding: 8, borderRadius: 10 }}>
+                <Ionicons name="moon" size={15} color={colors.pillLearning.text} />
               </View>
               <View>
-                <Text style={{ fontSize: 15, fontWeight: '700', color: colors.white }}>
+                <Text style={{ fontSize: 14, fontWeight: '700', color: colors.white }}>
                   {today?.sleep ? `${Math.floor(today.sleep)}h ${Math.round((today.sleep % 1) * 60)}m` : '--'}
                 </Text>
-                <Text style={{ fontSize: 12, color: colors.textHint }}>Sleep</Text>
+                <Text style={{ fontSize: 11, color: colors.textHint }}>Sleep</Text>
               </View>
             </View>
 
             {/* Metric 3 */}
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-              <View style={{ backgroundColor: colors.surfaceTint, padding: 10, borderRadius: 12 }}>
-                <Ionicons name="water" size={16} color={colors.tealLight} />
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+              <View style={{ backgroundColor: colors.surfaceTint, padding: 8, borderRadius: 10 }}>
+                <Ionicons name="water" size={15} color={colors.tealLight} />
               </View>
               <View>
-                <Text style={{ fontSize: 15, fontWeight: '700', color: colors.white }}>
+                <Text style={{ fontSize: 14, fontWeight: '700', color: colors.white }}>
                   {today?.water ? ((today.water) * 0.25).toFixed(1) + 'L' : '--'}
                 </Text>
-                <Text style={{ fontSize: 12, color: colors.textHint }}>Water</Text>
+                <Text style={{ fontSize: 11, color: colors.textHint }}>Water</Text>
+              </View>
+            </View>
+
+            {/* Metric 4: Heart Rate */}
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+              <View style={{ backgroundColor: colors.surfaceTint, padding: 8, borderRadius: 10 }}>
+                <Ionicons name="heart" size={15} color="#FF4B4B" />
+              </View>
+              <View>
+                <Text style={{ fontSize: 14, fontWeight: '700', color: colors.white }}>
+                  {(today?.heartRate || today?.watchData?.heartRate) ? `${today?.heartRate || today?.watchData?.heartRate} BPM` : '--'}
+                </Text>
+                <Text style={{ fontSize: 11, color: colors.textHint }}>Heart Rate</Text>
               </View>
             </View>
           </View>

@@ -392,21 +392,22 @@ export default function WalletList({ navigation }) {
           }
           contentContainerStyle={styles.list}
           showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
         />
+      </Screen>
 
-        {/* Floating Transaction Creator Button */}
+      {/* Floating Transaction Creator Button */}
+      {!loading && (
         <Pressable
           onPress={handleAddTxClick}
           style={({ pressed }) => [
             styles.fab,
             { backgroundColor: colors.wallet, opacity: pressed ? 0.9 : 1 },
-            { bottom: insets.bottom + 104 }
+            { bottom: (insets.bottom > 0 ? insets.bottom : 16) + 84 }
           ]}
         >
           <Ionicons name="add" size={28} color={colors.white} />
         </Pressable>
-      </Screen>
+      )}
 
       {/* Wallets Creator/Editor Modal */}
       {walletModalVisible && (
@@ -468,7 +469,7 @@ const styles = StyleSheet.create({
   },
   list: {
     gap: 12,
-    paddingBottom: 88, // Space for FAB
+    paddingBottom: 160, // Space for FAB + floating navbar
   },
   sectionHeader: {
     paddingHorizontal: 24,

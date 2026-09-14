@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Alert, KeyboardAvoidingView, Platform, StyleSheet, Switch, Text as RNText, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppText as Text } from '../../components/AppText';
 import { parseISO } from 'date-fns';
 import { Ionicons } from '@expo/vector-icons';
@@ -35,6 +36,7 @@ const toggleInList = (list, value) =>
   list.includes(value) ? list.filter((item) => item !== value) : [...list, value];
 
 export default function HealthLogEntry({ navigation, route }) {
+  const insets = useSafeAreaInsets();
   const { logs, addLog, updateLog, deleteLog, refresh } = useHealth();
   const { colors, triggerDataRefresh } = useTheme();
   const { weightUnit } = useHealthUnits();
@@ -50,6 +52,7 @@ export default function HealthLogEntry({ navigation, route }) {
     sleep: '',
     steps: '',
     water: '',
+    heartRate: '',
     mood: '',
     energy: '',
     symptoms: [],
@@ -77,6 +80,7 @@ export default function HealthLogEntry({ navigation, route }) {
       sleep: editing.sleep || editing.sleep === 0 ? String(editing.sleep) : '',
       steps: editing.steps || editing.steps === 0 ? String(editing.steps) : '',
       water: editing.water || editing.water === 0 ? String(editing.water) : '',
+      heartRate: editing.heartRate || editing.heartRate === 0 ? String(editing.heartRate) : '',
       mood: editing.mood || '',
       energy: editing.energy || '',
       symptoms: Array.isArray(editing.symptoms) ? editing.symptoms : [],
@@ -120,7 +124,7 @@ export default function HealthLogEntry({ navigation, route }) {
     }
 
     const hasMetric =
-      ['weight', 'sleep', 'steps', 'water', 'mood', 'energy', 'medication', 'notes'].some((key) => String(form[key]).trim()) ||
+      ['weight', 'sleep', 'steps', 'water', 'heartRate', 'mood', 'energy', 'medication', 'notes'].some((key) => String(form[key]).trim()) ||
       form.symptoms.length > 0 ||
       form.period ||
       form.cycleEnabled;
@@ -134,6 +138,7 @@ export default function HealthLogEntry({ navigation, route }) {
     if (!validateNumber('sleep', 'sleep hours', { max: 24, message: 'Please enter sleep between 0 and 24 hours.' })) return;
     if (!validateNumber('steps', 'steps', { message: 'Please enter a valid positive step count.' })) return;
     if (!validateNumber('water', 'water count', { message: 'Please enter a valid positive water count.' })) return;
+    if (!validateNumber('heartRate', 'heart rate', { min: 30, max: 250, message: 'Please enter a valid heart rate (30-250 BPM).' })) return;
     if (!validateNumber('waterGoal', 'water goal', { min: 1 })) return;
     if (!validateNumber('stepGoal', 'step goal', { min: 1 })) return;
     if (!validateNumber('sleepGoal', 'sleep goal', { min: 1, max: 24 })) return;
@@ -157,6 +162,7 @@ export default function HealthLogEntry({ navigation, route }) {
     if (form.sleep !== '') newSources.sleep = 'MANUAL';
     if (form.steps !== '') newSources.steps = 'MANUAL';
     if (form.water !== '') newSources.water = 'MANUAL';
+    if (form.heartRate !== '') newSources.heartRate = 'MANUAL';
 
     const payload = {
       date: trimmedDate,
@@ -164,6 +170,7 @@ export default function HealthLogEntry({ navigation, route }) {
       sleep: form.sleep ? Number(form.sleep) : null,
       steps: form.steps ? Number.parseInt(form.steps, 10) : null,
       water: form.water ? Number.parseInt(form.water, 10) : null,
+      heartRate: form.heartRate ? Number.parseInt(form.heartRate, 10) : null,
       mood: form.mood,
       energy: form.energy,
       symptoms: form.symptoms,
@@ -246,6 +253,7 @@ export default function HealthLogEntry({ navigation, route }) {
             <InputField style={styles.inputFlex} value={form.steps} onChangeText={(v) => setValue('steps', v)} placeholder="Steps" keyboardType="number-pad" />
             <InputField style={styles.inputFlex} value={form.water} onChangeText={(v) => setValue('water', v)} placeholder="Water (glasses)" keyboardType="number-pad" />
           </View>
+          <InputField value={form.heartRate} onChangeText={(v) => setValue('heartRate', v)} placeholder="Heart Rate (BPM)" keyboardType="number-pad" />
         </View>
 
         <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.borderLight }]}>
@@ -363,7 +371,7 @@ export default function HealthLogEntry({ navigation, route }) {
 
 const styles = StyleSheet.create({
   flex: { flex: 1 },
-  content: { paddingBottom: 32 },
+  content: { gap: 16 },
   card: {
     borderRadius: RADIUS.lg,
     borderWidth: 1,

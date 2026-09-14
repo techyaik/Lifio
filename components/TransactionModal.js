@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Modal, StyleSheet, Text as RNText, View, Pressable, ScrollView, KeyboardAvoidingView, Platform, Alert,  } from 'react-native';
+import { Modal, StyleSheet, Text as RNText, View, Pressable, ScrollView, KeyboardAvoidingView, Platform, Alert } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppText as Text } from './AppText';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../theme/ThemeContext';
@@ -24,6 +25,7 @@ export function TransactionModal({
   onCurrencyChange,
 }) {
   const { colors } = useTheme();
+  const insets = useSafeAreaInsets();
   const activeCurrency = currency || { code: 'USD', symbol: '$', label: 'USD' };
 
   const [type, setType] = useState('out'); // 'out' | 'in' | 'transfer'
@@ -161,9 +163,12 @@ export function TransactionModal({
     <Modal visible={visible} animationType="slide" transparent={true} onRequestClose={onClose}>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        style={[styles.overlay, { backgroundColor: colors.overlay }]}
+        style={styles.overlay}
       >
-        <Pressable style={styles.dismissArea} onPress={onClose} />
+        <Pressable
+          style={[StyleSheet.absoluteFillObject, { backgroundColor: colors.overlay }]}
+          onPress={onClose}
+        />
         <View style={[styles.sheet, { backgroundColor: colors.surface }]}>
           {/* Header */}
           <View style={[styles.header, { borderBottomColor: colors.borderLight }]}>
@@ -411,7 +416,13 @@ export function TransactionModal({
           </ScrollView>
 
           {/* Action Row */}
-          <View style={[styles.actions, { borderTopColor: colors.borderLight }]}>
+          <View style={[
+            styles.actions,
+            {
+              borderTopColor: colors.borderLight,
+              paddingBottom: Math.max(insets.bottom + 16, 24),
+            }
+          ]}>
             <View style={{ flex: 1 }}>
               <PrimaryButton
                 title={transaction ? "Save Transaction" : "Add Transaction"}
@@ -431,13 +442,12 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'flex-end',
   },
-  dismissArea: {
-    flex: 1,
-  },
   sheet: {
     borderTopLeftRadius: RADIUS.lg,
     borderTopRightRadius: RADIUS.lg,
-    maxHeight: '88%',
+    maxHeight: '90%',
+    width: '100%',
+    flexShrink: 1,
     ...SHADOWS.glow,
   },
   header: {
@@ -453,10 +463,11 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   form: {
-    flexGrow: 0,
+    flexShrink: 1,
   },
   formContent: {
     padding: 20,
+    paddingBottom: 28,
     gap: 16,
   },
   typeRow: {
@@ -528,8 +539,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 20,
-    paddingVertical: 14,
+    paddingTop: 14,
+    paddingBottom: 24,
     borderTopWidth: 0.5,
-    marginBottom: Platform.OS === 'ios' ? 24 : 0,
   },
 });

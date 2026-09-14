@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Alert, KeyboardAvoidingView, Modal, Platform, Pressable, StyleSheet, Text as RNText, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppText as Text } from '../../components/AppText';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../theme/ThemeContext';
@@ -16,6 +17,7 @@ const wrap = (text, prefix, suffix = prefix) => (text ? `${prefix}${text}${suffi
 export default function NoteEditor({ navigation, route }) {
   const { notes, addNote, updateNote, deleteNote, getAllTags } = useNotes();
   const { colors } = useTheme();
+  const insets = useSafeAreaInsets();
 
   const note = notes.find((item) => item.id === route.params?.note?.id) || route.params?.note;
   const [id] = useState(note?.id || Date.now().toString());
@@ -125,7 +127,7 @@ export default function NoteEditor({ navigation, route }) {
           <Pill label="+ Add tag" onPress={() => setTagModal(true)} palette={colors.pillFitness} />
         </View>
       </Screen>
-      <View style={[styles.toolbar, { backgroundColor: colors.surface, borderTopColor: colors.borderLight }]}>
+      <View style={[styles.toolbar, { backgroundColor: colors.surface, borderTopColor: colors.borderLight, paddingBottom: Math.max(insets.bottom + 16, 24) + 64 }]}>
         <Tool label="B" onPress={() => setBody((current) => wrap(current, '**'))} colors={colors} />
         <Tool label="I" onPress={() => setBody((current) => wrap(current, '*'))} colors={colors} />
         <Tool icon="list" onPress={() => setBody((current) => `${current}\n- `)} colors={colors} />

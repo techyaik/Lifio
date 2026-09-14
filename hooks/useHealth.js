@@ -129,43 +129,70 @@ export function useHealth() {
     triggerDataRefresh();
   };
 
-  const syncWatch = async (devMode = false, configOverride = null) => {
+  const syncWatch = async (devMode = false, configOverride = null, force = false) => {
     const config = configOverride || watchConfig;
     if (!config || !config.connected) return;
+
+    // Cooldown throttle: ignore auto-sync if last sync completed less than 15 seconds ago
+    if (!force && config.lastSynced) {
+      const elapsedMs = Date.now() - new Date(config.lastSynced).getTime();
+      if (elapsedMs < 15000) {
+        console.info(`[useHealth] Skipping auto sync (throttled, last sync was ${Math.round(elapsedMs / 1000)}s ago).`);
+        return;
+      }
+    }
+
+    // Auto-heal permissions to ensure all metrics are enabled by default
+    const activePermissions = {
+      steps: true,
+      distance: true,
+      calories: true,
+      heartRate: true,
+      sleep: true,
+      weight: true,
+      height: true,
+      hydration: true,
+      bodyFat: true,
+      bloodOxygen: true,
+      workout: true,
+      activeMinutes: true,
+      ...(config.permissions || {}),
+    };
 
     let syncedMetrics = null;
 
     if (devMode) {
       console.log('[DevMode] Injecting mock Health Connect data.');
       syncedMetrics = {
-        steps: config.permissions.steps ? 8432 : null,
-        distance: config.permissions.distance ? 6.2 : null,
-        activeMinutes: config.permissions.activeMinutes ? 45 : null,
-        calories: config.permissions.calories ? 342 : null,
-        heartRate: config.permissions.heartRate ? 72 : null,
-        sleep: config.permissions.sleep ? 7.5 : null,
-        weight: config.permissions.weight ? 70.5 : null,
-        height: config.permissions.height ? 175 : null,
-        bloodOxygen: config.permissions.bloodOxygen ? 98 : null,
-        workout: config.permissions.workout ? 'Running' : null,
+        steps: activePermissions.steps ? 8432 : null,
+        distance: activePermissions.distance ? 6.2 : null,
+        activeMinutes: activePermissions.activeMinutes ? 45 : null,
+        calories: activePermissions.calories ? 342 : null,
+        heartRate: activePermissions.heartRate ? 72 : null,
+        sleep: activePermissions.sleep ? 7.5 : null,
+        weight: activePermissions.weight ? 70.5 : null,
+        height: activePermissions.height ? 175 : null,
+        bloodOxygen: activePermissions.bloodOxygen ? 98 : null,
+        workout: activePermissions.workout ? 'Running' : null,
       };
     } else if (config.provider === 'health_connect') {
       try {
-        syncedMetrics = await fetchHealthConnectData(config.permissions);
+        console.info('[useHealth] Requesting Health Connect metrics for enabled permissions:', activePermissions);
+        syncedMetrics = await fetchHealthConnectData(activePermissions);
+        console.info('[useHealth] Successfully fetched metrics from Health Connect:', syncedMetrics);
       } catch (err) {
-        console.warn('Error fetching Health Connect data, returning zeroed state:', err);
-        // On failure, return zeroed metrics based on permissions
+        console.warn('[useHealth] Error fetching Health Connect data, returning zeroed state:', err);
         syncedMetrics = {
-          steps: config.permissions.steps ? 0 : null,
-          distance: config.permissions.distance ? 0 : null,
-          activeMinutes: config.permissions.activeMinutes ? 0 : null,
-          calories: config.permissions.calories ? 0 : null,
-          heartRate: config.permissions.heartRate ? 0 : null,
-          sleep: config.permissions.sleep ? 0 : null,
-          weight: config.permissions.weight ? 0 : null,
-          height: config.permissions.height ? 0 : null,
-          bloodOxygen: config.permissions.bloodOxygen ? 0 : null,
-          workout: config.permissions.workout ? 'None' : null,
+          steps: activePermissions.steps ? 0 : null,
+          distance: activePermissions.distance ? 0 : null,
+          activeMinutes: activePermissions.activeMinutes ? 0 : null,
+          calories: activePermissions.calories ? 0 : null,
+          heartRate: activePermissions.heartRate ? 0 : null,
+          sleep: activePermissions.sleep ? 0 : null,
+          weight: activePermissions.weight ? 0 : null,
+          height: activePermissions.height ? 0 : null,
+          bloodOxygen: activePermissions.bloodOxygen ? 0 : null,
+          workout: activePermissions.workout ? 'None' : null,
         };
       }
     }

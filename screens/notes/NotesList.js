@@ -99,7 +99,7 @@ export default function NotesList({ navigation, route }) {
               accent={colors.notes}
             />
           }
-          contentContainerStyle={styles.list}
+          contentContainerStyle={[styles.list, { paddingBottom: (insets.bottom > 0 ? insets.bottom : 16) + 160 }]}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
           initialNumToRender={8}
@@ -108,7 +108,7 @@ export default function NotesList({ navigation, route }) {
         />
       </Screen>
       {!loading && notes.length > 0 && (
-        <View style={[styles.fabWrap, { bottom: insets.bottom + 104 }]}>
+        <View style={[styles.fabWrap, { bottom: (insets.bottom > 0 ? insets.bottom : 16) + 84 }]}>
           <FAB color={colors.pillFitness.text} onPress={() => navigation.navigate('NoteEditor')} />
         </View>
       )}
@@ -132,11 +132,10 @@ const styles = StyleSheet.create({
     ...SHADOWS.soft,
   },
   tags: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 4 },
-  list: { gap: 16, paddingVertical: SPACING.screen, paddingHorizontal: SPACING.screen },
+  list: { gap: 16, paddingTop: SPACING.screen, paddingHorizontal: SPACING.screen },
   fabWrap: {
     position: 'absolute',
     right: 24,
-    bottom: 24,
     ...SHADOWS.glow,
   },
 });

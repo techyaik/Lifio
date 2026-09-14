@@ -43,6 +43,7 @@ const RECORD_TYPE_TO_KEY = Object.fromEntries(
  */
 export async function getHealthConnectAvailability() {
   if (Platform.OS !== 'android') {
+    console.info('[HealthConnect] Availability check: Platform is not Android.');
     return {
       available: false,
       requireInstall: false,
@@ -53,6 +54,7 @@ export async function getHealthConnectAvailability() {
 
   try {
     const status = await getSdkStatus();
+    console.info('[HealthConnect] SDK Availability Status:', status);
 
     switch (status) {
       case SdkAvailabilityStatus.SDK_UNAVAILABLE:
@@ -87,6 +89,7 @@ export async function getHealthConnectAvailability() {
   } catch (e) {
     const errorStr = String(e?.message || e || '');
     if (errorStr.includes("doesn't seem to be linked")) {
+      console.warn('[HealthConnect] SDK Unavailable: Running inside Expo Go.');
       return {
         available: false,
         isExpoGo: true,
@@ -95,7 +98,7 @@ export async function getHealthConnectAvailability() {
         message: 'Health Connect requires a native Android build. Custom native modules are not available in Expo Go.',
       };
     }
-    console.warn('Failed to check Health Connect status:', e);
+    console.warn('[HealthConnect] Failed to check Health Connect status:', e);
     return {
       available: false,
       requireInstall: true,
@@ -110,9 +113,10 @@ export async function getHealthConnectAvailability() {
  */
 export async function openHealthConnectStore() {
   try {
+    console.info('[HealthConnect] Opening Play Store link:', HEALTH_CONNECT_MARKET_URL);
     await Linking.openURL(HEALTH_CONNECT_MARKET_URL);
   } catch (e) {
-    console.warn('Failed to open Health Connect Play Store listing:', e);
+    console.warn('[HealthConnect] Failed to open Health Connect Play Store listing:', e);
   }
 }
 
@@ -121,6 +125,7 @@ export async function openHealthConnectStore() {
  * the permissions they granted/revoked.
  */
 export function openHealthConnectSettings() {
+  console.info('[HealthConnect] Opening native Health Connect App Settings screen...');
   openHealthConnectSettingsNative();
 }
 
@@ -130,12 +135,14 @@ export function openHealthConnectSettings() {
  */
 export async function initializeHealthConnect() {
   try {
-    return await initialize();
+    const res = await initialize();
+    console.info('[HealthConnect] SDK Client Initialized Successfully:', res);
+    return res;
   } catch (e) {
     if (e.message && e.message.includes('Expo Go')) {
-      console.warn('Health Connect is not available in Expo Go. Use a development build to test this feature.');
+      console.warn('[HealthConnect] Health Connect is not available in Expo Go. Use a development build.');
     } else {
-      console.warn('Failed to initialize Health Connect:', e);
+      console.warn('[HealthConnect] Failed to initialize Health Connect SDK:', e);
     }
     return false;
   }
@@ -146,13 +153,15 @@ export async function initializeHealthConnect() {
  */
 export async function revokeAllPermissions() {
   try {
+    console.info('[HealthConnect] Revoking all permissions...');
     await initializeHealthConnect();
     if (typeof revokeAllPermissionsNative === 'function') {
       await revokeAllPermissionsNative();
     }
+    console.info('[HealthConnect] All permissions revoked successfully.');
     return true;
   } catch (e) {
-    console.warn('Failed to revoke Health Connect permissions:', e);
+    console.warn('[HealthConnect] Failed to revoke permissions:', e);
     return false;
   }
 }
@@ -165,22 +174,58 @@ export async function getGrantedHealthPermissions() {
   try {
     await initializeHealthConnect();
     const granted = await getGrantedPermissions();
-    return granted
-      .filter((permission) => permission.accessType === 'read')
-      .map((permission) => RECORD_TYPE_TO_KEY[permission.recordType])
+    console.info('[HealthConnect] Raw granted permissions from OS:', JSON.stringify(granted));
+    
+    // Map permissions flexibly regardless of whether object structure has recordType, permission string, or accessType
+    const grantedKeys = granted
+      .map((permission) => {
+        if (permission?.recordType && RECORD_TYPE_TO_KEY[permission.recordType]) {
+          if (!permission.accessType || permission.accessType.toLowerCase().includes('read')) {
+            return RECORD_TYPE_TO_KEY[permission.recordType];
+          }
+        }
+        const permString = String(permission?.permission || permission || '');
+        const entry = Object.entries(METRIC_CONFIG).find(([_, cfg]) => cfg.permission.toLowerCase() === permString.toLowerCase());
+        if (entry) return entry[0];
+        return null;
+      })
       .filter(Boolean);
+
+    const uniqueKeys = [...new Set(grantedKeys)];
+    console.info('[HealthConnect] Parsed granted metric keys:', uniqueKeys);
+    return uniqueKeys;
   } catch (e) {
-    console.warn('Failed to fetch granted Health Connect permissions:', e);
-    return [];
+    console.warn('[HealthConnect] Failed to fetch granted permissions:', e);
+    // Return all keys as fallback so individual try/catch blocks in fetchHealthConnectData can attempt reads
+    return Object.keys(METRIC_CONFIG);
   }
 }
+
+/**
+ * Default permissions config for all supported health metrics in Lifio.
+ */
+export const DEFAULT_HEALTH_PERMISSIONS = {
+  steps: true,
+  distance: true,
+  calories: true,
+  heartRate: true,
+  sleep: true,
+  weight: true,
+  height: true,
+  hydration: true,
+  bodyFat: true,
+  bloodOxygen: true,
+  workout: true,
+  activeMinutes: true,
+};
 
 /**
  * Build the permission request list from the app's metric toggles.
  */
 function buildPermissionList(requestedPermissions) {
+  const merged = { ...DEFAULT_HEALTH_PERMISSIONS, ...(requestedPermissions || {}) };
   return Object.keys(METRIC_CONFIG)
-    .filter((key) => requestedPermissions && requestedPermissions[key])
+    .filter((key) => merged[key] !== false)
     .map((key) => ({
       accessType: 'read',
       recordType: METRIC_CONFIG[key].recordType,
@@ -197,17 +242,17 @@ function toConfigShape(grantedRecordTypes) {
 
 /**
  * Request Health Connect read permissions for the requested metrics.
- *
- * Returns a structured result so the UI can distinguish between:
- *  - nothing selected
- *  - partial grant (some accepted, some denied)
- *  - full denial
- *  - an unexpected failure during the request
  */
-export async function requestHealthPermissions(requestedPermissions) {
-  const requested = buildPermissionList(requestedPermissions);
+export async function requestHealthPermissions(requestedPermissions = DEFAULT_HEALTH_PERMISSIONS) {
+  const permsToRequest = requestedPermissions && typeof requestedPermissions === 'object'
+    ? { ...DEFAULT_HEALTH_PERMISSIONS, ...requestedPermissions }
+    : DEFAULT_HEALTH_PERMISSIONS;
+
+  const requested = buildPermissionList(permsToRequest);
+  console.info('[HealthConnect] Requesting OS permissions dialog for:', requested.map((r) => r.recordType));
 
   if (requested.length === 0) {
+    console.info('[HealthConnect] No permissions were selected in app config.');
     return {
       ok: true,
       allGranted: true,
@@ -230,6 +275,8 @@ export async function requestHealthPermissions(requestedPermissions) {
     const deniedKeys = deniedRecordTypes.map((recordType) => RECORD_TYPE_TO_KEY[recordType]).filter(Boolean);
     const grantedAsConfig = toConfigShape([...grantedKeys]);
 
+    console.info('[HealthConnect] Permission Dialog Result -> Granted:', [...grantedKeys], '| Denied:', deniedKeys);
+
     return {
       ok: grantedKeys.size > 0,
       allGranted: grantedKeys.size === allRequested.length,
@@ -239,7 +286,7 @@ export async function requestHealthPermissions(requestedPermissions) {
       message: buildPermissionResultMessage(grantedAsConfig, deniedKeys),
     };
   } catch (e) {
-    console.error('Failed to request Health Connect permissions:', e);
+    console.error('[HealthConnect] Failed to request permissions dialog:', e);
     return {
       ok: false,
       allGranted: false,
@@ -271,7 +318,7 @@ function getTodayRange() {
 
 function getSleepRange() {
   const now = new Date();
-  const startTime = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1, 18, 0, 0, 0); // yesterday 6 PM
+  const startTime = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1, 18, 0, 0, 0);
   const endTime = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
   return { operator: 'between', startTime: startTime.toISOString(), endTime: endTime.toISOString() };
 }
@@ -298,39 +345,46 @@ export async function fetchHealthConnectData(permissions) {
     workout: null,
   };
 
+  console.info('[HealthConnect] ====================================================');
+  console.info('[HealthConnect] 🚀 Starting Health Connect Sync Session...');
+
   try {
     await initializeHealthConnect();
   } catch (e) {
-    console.warn('Failed to initialize Health Connect before read:', e);
+    console.warn('[HealthConnect] Warning during initialize before read:', e);
   }
 
+  const now = new Date();
   const timeRangeFilter = getTodayRange();
-  const sleepTimeRangeFilter = getSleepRange();
+  console.info('[HealthConnect] Today query window:', timeRangeFilter.startTime, 'to', timeRangeFilter.endTime);
 
   let grantedKeys = [];
   try {
     grantedKeys = await getGrantedHealthPermissions();
+    console.info('[HealthConnect] Currently granted OS permission keys:', grantedKeys);
   } catch (e) {
-    console.warn('Could not query granted health permissions:', e);
+    console.warn('[HealthConnect] Could not query granted health permissions:', e);
   }
 
-  // Strictly enforce that native Android permission is granted before attempting readRecords,
-  // preventing SecurityException when permissions are denied or revoked in Health Connect settings.
+  // Evaluate effective permissions based on user metric toggles.
+  // We attempt readRecords for all metrics unless explicitly toggled off (false).
   const effectivePermissions = {
-    steps: grantedKeys.includes('steps') && (permissions ? permissions.steps !== false : true),
-    distance: grantedKeys.includes('distance') && (permissions ? permissions.distance !== false : true),
-    calories: grantedKeys.includes('calories') && (permissions ? permissions.calories !== false : true),
-    heartRate: grantedKeys.includes('heartRate') && (permissions ? permissions.heartRate !== false : true),
-    sleep: grantedKeys.includes('sleep') && (permissions ? permissions.sleep !== false : true),
-    weight: grantedKeys.includes('weight') && (permissions ? permissions.weight !== false : true),
-    height: grantedKeys.includes('height') && (permissions ? permissions.height !== false : true),
-    hydration: grantedKeys.includes('hydration') && (permissions ? permissions.hydration !== false : true),
-    bodyFat: grantedKeys.includes('bodyFat') && (permissions ? permissions.bodyFat !== false : true),
-    bloodOxygen: grantedKeys.includes('bloodOxygen') && (permissions ? permissions.bloodOxygen !== false : true),
-    workout: grantedKeys.includes('workout') && (permissions ? permissions.workout !== false : true),
+    steps: !permissions || permissions.steps !== false,
+    distance: !permissions || permissions.distance !== false,
+    calories: !permissions || permissions.calories !== false,
+    heartRate: !permissions || permissions.heartRate !== false,
+    sleep: !permissions || permissions.sleep !== false,
+    weight: !permissions || permissions.weight !== false,
+    height: !permissions || permissions.height !== false,
+    hydration: !permissions || permissions.hydration !== false,
+    bodyFat: !permissions || permissions.bodyFat !== false,
+    bloodOxygen: !permissions || permissions.bloodOxygen !== false,
+    workout: !permissions || permissions.workout !== false,
   };
 
-  // Helper to deduplicate records across data sources (e.g. Google Fit vs Phone sensor)
+  console.info('[HealthConnect] Enabled metric read targets:', Object.keys(effectivePermissions).filter((k) => effectivePermissions[k]));
+
+  // Helper to deduplicate records across data sources cleanly
   const extractMaxByOrigin = (records, getVal) => {
     if (!records || records.length === 0) return null;
     const byOrigin = {};
@@ -340,67 +394,91 @@ export async function fetchHealthConnectData(permissions) {
       byOrigin[origin] = (byOrigin[origin] || 0) + val;
     });
 
-    // If Google Fit package is present, prioritize its total
-    if (byOrigin['com.google.android.apps.fitness']) {
-      return byOrigin['com.google.android.apps.fitness'];
-    }
     const values = Object.values(byOrigin);
     return values.length > 0 ? Math.max(...values) : null;
+  };
+
+  // Safe readRecords wrapper guaranteeing non-null options parameter with valid timeRangeFilter
+  const safeReadRecords = async (recordType, options) => {
+    const opts = options && typeof options === 'object' ? options : { timeRangeFilter };
+    if (!opts.timeRangeFilter) {
+      opts.timeRangeFilter = timeRangeFilter;
+    }
+    return await readRecords(recordType, opts);
   };
 
   // 1. Steps
   if (effectivePermissions.steps) {
     try {
-      const { records } = await readRecords('Steps', { timeRangeFilter });
+      let { records } = await safeReadRecords('Steps', { timeRangeFilter });
+      if (!records || records.length === 0) {
+        const fallback = await safeReadRecords('Steps', {
+          timeRangeFilter: { operator: 'between', startTime: new Date(now.getTime() - (7 * 86400000)).toISOString(), endTime: now.toISOString() }
+        });
+        records = fallback?.records || [];
+      }
       const maxSteps = extractMaxByOrigin(records, (r) => r.count || 0);
-      if (maxSteps != null) results.steps = maxSteps;
+      if (maxSteps != null && maxSteps >= 0) results.steps = maxSteps;
+      console.info(`[HealthConnect] [Steps] Read ${records?.length || 0} records -> Result: ${results.steps} steps`);
     } catch (e) {
-      console.warn('Health Connect steps read failed:', e);
+      console.warn('[HealthConnect] [Steps] Read error:', e?.message || e);
     }
   }
 
   // 2. Distance (km)
   if (effectivePermissions.distance) {
     try {
-      const { records } = await readRecords('Distance', { timeRangeFilter });
+      let { records } = await safeReadRecords('Distance', { timeRangeFilter });
       const maxMeters = extractMaxByOrigin(records, (r) => r.distance?.inMeters || 0);
-      if (maxMeters != null) results.distance = parseFloat((maxMeters / 1000).toFixed(2));
+      if (maxMeters != null && maxMeters >= 0) results.distance = parseFloat((maxMeters / 1000).toFixed(2));
+      console.info(`[HealthConnect] [Distance] Read ${records?.length || 0} records -> Result: ${results.distance} km`);
     } catch (e) {
-      console.warn('Health Connect distance read failed:', e);
+      console.warn('[HealthConnect] [Distance] Read error:', e?.message || e);
     }
   }
 
   // 3. Calories / Energy
   if (effectivePermissions.calories) {
     try {
-      const { records } = await readRecords('ActiveCaloriesBurned', { timeRangeFilter });
+      const { records } = await safeReadRecords('ActiveCaloriesBurned', { timeRangeFilter });
       let maxCalories = extractMaxByOrigin(records, (r) => r.energy?.inKilocalories || 0);
 
-      // Fallback to TotalCaloriesBurned if ActiveCaloriesBurned has no records
       if (maxCalories == null || maxCalories === 0) {
         try {
-          const { records: totalRecords } = await readRecords('TotalCaloriesBurned', { timeRangeFilter });
+          const { records: totalRecords } = await safeReadRecords('TotalCaloriesBurned', { timeRangeFilter });
           maxCalories = extractMaxByOrigin(totalRecords, (r) => r.energy?.inKilocalories || 0);
         } catch (e) {
-          // ignore fallback error
+          // ignore fallback
         }
       }
 
       if (maxCalories != null && maxCalories > 0) {
         results.calories = Math.round(maxCalories);
       }
+      console.info(`[HealthConnect] [Calories] Read ${records?.length || 0} records -> Result: ${results.calories} kcal`);
     } catch (e) {
-      console.warn('Health Connect calories read failed:', e);
+      console.warn('[HealthConnect] [Calories] Read error:', e?.message || e);
     }
   }
 
-  // 4. Heart Rate (average across today's samples)
+  // 4. Heart Rate
   if (effectivePermissions.heartRate) {
     try {
-      const { records } = await readRecords('HeartRate', { timeRangeFilter });
+      let { records } = await safeReadRecords('HeartRate', { timeRangeFilter });
+      if (!records || records.length === 0) {
+        try {
+          const fallback = await safeReadRecords('HeartRate', {
+            timeRangeFilter: { operator: 'between', startTime: new Date(now.getTime() - (48 * 3600000)).toISOString(), endTime: now.toISOString() }
+          });
+          records = fallback?.records || [];
+        } catch (err) {
+          // ignore fallback error
+        }
+      }
+
       let totalBpm = 0;
       let count = 0;
-      records.forEach((record) => {
+      records?.forEach((record) => {
         record.samples?.forEach((sample) => {
           if (sample.beatsPerMinute) {
             totalBpm += sample.beatsPerMinute;
@@ -409,98 +487,214 @@ export async function fetchHealthConnectData(permissions) {
         });
       });
       if (count > 0) results.heartRate = Math.round(totalBpm / count);
+      console.info(`[HealthConnect] [HeartRate] Read ${records?.length || 0} records (${count} samples) -> Result: ${results.heartRate} BPM`);
     } catch (e) {
-      console.warn('Health Connect heart rate read failed:', e);
+      console.warn('[HealthConnect] [HeartRate] Read error:', e?.message || e);
     }
   }
 
-  // 5. Sleep (hours from overnight / today sleep sessions)
+  // 5. Sleep (hours from sleep sessions)
   if (effectivePermissions.sleep) {
     try {
-      const { records } = await readRecords('SleepSession', { timeRangeFilter: sleepTimeRangeFilter });
+      console.info('[HealthConnect] [Sleep] Querying SleepSession records...');
+      const sleepStartTime = new Date(now.getTime() - (48 * 3600000)).toISOString(); // last 48 hrs
+      let records = [];
+      try {
+        const res = await safeReadRecords('SleepSession', {
+          timeRangeFilter: { operator: 'between', startTime: sleepStartTime, endTime: now.toISOString() }
+        });
+        records = res?.records || [];
+      } catch (e) {
+        try {
+          const res = await safeReadRecords('SleepSession', {
+            timeRangeFilter: { operator: 'between', startTime: '2020-01-01T00:00:00.000Z', endTime: now.toISOString() }
+          });
+          records = res?.records || [];
+        } catch (err) {
+          console.warn('[HealthConnect] [Sleep] Fallback query error:', err?.message || err);
+        }
+      }
+      
+      console.info(`[HealthConnect] [Sleep] Raw sessions count: ${records?.length || 0}`);
       if (records && records.length > 0) {
-        // Group sessions by origin
+        console.info('[HealthConnect] [Sleep] Raw session records:', JSON.stringify(records));
         const sleepByOrigin = {};
+        const thirtySixHoursAgo = now.getTime() - (36 * 3600000);
+        
         records.forEach((record) => {
           const origin = record.metadata?.dataOrigin || 'default';
-          const start = new Date(record.startTime).getTime();
-          const end = new Date(record.endTime).getTime();
-          if (end > start) {
+          const start = new Date(record.startTime || record.time || 0).getTime();
+          const end = new Date(record.endTime || record.time || 0).getTime();
+          if (end > start && end >= thirtySixHoursAgo) {
             const hours = (end - start) / 3600000;
             sleepByOrigin[origin] = (sleepByOrigin[origin] || 0) + hours;
+            console.info(`[HealthConnect] [Sleep] Found session (${origin}): ${hours.toFixed(2)} hrs`);
           }
         });
 
-        // Filter positive durations and select max valid sleep session duration across origins
         const validDurations = Object.values(sleepByOrigin).filter((h) => h > 0);
         if (validDurations.length > 0) {
           results.sleep = parseFloat(Math.max(...validDurations).toFixed(1));
+        } else {
+          // Pick latest recorded session duration if no session ended in recent 36h
+          const sorted = [...records].sort((a, b) => new Date(a.endTime || a.startTime || 0) - new Date(b.endTime || b.startTime || 0));
+          const latest = sorted[sorted.length - 1];
+          const start = new Date(latest.startTime || latest.time || 0).getTime();
+          const end = new Date(latest.endTime || latest.time || 0).getTime();
+          if (end > start) {
+            results.sleep = parseFloat(((end - start) / 3600000).toFixed(1));
+          }
         }
       }
+      console.info(`[HealthConnect] [Sleep] Final Sleep Result: ${results.sleep} hrs`);
     } catch (e) {
-      console.warn('Health Connect sleep read failed:', e);
+      console.warn('[HealthConnect] [Sleep] Read error:', e?.message || e);
     }
   }
 
   // 6. Weight (kg)
   if (effectivePermissions.weight) {
     try {
-      const { records } = await readRecords('Weight', { timeRangeFilter });
-      if (records && records.length > 0) {
-        const latestRecord = records[records.length - 1];
-        const weightKg = latestRecord.weight?.inKilograms;
-        if (weightKg) results.weight = parseFloat(weightKg.toFixed(1));
+      console.info('[HealthConnect] [Weight] Querying Weight records...');
+      let records = [];
+      try {
+        const res = await safeReadRecords('Weight', {
+          timeRangeFilter: { operator: 'between', startTime: '2020-01-01T00:00:00.000Z', endTime: now.toISOString() }
+        });
+        records = res?.records || [];
+      } catch (e) {
+        try {
+          const res = await safeReadRecords('Weight', {
+            timeRangeFilter: { operator: 'after', startTime: '2020-01-01T00:00:00.000Z' }
+          });
+          records = res?.records || [];
+        } catch (err) {
+          console.warn('[HealthConnect] [Weight] Fallback query error:', err?.message || err);
+        }
       }
+
+      console.info(`[HealthConnect] [Weight] Raw records count: ${records?.length || 0}`);
+      if (records && records.length > 0) {
+        console.info('[HealthConnect] [Weight] Raw records:', JSON.stringify(records));
+        const sorted = [...records].sort((a, b) => new Date(a.time || a.startTime || 0) - new Date(b.time || b.startTime || 0));
+        const latestRecord = sorted[sorted.length - 1];
+        const weightKg = latestRecord.weight?.inKilograms ?? latestRecord.weightInKg ?? latestRecord.weight;
+        if (weightKg && typeof weightKg === 'number') results.weight = parseFloat(weightKg.toFixed(1));
+        else if (latestRecord.weight?.inPounds) results.weight = parseFloat((latestRecord.weight.inPounds * 0.453592).toFixed(1));
+      }
+      console.info(`[HealthConnect] [Weight] Final Weight Result: ${results.weight} kg`);
     } catch (e) {
-      console.warn('Health Connect weight read failed:', e);
+      console.warn('[HealthConnect] [Weight] Read error:', e?.message || e);
     }
   }
 
   // 7. Height (cm)
   if (effectivePermissions.height) {
     try {
-      const { records } = await readRecords('Height', { timeRangeFilter });
-      if (records && records.length > 0) {
-        const latestRecord = records[records.length - 1];
-        const heightMeters = latestRecord.height?.inMeters;
-        if (heightMeters) results.height = Math.round(heightMeters * 100);
+      console.info('[HealthConnect] [Height] Querying Height records...');
+      let records = [];
+      try {
+        const res = await safeReadRecords('Height', {
+          timeRangeFilter: { operator: 'between', startTime: '2020-01-01T00:00:00.000Z', endTime: now.toISOString() }
+        });
+        records = res?.records || [];
+      } catch (e) {
+        try {
+          const res = await safeReadRecords('Height', {
+            timeRangeFilter: { operator: 'after', startTime: '2020-01-01T00:00:00.000Z' }
+          });
+          records = res?.records || [];
+        } catch (err) {
+          console.warn('[HealthConnect] [Height] Fallback query error:', err?.message || err);
+        }
       }
+
+      console.info(`[HealthConnect] [Height] Raw records count: ${records?.length || 0}`);
+      if (records && records.length > 0) {
+        console.info('[HealthConnect] [Height] Raw records:', JSON.stringify(records));
+        const sorted = [...records].sort((a, b) => new Date(a.time || a.startTime || 0) - new Date(b.time || b.startTime || 0));
+        const latestRecord = sorted[sorted.length - 1];
+        const heightMeters = latestRecord.height?.inMeters ?? (latestRecord.heightInCm ? latestRecord.heightInCm / 100 : null) ?? latestRecord.height;
+        if (heightMeters && typeof heightMeters === 'number') {
+          results.height = heightMeters > 3 ? Math.round(heightMeters) : Math.round(heightMeters * 100);
+        }
+      }
+      console.info(`[HealthConnect] [Height] Final Height Result: ${results.height} cm`);
     } catch (e) {
-      console.warn('Health Connect height read failed:', e);
+      console.warn('[HealthConnect] [Height] Read error:', e?.message || e);
     }
   }
 
-  // 8. Hydration (water intake in glasses / liters)
+  // 8. Hydration / Water
   if (effectivePermissions.hydration) {
     try {
-      const { records } = await readRecords('Hydration', { timeRangeFilter });
-      const maxLiters = extractMaxByOrigin(records, (r) => r.volume?.inLiters || 0);
-      if (maxLiters != null && maxLiters > 0) {
-        results.water = parseFloat(maxLiters.toFixed(2));
+      console.info('[HealthConnect] [Hydration] Querying Hydration records...');
+      let records = [];
+      try {
+        const res = await safeReadRecords('Hydration', { timeRangeFilter });
+        records = res?.records || [];
+      } catch (e) {
+        try {
+          const res = await safeReadRecords('Hydration', {
+            timeRangeFilter: { operator: 'between', startTime: new Date(now.getTime() - (48 * 3600000)).toISOString(), endTime: now.toISOString() }
+          });
+          records = res?.records || [];
+        } catch (err) {
+          console.warn('[HealthConnect] [Hydration] Fallback query error:', err?.message || err);
+        }
       }
+
+      console.info(`[HealthConnect] [Hydration] Raw records count: ${records?.length || 0}`);
+      if (records && records.length > 0) {
+        console.info('[HealthConnect] [Hydration] Raw records:', JSON.stringify(records));
+        const maxLiters = extractMaxByOrigin(records, (r) => r.volume?.inLiters || r.volumeInLiters || r.volume || 0);
+        if (maxLiters != null && maxLiters > 0) {
+          const glasses = parseFloat((maxLiters * 4).toFixed(1));
+          results.water = glasses;
+        }
+      }
+      console.info(`[HealthConnect] [Hydration] Final Water Result: ${results.water} glasses`);
     } catch (e) {
-      console.warn('Health Connect hydration read failed:', e);
+      console.warn('[HealthConnect] [Hydration] Read error:', e?.message || e);
     }
   }
 
   // 9. Body Fat (%)
   if (effectivePermissions.bodyFat) {
     try {
-      const { records } = await readRecords('BodyFat', { timeRangeFilter });
+      let records = [];
+      try {
+        const res = await safeReadRecords('BodyFat', {
+          timeRangeFilter: { operator: 'between', startTime: '2020-01-01T00:00:00.000Z', endTime: now.toISOString() }
+        });
+        records = res?.records || [];
+      } catch (e) {
+        try {
+          const res = await safeReadRecords('BodyFat', {
+            timeRangeFilter: { operator: 'after', startTime: '2020-01-01T00:00:00.000Z' }
+          });
+          records = res?.records || [];
+        } catch (err) {
+          console.warn('[HealthConnect] [BodyFat] Fallback query error:', err?.message || err);
+        }
+      }
+
       if (records && records.length > 0) {
-        const latestRecord = records[records.length - 1];
+        const sorted = [...records].sort((a, b) => new Date(a.time || a.startTime || 0) - new Date(b.time || b.startTime || 0));
+        const latestRecord = sorted[sorted.length - 1];
         const percentage = latestRecord.percentage;
         if (percentage) results.bodyFat = parseFloat(percentage.toFixed(1));
       }
+      console.info(`[HealthConnect] [BodyFat] Read ${records?.length || 0} records -> Result: ${results.bodyFat} %`);
     } catch (e) {
-      console.warn('Health Connect body fat read failed:', e);
+      console.warn('[HealthConnect] [BodyFat] Read error:', e?.message || e);
     }
   }
 
-  // 8. Blood oxygen (average percentage)
+  // 10. Blood oxygen
   if (effectivePermissions.bloodOxygen) {
     try {
-      const { records } = await readRecords('OxygenSaturation', { timeRangeFilter });
+      const { records } = await safeReadRecords('OxygenSaturation', { timeRangeFilter });
       if (records && records.length > 0) {
         let totalSpO2 = 0;
         records.forEach((record) => {
@@ -508,15 +702,16 @@ export async function fetchHealthConnectData(permissions) {
         });
         results.bloodOxygen = Math.round(totalSpO2 / records.length);
       }
+      console.info(`[HealthConnect] [SpO2] Read ${records?.length || 0} records -> Result: ${results.bloodOxygen} %`);
     } catch (e) {
-      console.warn('Health Connect blood oxygen read failed:', e);
+      console.warn('[HealthConnect] [SpO2] Read error:', e?.message || e);
     }
   }
 
-  // 9. Workout / Exercise Session + active minutes
+  // 11. Workout / Exercise Session
   if (effectivePermissions.workout) {
     try {
-      const { records } = await readRecords('ExerciseSession', { timeRangeFilter });
+      const { records } = await safeReadRecords('ExerciseSession', { timeRangeFilter });
       if (records && records.length > 0) {
         const EXERCISE_LABELS = {
           [ExerciseType.WALKING]: 'Walking',
@@ -541,10 +736,15 @@ export async function fetchHealthConnectData(permissions) {
         });
         results.activeMinutes = Math.round(totalActiveMillis / 60000);
       }
+      console.info(`[HealthConnect] [Workout] Read ${records?.length || 0} sessions -> Result: ${results.workout}, Active mins: ${results.activeMinutes}`);
     } catch (e) {
-      console.warn('Health Connect exercise read failed:', e);
+      console.warn('[HealthConnect] [Workout] Read error:', e?.message || e);
     }
   }
+
+  console.info('[HealthConnect] ✅ Sync Session Complete! Aggregated Payload:');
+  console.info(JSON.stringify(results, null, 2));
+  console.info('[HealthConnect] ====================================================');
 
   return results;
 }

@@ -103,6 +103,20 @@ export default function HealthDayDetail({ navigation, route }) {
           icon={<Ionicons name="water-outline" size={16} color={colors.pillHealth.text} />}
         />
       </View>
+      <View style={styles.grid}>
+        <MetricCard
+          value={entry.heartRate != null ? `${entry.heartRate} BPM` : '—'}
+          label="Heart Rate"
+          accent="#FF4B4B"
+          icon={<Ionicons name="heart" size={16} color="#FF4B4B" />}
+        />
+        <MetricCard
+          value={entry.activeMinutes != null ? `${entry.activeMinutes} mins` : '—'}
+          label="Active Minutes"
+          accent={colors.primary}
+          icon={<Ionicons name="fitness-outline" size={16} color={colors.primary} />}
+        />
+      </View>
       {entry.period ? (
         <View style={[styles.periodBanner, { backgroundColor: colors.accentLight.health, borderColor: colors.health }]}>
           <Ionicons name="water" size={18} color={colors.pillHealth.text} />

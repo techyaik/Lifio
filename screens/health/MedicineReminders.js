@@ -373,6 +373,7 @@ const styles = StyleSheet.create({
     borderRadius: RADIUS.xl,
     borderWidth: 1,
     maxHeight: '86%',
+    flexShrink: 1,
     padding: 18,
     ...SHADOWS.soft,
   },

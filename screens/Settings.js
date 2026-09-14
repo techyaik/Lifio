@@ -629,7 +629,7 @@ export default function Settings() {
   // ── Render ────────────────────────────────────────────────────────────────
 
   return (
-    <Screen contentStyle={styles.screenContent}>
+    <Screen contentStyle={styles.screenContent} withBottomNav>
       <Animated.View style={[styles.animatedContent, entranceStyle]}>
         <AppHeader
           title="Settings"
@@ -804,7 +804,7 @@ export default function Settings() {
                   return;
                 }
                 await initializeHealthConnect();
-                const res = await requestHealthPermissions({ steps: true, sleep: true, heartRate: true, calories: true, distance: true, workout: true });
+                const res = await requestHealthPermissions();
                 if (res.ok) {
                   await connectWatch(res.grantedKeys, 'health_connect');
                   await syncWatch(developerMode);
@@ -1157,7 +1157,7 @@ export default function Settings() {
 
 const styles = StyleSheet.create({
   screenContent: {
-    paddingBottom: 110, // Increased padding to clear bottom navigation and safe area
+    gap: 16,
   },
   animatedContent: {
     gap: 16,

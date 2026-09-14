@@ -4,11 +4,28 @@ import { AppText as Text } from './AppText';
 import { useTheme } from '../theme/ThemeContext';
 import { RADIUS, SHADOWS } from '../constants/theme';
 
-export function PrimaryButton({ title, onPress, color, disabled = false, icon, style }) {
+function getContrastTextColor(bgColor, darkColor, lightColor) {
+  if (!bgColor || typeof bgColor !== 'string') return darkColor;
+  let hex = bgColor.replace('#', '');
+  if (hex.length === 3) {
+    hex = hex.split('').map((c) => c + c).join('');
+  }
+  if (hex.length !== 6) return darkColor;
+  const r = parseInt(hex.substring(0, 2), 16);
+  const g = parseInt(hex.substring(2, 4), 16);
+  const b = parseInt(hex.substring(4, 6), 16);
+  const brightness = (r * 299 + g * 587 + b * 114) / 1000;
+  return brightness > 150 ? darkColor : lightColor;
+}
+
+export function PrimaryButton({ title, onPress, color, textColor, disabled = false, icon, style }) {
   const { colors, resolveThemeColor } = useTheme();
 
   const activeColor = color ? resolveThemeColor(color) : colors.health;
-  const buttonTextColor = colors.onAccent;
+  const buttonTextColor = textColor
+    ? resolveThemeColor(textColor)
+    : getContrastTextColor(activeColor, colors.onAccent || '#0A1913', colors.white || '#FFFFFF');
+
   const buttonIcon = React.isValidElement(icon)
     ? React.cloneElement(icon, { color: buttonTextColor })
     : icon;

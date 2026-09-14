@@ -4,11 +4,18 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../theme/ThemeContext';
 import { SPACING } from '../constants/theme';
 
-export function Screen({ children, scroll = true, loading = false, style, contentStyle, withBottomNav = false }) {
+export function Screen({ children, scroll = true, loading = false, style, contentStyle, withBottomNav = true }) {
   const { colors } = useTheme();
 
   const insets = useSafeAreaInsets();
-  const bottomNavPadding = withBottomNav ? 180 : SPACING.screen;
+  const minBottomPadding = withBottomNav ? 160 : SPACING.screen;
+
+  const flattenedContentStyle = StyleSheet.flatten(contentStyle) || {};
+  const customPaddingBottom = typeof flattenedContentStyle.paddingBottom === 'number'
+    ? flattenedContentStyle.paddingBottom
+    : 0;
+
+  const finalBottomPadding = insets.bottom + Math.max(minBottomPadding, customPaddingBottom);
 
   if (loading) {
     return (
@@ -25,7 +32,7 @@ export function Screen({ children, scroll = true, loading = false, style, conten
   if (!scroll) {
     return (
       <View style={[styles.root, { backgroundColor: colors.bg }, style]}>
-        <View style={[styles.root, { paddingTop: insets.top, paddingBottom: insets.bottom + (withBottomNav ? 88 : 0) }]}>
+        <View style={[styles.root, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
           {children}
         </View>
       </View>
@@ -39,8 +46,8 @@ export function Screen({ children, scroll = true, loading = false, style, conten
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={[
           styles.content, 
-          { paddingTop: insets.top + SPACING.screen, paddingBottom: insets.bottom + bottomNavPadding },
-          contentStyle
+          contentStyle,
+          { paddingTop: insets.top + SPACING.screen, paddingBottom: finalBottomPadding }
         ]}
       >
         {children}
