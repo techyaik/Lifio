@@ -807,7 +807,7 @@ export default function Settings() {
           </View>
 
           {watchConfig && watchConfig.connected ? (
-            <View style={{ flexDirection: 'row', gap: 8, marginTop: 4 }}>
+            <View style={{ flexDirection: 'row', gap: 8, marginTop: 6 }}>
               <Pressable
                 onPress={async () => {
                   try {
@@ -817,10 +817,13 @@ export default function Settings() {
                     showToast('Sync failed');
                   }
                 }}
-                style={[styles.inlineButton, { backgroundColor: colors.accentLight.health, borderColor: colors.health, flex: 1, height: 38, justifyContent: 'center' }]}
+                style={({ pressed }) => [
+                  styles.connectActionButton,
+                  { backgroundColor: colors.accentLight.health, borderColor: colors.health, flex: 1, opacity: pressed ? 0.8 : 1 }
+                ]}
               >
-                <Ionicons name="sync-outline" size={14} color={colors.pillHealth.text} style={{ marginRight: 4 }} />
-                <Text style={[styles.inlineButtonText, { color: colors.pillHealth.text }]}>Sync Now</Text>
+                <Ionicons name="sync-outline" size={15} color={colors.pillHealth.text} />
+                <Text style={[styles.connectActionButtonText, { color: colors.pillHealth.text }]}>Sync Now</Text>
               </Pressable>
 
               <Pressable
@@ -828,10 +831,13 @@ export default function Settings() {
                   const { openHealthConnectSettings } = require('../utils/healthConnect');
                   openHealthConnectSettings();
                 }}
-                style={[styles.inlineButton, { borderColor: colors.border, flex: 1, height: 38, justifyContent: 'center' }]}
+                style={({ pressed }) => [
+                  styles.connectActionButton,
+                  { borderColor: colors.borderLight, flex: 1, opacity: pressed ? 0.8 : 1 }
+                ]}
               >
-                <Ionicons name="settings-outline" size={14} color={colors.textSecondary} style={{ marginRight: 4 }} />
-                <Text style={[styles.inlineButtonText, { color: colors.textSecondary }]}>Manage</Text>
+                <Ionicons name="settings-outline" size={15} color={colors.textSecondary} />
+                <Text style={[styles.connectActionButtonText, { color: colors.textSecondary }]}>Manage</Text>
               </Pressable>
 
               <Pressable
@@ -847,10 +853,13 @@ export default function Settings() {
                     'Unlink'
                   );
                 }}
-                style={[styles.inlineButton, { borderColor: colors.danger, flex: 1, height: 38, justifyContent: 'center' }]}
+                style={({ pressed }) => [
+                  styles.connectActionButton,
+                  { borderColor: colors.danger, backgroundColor: colors.dangerBg, flex: 1, opacity: pressed ? 0.8 : 1 }
+                ]}
               >
-                <Ionicons name="close-circle-outline" size={14} color={colors.danger} style={{ marginRight: 4 }} />
-                <Text style={[styles.inlineButtonText, { color: colors.danger }]}>Unlink</Text>
+                <Ionicons name="close-circle-outline" size={15} color={colors.danger} />
+                <Text style={[styles.connectActionButtonText, { color: colors.danger }]}>Unlink</Text>
               </Pressable>
             </View>
           ) : (
@@ -880,14 +889,21 @@ export default function Settings() {
                   showToast('Permission denied');
                 }
               }}
-              style={[styles.inlineButton, { backgroundColor: colors.accentLight.health, borderColor: colors.health, height: 40, justifyContent: 'center' }]}
+              style={({ pressed }) => [
+                styles.connectPrimaryButton,
+                { backgroundColor: colors.health, opacity: pressed ? 0.85 : 1 }
+              ]}
             >
-              <Ionicons name="fitness-outline" size={16} color={colors.pillHealth.text} style={{ marginRight: 6 }} />
-              <Text style={[styles.inlineButtonText, { color: colors.pillHealth.text, fontSize: 14 }]}>Connect Google Health Connect</Text>
+              <Ionicons name="fitness" size={18} color={colors.onAccent || '#0A1913'} />
+              <Text style={[styles.connectPrimaryButtonText, { color: colors.onAccent || '#0A1913' }]}>
+                Connect Google Health Connect
+              </Text>
             </Pressable>
           )}
 
+
           <View style={[styles.divider, { backgroundColor: colors.borderLight, marginVertical: 16 }]} />
+
 
           <Text style={[styles.cardDesc, { color: colors.textSecondary }]}>
             Select the units used when logging and viewing your health metrics.
@@ -973,7 +989,13 @@ export default function Settings() {
             <>
               <View style={[styles.divider, { backgroundColor: colors.borderLight }]} />
 
-              <Pressable onPress={openTimePickerModal} style={[styles.optionRow, { justifyContent: 'space-between', alignItems: 'center' }]}>
+              <Pressable
+                onPress={openTimePickerModal}
+                style={({ pressed }) => [
+                  styles.optionRow,
+                  { justifyContent: 'space-between', alignItems: 'center', opacity: pressed ? 0.8 : 1 }
+                ]}
+              >
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 }}>
                   <View style={[styles.navIconWrap, { backgroundColor: colors.accentLight.habits, width: 34, height: 34 }]}>
                     <Ionicons name="alarm-outline" size={18} color={colors.habits} />
@@ -987,8 +1009,7 @@ export default function Settings() {
                 </View>
 
                 {/* Time Badge (20:00 / 09:00) */}
-                <Pressable
-                  onPress={openTimePickerModal}
+                <View
                   style={[
                     styles.timeDisplayBadge,
                     { backgroundColor: colors.surface, borderColor: colors.health }
@@ -997,11 +1018,12 @@ export default function Settings() {
                   <Text style={[styles.timeDisplayBadgeText, { color: colors.pillHealth.text }]}>
                     {dailyReminderTime}
                   </Text>
-                  <Ionicons name="chevron-forward" size={14} color={colors.textSecondary} style={{ marginLeft: 2 }} />
-                </Pressable>
+                  <Ionicons name="chevron-forward" size={14} color={colors.textSecondary} style={{ marginLeft: 4 }} />
+                </View>
               </Pressable>
             </>
           ) : null}
+
 
         </View>
       </View>
@@ -1382,10 +1404,13 @@ const styles = StyleSheet.create({
   optionTitle: {
     fontSize: 13,
     fontWeight: '700',
+    lineHeight: 18,
   },
   optionDesc: {
     fontSize: 11,
+    lineHeight: 15,
   },
+
   inlineButton: {
     paddingVertical: 6,
     paddingHorizontal: 14,
@@ -1470,8 +1495,9 @@ const styles = StyleSheet.create({
   // Divider
   divider: {
     height: 1,
-    marginVertical: 2,
+    marginVertical: 6,
   },
+
 
   // Nav rows (tappable)
   navRow: {
@@ -1601,26 +1627,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
 
-  // Time pills
-  timePillsScroll: {
-    flexDirection: 'row',
-    gap: 8,
-    paddingVertical: 4,
-    paddingRight: 4,
-  },
-  timePill: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: RADIUS.md,
-    borderWidth: 1.5,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  timePillLabel: {
-    fontSize: 12,
-    fontWeight: '600',
-  },
-
   // Time display badge
   timeDisplayBadge: {
     flexDirection: 'row',
@@ -1629,12 +1635,48 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: RADIUS.md,
     borderWidth: 1.5,
+    minHeight: 34,
   },
   timeDisplayBadgeText: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '700',
     letterSpacing: 0.5,
   },
+
+  // Health Connect integration buttons
+  connectPrimaryButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    height: 48,
+    borderRadius: RADIUS.md,
+    marginTop: 6,
+    paddingHorizontal: 16,
+    ...SHADOWS.subtle,
+  },
+  connectPrimaryButtonText: {
+    fontSize: 14,
+    fontWeight: '800',
+    letterSpacing: 0.2,
+  },
+
+  connectActionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    height: 40,
+    borderRadius: RADIUS.md,
+    borderWidth: 1,
+    paddingHorizontal: 10,
+  },
+  connectActionButtonText: {
+    fontSize: 12,
+    fontWeight: '700',
+  },
 });
+
+
 
 
