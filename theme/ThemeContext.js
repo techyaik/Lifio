@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { useColorScheme } from 'react-native';
+import { useColorScheme, Appearance } from 'react-native';
 import AsyncStorage from '../storage/safeAsyncStorage';
 import { LIGHT_COLORS, DARK_COLORS } from '../constants/colors';
 
@@ -45,10 +45,39 @@ export const resolveColor = (colorStr, colors) => {
 
 export function ThemeProvider({ children }) {
   const systemColorScheme = useColorScheme();
+  const [systemSchemeState, setSystemSchemeState] = useState(
+    () => Appearance.getColorScheme() || systemColorScheme || 'light'
+  );
   const [themeMode, setThemeModeState] = useState('system'); // 'light' | 'dark' | 'system'
   const [profileName, setProfileNameState] = useState('');
   const [appLockEnabled, setAppLockEnabledState] = useState(false);
   const [ready, setReady] = useState(false);
+
+  // Sync state whenever useColorScheme hook or Appearance state updates
+  useEffect(() => {
+    const current = Appearance.getColorScheme() || systemColorScheme;
+    if (current) {
+      setSystemSchemeState(current);
+    }
+  }, [systemColorScheme]);
+
+  // Subscribe to real-time device system appearance changes
+  useEffect(() => {
+    const subscription = Appearance.addChangeListener(({ colorScheme }) => {
+      const nextScheme = colorScheme || Appearance.getColorScheme();
+      if (nextScheme) {
+        console.info('[ThemeContext] System appearance changed to:', nextScheme);
+        setSystemSchemeState(nextScheme);
+      }
+    });
+    return () => {
+      if (subscription?.remove) {
+        subscription.remove();
+      } else if (Appearance.removeChangeListener) {
+        Appearance.removeChangeListener(subscription);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     const loadTheme = async () => {
@@ -119,7 +148,8 @@ export function ThemeProvider({ children }) {
     }
   };
 
-  const theme = themeMode === 'system' ? (systemColorScheme || 'light') : themeMode;
+  const activeSystemScheme = systemSchemeState || Appearance.getColorScheme() || systemColorScheme || 'light';
+  const theme = themeMode === 'system' ? activeSystemScheme : themeMode;
   const colors = theme === 'dark' ? DARK_COLORS : LIGHT_COLORS;
 
   const gradients = {

@@ -93,7 +93,7 @@ function CustomTabBar({ state, descriptors, navigation }) {
         };
 
         const activeBg = colors.white;
-        const activeContentColor = colors.textPrimary;
+        const activeContentColor = colors.onAccent || colors.textPrimary;
         const inactiveContentColor = colors.textSecondary;
 
         return (
@@ -202,7 +202,7 @@ function NavigatorContent() {
 
   return (
     <>
-      <StatusBar barStyle={theme === 'dark' ? 'light-content' : 'dark-content'} />
+      <StatusBar barStyle={theme === 'dark' ? 'light-content' : 'dark-content'} backgroundColor={colors.bg} />
       <NavigationContainer theme={navigationTheme}>
         {onboarded ? (
         profileName ? (
