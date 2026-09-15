@@ -119,19 +119,19 @@ export default function NotesList({ navigation, route }) {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  headerContainer: { gap: 10, paddingTop: 8 },
+  headerContainer: { gap: 12, paddingTop: 8 },
   searchRow: { alignItems: 'center', flexDirection: 'row', gap: 8 },
   searchInput: { flex: 1 },
   tagButton: {
     alignItems: 'center',
     borderRadius: RADIUS.xl,
     borderWidth: 0,
-    height: 52,
+    height: 48,
     justifyContent: 'center',
-    width: 52,
+    width: 48,
     ...SHADOWS.soft,
   },
-  tags: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 4 },
+  tags: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 6 },
   list: { gap: 16, paddingTop: SPACING.screen, paddingHorizontal: SPACING.screen },
   fabWrap: {
     position: 'absolute',

@@ -59,9 +59,9 @@ const styles = StyleSheet.create({
   },
   titleRow: { alignItems: 'center', flexDirection: 'row', gap: 6 },
   title: { flex: 1, fontSize: 16, fontWeight: '700' },
-  preview: { fontSize: 14, lineHeight: 20 },
-  footer: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between', marginTop: 8 },
-  date: { fontSize: 11 },
+  preview: { fontSize: 14, lineHeight: 21 },
+  footer: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between', marginTop: 6 },
+  date: { fontSize: 12 },
   delete: {
     alignItems: 'center',
     borderRadius: RADIUS.xl,

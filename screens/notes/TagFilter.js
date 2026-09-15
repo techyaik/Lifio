@@ -41,15 +41,15 @@ export default function TagFilter({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   card: {
     borderRadius: RADIUS.lg,
     borderWidth: 1,
-    gap: 8,
-    padding: 12,
+    gap: 10,
+    padding: 16,
     width: '48%',
     ...SHADOWS.subtle,
   },
   tag: { fontSize: 15, fontWeight: '600' },
-  count: { fontSize: 11 },
+  count: { fontSize: 12 },
 });

@@ -128,23 +128,23 @@ export default function HabitsToday({ navigation }) {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  section: { gap: 12, marginBottom: 8 },
+  section: { gap: 14, marginBottom: 12 },
   weekBars: {
     alignItems: 'flex-end',
     borderRadius: RADIUS.xl,
     borderWidth: 0,
     flexDirection: 'row',
-    gap: 8,
+    gap: 10,
     justifyContent: 'space-between',
     minHeight: 160,
     paddingHorizontal: 24,
     paddingVertical: 20,
     ...SHADOWS.soft,
   },
-  barItem: { alignItems: 'center', flex: 1, gap: 10 },
+  barItem: { alignItems: 'center', flex: 1, gap: 8 },
   barTrack: { borderRadius: RADIUS.pill, height: 100, justifyContent: 'flex-end', overflow: 'hidden', width: 16 },
   barFill: { borderRadius: RADIUS.pill, width: 16 },
-  dayLabel: { fontSize: 11, fontWeight: '600' },
+  dayLabel: { fontSize: 12, fontWeight: '600' },
   fabWrap: {
     position: 'absolute',
     right: 24,

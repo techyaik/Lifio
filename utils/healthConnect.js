@@ -6,6 +6,7 @@ import {
   revokeAllPermissions as revokeAllPermissionsNative,
   getSdkStatus,
   readRecords,
+  aggregateRecord,
   openHealthConnectSettings as openHealthConnectSettingsNative,
   SdkAvailabilityStatus,
   ExerciseType,
@@ -22,6 +23,7 @@ const METRIC_CONFIG = {
   steps: { recordType: 'Steps', permission: 'android.permission.health.READ_STEPS', label: 'Steps' },
   distance: { recordType: 'Distance', permission: 'android.permission.health.READ_DISTANCE', label: 'Distance' },
   calories: { recordType: 'ActiveCaloriesBurned', permission: 'android.permission.health.READ_ACTIVE_CALORIES_BURNED', label: 'Calories' },
+  totalCalories: { recordType: 'TotalCaloriesBurned', permission: 'android.permission.health.READ_TOTAL_CALORIES_BURNED', label: 'Total Calories' },
   heartRate: { recordType: 'HeartRate', permission: 'android.permission.health.READ_HEART_RATE', label: 'Heart rate' },
   sleep: { recordType: 'SleepSession', permission: 'android.permission.health.READ_SLEEP', label: 'Sleep' },
   weight: { recordType: 'Weight', permission: 'android.permission.health.READ_WEIGHT', label: 'Weight' },
@@ -366,23 +368,25 @@ export async function fetchHealthConnectData(permissions) {
     console.warn('[HealthConnect] Could not query granted health permissions:', e);
   }
 
-  // Evaluate effective permissions based on user metric toggles.
-  // We attempt readRecords for all metrics unless explicitly toggled off (false).
+  // Check if a metric key has been granted at the OS level (or fallback to true if query failed)
+  const isGranted = (key) => grantedKeys.length === 0 || grantedKeys.includes(key);
+
+  // Evaluate effective permissions based on BOTH user metric toggles AND granted OS permissions
   const effectivePermissions = {
-    steps: !permissions || permissions.steps !== false,
-    distance: !permissions || permissions.distance !== false,
-    calories: !permissions || permissions.calories !== false,
-    heartRate: !permissions || permissions.heartRate !== false,
-    sleep: !permissions || permissions.sleep !== false,
-    weight: !permissions || permissions.weight !== false,
-    height: !permissions || permissions.height !== false,
-    hydration: !permissions || permissions.hydration !== false,
-    bodyFat: !permissions || permissions.bodyFat !== false,
-    bloodOxygen: !permissions || permissions.bloodOxygen !== false,
-    workout: !permissions || permissions.workout !== false,
+    steps: (!permissions || permissions.steps !== false) && isGranted('steps'),
+    distance: (!permissions || permissions.distance !== false) && isGranted('distance'),
+    calories: (!permissions || permissions.calories !== false) && isGranted('calories'),
+    heartRate: (!permissions || permissions.heartRate !== false) && isGranted('heartRate'),
+    sleep: (!permissions || permissions.sleep !== false) && isGranted('sleep'),
+    weight: (!permissions || permissions.weight !== false) && isGranted('weight'),
+    height: (!permissions || permissions.height !== false) && isGranted('height'),
+    hydration: (!permissions || permissions.hydration !== false) && isGranted('hydration'),
+    bodyFat: (!permissions || permissions.bodyFat !== false) && isGranted('bodyFat'),
+    bloodOxygen: (!permissions || permissions.bloodOxygen !== false) && isGranted('bloodOxygen'),
+    workout: (!permissions || permissions.workout !== false) && isGranted('workout'),
   };
 
-  console.info('[HealthConnect] Enabled metric read targets:', Object.keys(effectivePermissions).filter((k) => effectivePermissions[k]));
+  console.info('[HealthConnect] Enabled & Granted metric read targets:', Object.keys(effectivePermissions).filter((k) => effectivePermissions[k]));
 
   // Helper to deduplicate records across data sources cleanly
   const extractMaxByOrigin = (records, getVal) => {
@@ -400,26 +404,49 @@ export async function fetchHealthConnectData(permissions) {
 
   // Safe readRecords wrapper guaranteeing non-null options parameter with valid timeRangeFilter
   const safeReadRecords = async (recordType, options) => {
-    const opts = options && typeof options === 'object' ? options : { timeRangeFilter };
-    if (!opts.timeRangeFilter) {
-      opts.timeRangeFilter = timeRangeFilter;
-    }
+    const opts = {
+      timeRangeFilter,
+      ...(options && typeof options === 'object' ? options : {}),
+    };
     return await readRecords(recordType, opts);
+  };
+
+  // Helper to attempt OS native aggregate calculations
+  const safeAggregate = async (request) => {
+    try {
+      if (typeof aggregateRecord === 'function') {
+        return await aggregateRecord(request);
+      }
+    } catch (e) {
+      console.info(`[HealthConnect] [Aggregate] Note for ${request.recordType}:`, e?.message || e);
+    }
+    return null;
   };
 
   // 1. Steps
   if (effectivePermissions.steps) {
     try {
-      let { records } = await safeReadRecords('Steps', { timeRangeFilter });
-      if (!records || records.length === 0) {
-        const fallback = await safeReadRecords('Steps', {
-          timeRangeFilter: { operator: 'between', startTime: new Date(now.getTime() - (7 * 86400000)).toISOString(), endTime: now.toISOString() }
-        });
-        records = fallback?.records || [];
+      // Primary: Native OS aggregation
+      const agg = await safeAggregate({ recordType: 'Steps', timeRangeFilter });
+      if (agg && typeof agg.COUNT_TOTAL === 'number' && agg.COUNT_TOTAL > 0) {
+        results.steps = agg.COUNT_TOTAL;
       }
-      const maxSteps = extractMaxByOrigin(records, (r) => r.count || 0);
-      if (maxSteps != null && maxSteps >= 0) results.steps = maxSteps;
-      console.info(`[HealthConnect] [Steps] Read ${records?.length || 0} records -> Result: ${results.steps} steps`);
+
+      // Fallback: Individual record calculation
+      if (results.steps == null) {
+        let { records } = await safeReadRecords('Steps', { timeRangeFilter });
+        if (!records || records.length === 0) {
+          const fallback = await safeReadRecords('Steps', {
+            timeRangeFilter: { operator: 'between', startTime: new Date(now.getTime() - (7 * 86400000)).toISOString(), endTime: now.toISOString() }
+          });
+          records = fallback?.records || [];
+        }
+        const maxSteps = extractMaxByOrigin(records, (r) => r.count || 0);
+        if (maxSteps != null && maxSteps >= 0) results.steps = maxSteps;
+        console.info(`[HealthConnect] [Steps] Read ${records?.length || 0} raw records -> Result: ${results.steps} steps`);
+      } else {
+        console.info(`[HealthConnect] [Steps] OS Aggregate -> Result: ${results.steps} steps`);
+      }
     } catch (e) {
       console.warn('[HealthConnect] [Steps] Read error:', e?.message || e);
     }
@@ -428,10 +455,22 @@ export async function fetchHealthConnectData(permissions) {
   // 2. Distance (km)
   if (effectivePermissions.distance) {
     try {
-      let { records } = await safeReadRecords('Distance', { timeRangeFilter });
-      const maxMeters = extractMaxByOrigin(records, (r) => r.distance?.inMeters || 0);
-      if (maxMeters != null && maxMeters >= 0) results.distance = parseFloat((maxMeters / 1000).toFixed(2));
-      console.info(`[HealthConnect] [Distance] Read ${records?.length || 0} records -> Result: ${results.distance} km`);
+      // Primary: Native OS aggregation
+      const agg = await safeAggregate({ recordType: 'Distance', timeRangeFilter });
+      const distMeters = agg?.DISTANCE?.inMeters ?? (agg?.DISTANCE?.inKilometers ? agg.DISTANCE.inKilometers * 1000 : null);
+      if (distMeters != null && distMeters > 0) {
+        results.distance = parseFloat((distMeters / 1000).toFixed(2));
+      }
+
+      // Fallback: Individual record calculation
+      if (results.distance == null) {
+        let { records } = await safeReadRecords('Distance', { timeRangeFilter });
+        const maxMeters = extractMaxByOrigin(records, (r) => r.distance?.inMeters || 0);
+        if (maxMeters != null && maxMeters >= 0) results.distance = parseFloat((maxMeters / 1000).toFixed(2));
+        console.info(`[HealthConnect] [Distance] Read ${records?.length || 0} raw records -> Result: ${results.distance} km`);
+      } else {
+        console.info(`[HealthConnect] [Distance] OS Aggregate -> Result: ${results.distance} km`);
+      }
     } catch (e) {
       console.warn('[HealthConnect] [Distance] Read error:', e?.message || e);
     }
@@ -440,22 +479,38 @@ export async function fetchHealthConnectData(permissions) {
   // 3. Calories / Energy
   if (effectivePermissions.calories) {
     try {
-      const { records } = await safeReadRecords('ActiveCaloriesBurned', { timeRangeFilter });
-      let maxCalories = extractMaxByOrigin(records, (r) => r.energy?.inKilocalories || 0);
+      // Primary: Native OS aggregation
+      const agg = await safeAggregate({ recordType: 'ActiveCaloriesBurned', timeRangeFilter });
+      let cal = agg?.ACTIVE_CALORIES_TOTAL?.inKilocalories;
+      if ((cal == null || cal === 0) && isGranted('totalCalories')) {
+        const totalAgg = await safeAggregate({ recordType: 'TotalCaloriesBurned', timeRangeFilter });
+        cal = totalAgg?.ENERGY_TOTAL?.inKilocalories;
+      }
+      if (cal != null && cal > 0) {
+        results.calories = Math.round(cal);
+      }
 
-      if (maxCalories == null || maxCalories === 0) {
-        try {
-          const { records: totalRecords } = await safeReadRecords('TotalCaloriesBurned', { timeRangeFilter });
-          maxCalories = extractMaxByOrigin(totalRecords, (r) => r.energy?.inKilocalories || 0);
-        } catch (e) {
-          // ignore fallback
+      // Fallback: Individual record calculation
+      if (results.calories == null) {
+        const { records } = await safeReadRecords('ActiveCaloriesBurned', { timeRangeFilter });
+        let maxCalories = extractMaxByOrigin(records, (r) => r.energy?.inKilocalories || 0);
+
+        if ((maxCalories == null || maxCalories === 0) && isGranted('totalCalories')) {
+          try {
+            const { records: totalRecords } = await safeReadRecords('TotalCaloriesBurned', { timeRangeFilter });
+            maxCalories = extractMaxByOrigin(totalRecords, (r) => r.energy?.inKilocalories || 0);
+          } catch (e) {
+            // ignore fallback
+          }
         }
-      }
 
-      if (maxCalories != null && maxCalories > 0) {
-        results.calories = Math.round(maxCalories);
+        if (maxCalories != null && maxCalories > 0) {
+          results.calories = Math.round(maxCalories);
+        }
+        console.info(`[HealthConnect] [Calories] Read ${records?.length || 0} raw records -> Result: ${results.calories} kcal`);
+      } else {
+        console.info(`[HealthConnect] [Calories] OS Aggregate -> Result: ${results.calories} kcal`);
       }
-      console.info(`[HealthConnect] [Calories] Read ${records?.length || 0} records -> Result: ${results.calories} kcal`);
     } catch (e) {
       console.warn('[HealthConnect] [Calories] Read error:', e?.message || e);
     }

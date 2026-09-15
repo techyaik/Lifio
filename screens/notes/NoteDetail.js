@@ -58,9 +58,9 @@ export default function NoteDetail({ navigation, route }) {
 }
 
 const styles = StyleSheet.create({
-  card: { borderRadius: RADIUS.lg, borderWidth: 1, gap: 12, padding: 16, ...SHADOWS.subtle },
-  title: { fontSize: 22, fontWeight: '700' },
-  date: { fontSize: 11 },
+  card: { borderRadius: RADIUS.lg, borderWidth: 1, gap: 14, padding: 20, ...SHADOWS.subtle },
+  title: { fontSize: 24, fontWeight: '700' },
+  date: { fontSize: 12 },
   tags: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   body: { fontSize: 15, lineHeight: 23 },
 });

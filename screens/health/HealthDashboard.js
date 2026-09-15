@@ -106,10 +106,27 @@ function ProgressLine({ label, value, detail, color }) {
   );
 }
 
+const getLast7DaysData = (logs, field) => {
+  const byDate = new Map((logs || []).map((log) => [log.date, log]));
+  const result = [];
+  const now = new Date();
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() - i);
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    const log = byDate.get(key);
+    result.push({
+      id: key,
+      date: key,
+      [field]: log?.[field] ?? 0,
+      isToday: i === 0,
+    });
+  }
+  return result;
+};
+
 function MiniBars({ logs, field, goal }) {
   const { colors } = useTheme();
-  const recent = [...logs].slice(0, 7).reverse();
-  const data = recent.length ? recent : Array.from({ length: 7 }, (_, index) => ({ id: String(index), [field]: 0 }));
+  const data = getLast7DaysData(logs, field);
   return (
     <View style={styles.miniBars}>
       {data.map((item, index) => {

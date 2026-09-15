@@ -161,9 +161,9 @@ export default function HabitEdit({ navigation, route }) {
 }
 
 const styles = StyleSheet.create({
-  form: { gap: 10 },
+  form: { gap: 12 },
   wrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  segment: { borderRadius: RADIUS.md, borderWidth: 1, flexDirection: 'row', padding: 4 },
-  segmentText: { flex: 1, fontSize: 12, fontWeight: '600', padding: 10, textAlign: 'center', textTransform: 'capitalize' },
-  errorText: { fontSize: 11, fontWeight: '600', marginTop: -4, marginLeft: 4 },
+  segment: { borderRadius: RADIUS.md, borderWidth: 1, flexDirection: 'row', padding: 5 },
+  segmentText: { flex: 1, fontSize: 12, fontWeight: '600', padding: 11, textAlign: 'center', textTransform: 'capitalize' },
+  errorText: { fontSize: 12, fontWeight: '600', marginTop: -4, marginLeft: 4 },
 });

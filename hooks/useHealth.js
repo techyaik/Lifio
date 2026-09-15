@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect, useCallback } from 'react';
+import { useMemo, useState, useEffect, useCallback, useRef } from 'react';
 import AsyncStorage from '../storage/safeAsyncStorage';
 import { parseISO } from 'date-fns';
 import { useFocusEffect } from '@react-navigation/native';
@@ -19,6 +19,8 @@ export function useHealth() {
   const { items, loading, saveAll, refresh } = useStoredList(KEY);
   const [watchConfig, setWatchConfig] = useState(null);
   const { dataVersion, triggerDataRefresh } = useTheme();
+  // Prevents concurrent syncs from racing each other
+  const isSyncingRef = useRef(false);
 
   const loadWatchConfig = useCallback(async () => {
     try {
@@ -133,6 +135,12 @@ export function useHealth() {
     const config = configOverride || watchConfig;
     if (!config || !config.connected) return;
 
+    // Prevent concurrent syncs from racing each other
+    if (isSyncingRef.current) {
+      console.info('[useHealth] Skipping sync — another sync is already in progress.');
+      return;
+    }
+
     // Cooldown throttle: ignore auto-sync if last sync completed less than 15 seconds ago
     if (!force && config.lastSynced) {
       const elapsedMs = Date.now() - new Date(config.lastSynced).getTime();
@@ -142,173 +150,205 @@ export function useHealth() {
       }
     }
 
-    // Auto-heal permissions to ensure all metrics are enabled by default
-    const activePermissions = {
-      steps: true,
-      distance: true,
-      calories: true,
-      heartRate: true,
-      sleep: true,
-      weight: true,
-      height: true,
-      hydration: true,
-      bodyFat: true,
-      bloodOxygen: true,
-      workout: true,
-      activeMinutes: true,
-      ...(config.permissions || {}),
-    };
+    isSyncingRef.current = true;
 
-    let syncedMetrics = null;
-
-    if (devMode) {
-      console.log('[DevMode] Injecting mock Health Connect data.');
-      syncedMetrics = {
-        steps: activePermissions.steps ? 8432 : null,
-        distance: activePermissions.distance ? 6.2 : null,
-        activeMinutes: activePermissions.activeMinutes ? 45 : null,
-        calories: activePermissions.calories ? 342 : null,
-        heartRate: activePermissions.heartRate ? 72 : null,
-        sleep: activePermissions.sleep ? 7.5 : null,
-        weight: activePermissions.weight ? 70.5 : null,
-        height: activePermissions.height ? 175 : null,
-        bloodOxygen: activePermissions.bloodOxygen ? 98 : null,
-        workout: activePermissions.workout ? 'Running' : null,
+    try {
+      // Auto-heal permissions to ensure all metrics are enabled by default
+      const activePermissions = {
+        steps: true,
+        distance: true,
+        calories: true,
+        heartRate: true,
+        sleep: true,
+        weight: true,
+        height: true,
+        hydration: true,
+        bodyFat: true,
+        bloodOxygen: true,
+        workout: true,
+        activeMinutes: true,
+        ...(config.permissions || {}),
       };
-    } else if (config.provider === 'health_connect') {
-      try {
-        console.info('[useHealth] Requesting Health Connect metrics for enabled permissions:', activePermissions);
-        syncedMetrics = await fetchHealthConnectData(activePermissions);
-        console.info('[useHealth] Successfully fetched metrics from Health Connect:', syncedMetrics);
-      } catch (err) {
-        console.warn('[useHealth] Error fetching Health Connect data, returning zeroed state:', err);
+
+      let syncedMetrics = null;
+
+      if (devMode) {
+        console.log('[DevMode] Injecting mock Health Connect data.');
         syncedMetrics = {
-          steps: activePermissions.steps ? 0 : null,
-          distance: activePermissions.distance ? 0 : null,
-          activeMinutes: activePermissions.activeMinutes ? 0 : null,
-          calories: activePermissions.calories ? 0 : null,
-          heartRate: activePermissions.heartRate ? 0 : null,
-          sleep: activePermissions.sleep ? 0 : null,
-          weight: activePermissions.weight ? 0 : null,
-          height: activePermissions.height ? 0 : null,
-          bloodOxygen: activePermissions.bloodOxygen ? 0 : null,
-          workout: activePermissions.workout ? 'None' : null,
+          steps: activePermissions.steps ? 8432 : null,
+          distance: activePermissions.distance ? 6.2 : null,
+          activeMinutes: activePermissions.activeMinutes ? 45 : null,
+          calories: activePermissions.calories ? 342 : null,
+          heartRate: activePermissions.heartRate ? 72 : null,
+          sleep: activePermissions.sleep ? 7.5 : null,
+          weight: activePermissions.weight ? 70.5 : null,
+          height: activePermissions.height ? 175 : null,
+          bloodOxygen: activePermissions.bloodOxygen ? 98 : null,
+          workout: activePermissions.workout ? 'Running' : null,
         };
-      }
-    }
-
-    if (!syncedMetrics) {
-      return;
-    }
-
-    const todayDate = todayKey();
-    const existingToday = items.find((log) => log.date === todayDate);
-
-    const reconcileField = (existingRecord, field, syncedValue) => {
-      const sources = existingRecord?.sources || {};
-      const isManual = sources[field] === 'MANUAL';
-      
-      if (!isManual && syncedValue != null && syncedValue !== '') {
-        return { value: syncedValue, source: 'HEALTH_CONNECT' };
-      }
-      return { value: existingRecord?.[field] ?? null, source: sources[field] || null };
-    };
-
-    let updatedLogs;
-    if (existingToday) {
-      updatedLogs = items.map((log) => {
-        if (log.date === todayDate) {
-          const stepsData = reconcileField(log, 'steps', syncedMetrics.steps);
-          const sleepData = reconcileField(log, 'sleep', syncedMetrics.sleep);
-          const heartRateData = reconcileField(log, 'heartRate', syncedMetrics.heartRate);
-          const distanceData = reconcileField(log, 'distance', syncedMetrics.distance);
-          const caloriesData = reconcileField(log, 'calories', syncedMetrics.calories);
-          const weightData = reconcileField(log, 'weight', syncedMetrics.weight);
-          const heightData = reconcileField(log, 'height', syncedMetrics.height);
-          const waterData = reconcileField(log, 'water', syncedMetrics.water);
-          const bodyFatData = reconcileField(log, 'bodyFat', syncedMetrics.bodyFat);
-          const bloodOxygenData = reconcileField(log, 'bloodOxygen', syncedMetrics.bloodOxygen);
-          const activeMinutesData = reconcileField(log, 'activeMinutes', syncedMetrics.activeMinutes);
-
-          return {
-            ...log,
-            steps: stepsData.value,
-            sleep: sleepData.value,
-            heartRate: heartRateData.value,
-            distance: distanceData.value,
-            calories: caloriesData.value,
-            weight: weightData.value,
-            height: heightData.value,
-            water: waterData.value,
-            bodyFat: bodyFatData.value,
-            bloodOxygen: bloodOxygenData.value,
-            activeMinutes: activeMinutesData.value,
-            workout: syncedMetrics.workout || log.workout || null,
-            watchData: syncedMetrics,
-            sources: {
-              ...(log.sources || {}),
-              steps: stepsData.source,
-              sleep: sleepData.source,
-              heartRate: heartRateData.source,
-              distance: distanceData.source,
-              calories: caloriesData.source,
-              weight: weightData.source,
-              height: heightData.source,
-              water: waterData.source,
-              bodyFat: bodyFatData.source,
-              bloodOxygen: bloodOxygenData.source,
-              activeMinutes: activeMinutesData.source,
-            }
+      } else if (config.provider === 'health_connect') {
+        try {
+          console.info('[useHealth] Requesting Health Connect metrics for enabled permissions:', activePermissions);
+          syncedMetrics = await fetchHealthConnectData(activePermissions);
+          console.info('[useHealth] Successfully fetched metrics from Health Connect:', syncedMetrics);
+        } catch (err) {
+          console.warn('[useHealth] Error fetching Health Connect data, returning zeroed state:', err);
+          syncedMetrics = {
+            steps: activePermissions.steps ? 0 : null,
+            distance: activePermissions.distance ? 0 : null,
+            activeMinutes: activePermissions.activeMinutes ? 0 : null,
+            calories: activePermissions.calories ? 0 : null,
+            heartRate: activePermissions.heartRate ? 0 : null,
+            sleep: activePermissions.sleep ? 0 : null,
+            weight: activePermissions.weight ? 0 : null,
+            height: activePermissions.height ? 0 : null,
+            bloodOxygen: activePermissions.bloodOxygen ? 0 : null,
+            workout: activePermissions.workout ? 'None' : null,
           };
         }
-        return log;
+      }
+
+      if (!syncedMetrics) {
+        console.info('[useHealth] No metrics to sync — skipping save.');
+        return;
+      }
+
+      // Differentiate daily activity metrics (which reset daily) from profile metrics (which persist)
+      const reconcileDailyField = (existingRecord, field, syncedValue) => {
+        const isManual = existingRecord?.sources?.[field] === 'MANUAL';
+        if (isManual) {
+          return { value: existingRecord?.[field] ?? null, source: 'MANUAL' };
+        }
+        // Daily activity metric: reflects incoming syncedValue for today
+        return {
+          value: syncedValue ?? null,
+          source: syncedValue != null ? 'HEALTH_CONNECT' : null,
+        };
+      };
+
+      const reconcileProfileField = (existingRecord, field, syncedValue) => {
+        const isManual = existingRecord?.sources?.[field] === 'MANUAL';
+        if (isManual) {
+          return { value: existingRecord?.[field] ?? null, source: 'MANUAL' };
+        }
+        if (syncedValue != null && syncedValue !== '') {
+          return { value: syncedValue, source: 'HEALTH_CONNECT' };
+        }
+        return {
+          value: existingRecord?.[field] ?? null,
+          source: existingRecord?.sources?.[field] || null,
+        };
+      };
+
+      // saveAll receives a function updater so it always reads from the freshest in-memory state
+      await saveAll((currentLogs) => {
+        const todayDate = todayKey();
+        const existingToday = currentLogs.find((log) => log.date === todayDate);
+
+        if (existingToday) {
+          return currentLogs.map((log) => {
+            if (log.date !== todayDate) return log;
+
+            const stepsData = reconcileDailyField(log, 'steps', syncedMetrics.steps);
+            const distanceData = reconcileDailyField(log, 'distance', syncedMetrics.distance);
+            const caloriesData = reconcileDailyField(log, 'calories', syncedMetrics.calories);
+            const activeMinutesData = reconcileDailyField(log, 'activeMinutes', syncedMetrics.activeMinutes);
+            const heartRateData = reconcileDailyField(log, 'heartRate', syncedMetrics.heartRate);
+            const sleepData = reconcileDailyField(log, 'sleep', syncedMetrics.sleep);
+            const workoutVal = syncedMetrics.workout ?? (log.sources?.workout === 'MANUAL' ? log.workout : null);
+
+            const weightData = reconcileProfileField(log, 'weight', syncedMetrics.weight);
+            const heightData = reconcileProfileField(log, 'height', syncedMetrics.height);
+            const waterData = reconcileDailyField(log, 'water', syncedMetrics.water);
+            const bodyFatData = reconcileProfileField(log, 'bodyFat', syncedMetrics.bodyFat);
+            const bloodOxygenData = reconcileProfileField(log, 'bloodOxygen', syncedMetrics.bloodOxygen);
+
+            return {
+              ...log,
+              steps: stepsData.value,
+              sleep: sleepData.value,
+              heartRate: heartRateData.value,
+              distance: distanceData.value,
+              calories: caloriesData.value,
+              activeMinutes: activeMinutesData.value,
+              workout: workoutVal,
+              weight: weightData.value,
+              height: heightData.value,
+              water: waterData.value,
+              bodyFat: bodyFatData.value,
+              bloodOxygen: bloodOxygenData.value,
+              watchData: syncedMetrics,
+              sources: {
+                ...(log.sources || {}),
+                steps: stepsData.source,
+                sleep: sleepData.source,
+                heartRate: heartRateData.source,
+                distance: distanceData.source,
+                calories: caloriesData.source,
+                activeMinutes: activeMinutesData.source,
+                workout: syncedMetrics.workout != null ? 'HEALTH_CONNECT' : log.sources?.workout || null,
+                weight: weightData.source,
+                height: heightData.source,
+                water: waterData.source,
+                bodyFat: bodyFatData.source,
+                bloodOxygen: bloodOxygenData.source,
+              },
+            };
+          });
+        }
+
+        // Find latest log for profile fallbacks (weight/height)
+        const latestLog = currentLogs.length > 0 ? currentLogs[0] : null;
+
+        // Create today's log ensuring today's record exists and reflects today's state
+        return [
+          ...currentLogs,
+          {
+            id: Date.now().toString(),
+            date: todayDate,
+            createdAt: new Date().toISOString(),
+            steps: syncedMetrics.steps ?? null,
+            distance: syncedMetrics.distance ?? null,
+            calories: syncedMetrics.calories ?? null,
+            activeMinutes: syncedMetrics.activeMinutes ?? null,
+            heartRate: syncedMetrics.heartRate ?? null,
+            sleep: syncedMetrics.sleep ?? null,
+            workout: syncedMetrics.workout ?? null,
+            weight: syncedMetrics.weight ?? latestLog?.weight ?? null,
+            height: syncedMetrics.height ?? latestLog?.height ?? null,
+            water: syncedMetrics.water ?? null,
+            bodyFat: syncedMetrics.bodyFat ?? latestLog?.bodyFat ?? null,
+            bloodOxygen: syncedMetrics.bloodOxygen ?? latestLog?.bloodOxygen ?? null,
+            watchData: syncedMetrics,
+            sources: {
+              steps: syncedMetrics.steps != null ? 'HEALTH_CONNECT' : null,
+              distance: syncedMetrics.distance != null ? 'HEALTH_CONNECT' : null,
+              calories: syncedMetrics.calories != null ? 'HEALTH_CONNECT' : null,
+              activeMinutes: syncedMetrics.activeMinutes != null ? 'HEALTH_CONNECT' : null,
+              heartRate: syncedMetrics.heartRate != null ? 'HEALTH_CONNECT' : null,
+              sleep: syncedMetrics.sleep != null ? 'HEALTH_CONNECT' : null,
+              workout: syncedMetrics.workout != null ? 'HEALTH_CONNECT' : null,
+              weight: syncedMetrics.weight != null ? 'HEALTH_CONNECT' : latestLog?.sources?.weight || null,
+              height: syncedMetrics.height != null ? 'HEALTH_CONNECT' : latestLog?.sources?.height || null,
+              water: syncedMetrics.water != null ? 'HEALTH_CONNECT' : null,
+              bodyFat: syncedMetrics.bodyFat != null ? 'HEALTH_CONNECT' : latestLog?.sources?.bodyFat || null,
+              bloodOxygen: syncedMetrics.bloodOxygen != null ? 'HEALTH_CONNECT' : latestLog?.sources?.bloodOxygen || null,
+            },
+          },
+        ];
       });
-    } else {
-      updatedLogs = [
-        ...items,
-        {
-          id: Date.now().toString(),
-          date: todayDate,
-          createdAt: new Date().toISOString(),
-          steps: syncedMetrics.steps,
-          sleep: syncedMetrics.sleep,
-          heartRate: syncedMetrics.heartRate,
-          distance: syncedMetrics.distance,
-          calories: syncedMetrics.calories,
-          weight: syncedMetrics.weight,
-          height: syncedMetrics.height,
-          water: syncedMetrics.water,
-          bodyFat: syncedMetrics.bodyFat,
-          bloodOxygen: syncedMetrics.bloodOxygen,
-          activeMinutes: syncedMetrics.activeMinutes,
-          workout: syncedMetrics.workout,
-          watchData: syncedMetrics,
-          sources: {
-            steps: syncedMetrics.steps != null ? 'HEALTH_CONNECT' : null,
-            sleep: syncedMetrics.sleep != null ? 'HEALTH_CONNECT' : null,
-            heartRate: syncedMetrics.heartRate != null ? 'HEALTH_CONNECT' : null,
-            distance: syncedMetrics.distance != null ? 'HEALTH_CONNECT' : null,
-            calories: syncedMetrics.calories != null ? 'HEALTH_CONNECT' : null,
-            weight: syncedMetrics.weight != null ? 'HEALTH_CONNECT' : null,
-            height: syncedMetrics.height != null ? 'HEALTH_CONNECT' : null,
-            water: syncedMetrics.water != null ? 'HEALTH_CONNECT' : null,
-            bodyFat: syncedMetrics.bodyFat != null ? 'HEALTH_CONNECT' : null,
-            bloodOxygen: syncedMetrics.bloodOxygen != null ? 'HEALTH_CONNECT' : null,
-            activeMinutes: syncedMetrics.activeMinutes != null ? 'HEALTH_CONNECT' : null,
-          }
-        },
-      ];
+
+      // Notify all mounted screens (Home, HealthDashboard, etc.) to re-render with fresh data
+      triggerDataRefresh();
+
+      const updatedConfig = { ...config, lastSynced: new Date().toISOString() };
+      setWatchConfig(updatedConfig);
+      await AsyncStorage.setItem(WATCH_CONFIG_KEY, JSON.stringify(updatedConfig));
+    } finally {
+      isSyncingRef.current = false;
     }
-
-    await saveAll(updatedLogs);
-
-    const updatedConfig = {
-      ...config,
-      lastSynced: new Date().toISOString(),
-    };
-    setWatchConfig(updatedConfig);
-    await AsyncStorage.setItem(WATCH_CONFIG_KEY, JSON.stringify(updatedConfig));
   };
+
 
   return {
     logs,
