@@ -423,27 +423,22 @@ export async function fetchHealthConnectData(permissions) {
     return null;
   };
 
-  // 1. Steps
+  // 1. Steps (strictly for current day timeRangeFilter)
   if (effectivePermissions.steps) {
     try {
       // Primary: Native OS aggregation
       const agg = await safeAggregate({ recordType: 'Steps', timeRangeFilter });
-      if (agg && typeof agg.COUNT_TOTAL === 'number' && agg.COUNT_TOTAL > 0) {
+      if (agg && typeof agg.COUNT_TOTAL === 'number') {
         results.steps = agg.COUNT_TOTAL;
       }
 
-      // Fallback: Individual record calculation
+      // Fallback: Individual raw records calculation for today
       if (results.steps == null) {
         let { records } = await safeReadRecords('Steps', { timeRangeFilter });
-        if (!records || records.length === 0) {
-          const fallback = await safeReadRecords('Steps', {
-            timeRangeFilter: { operator: 'between', startTime: new Date(now.getTime() - (7 * 86400000)).toISOString(), endTime: now.toISOString() }
-          });
-          records = fallback?.records || [];
-        }
-        const maxSteps = extractMaxByOrigin(records, (r) => r.count || 0);
+        const rawRecords = records || [];
+        const maxSteps = extractMaxByOrigin(rawRecords, (r) => r.count || 0);
         if (maxSteps != null && maxSteps >= 0) results.steps = maxSteps;
-        console.info(`[HealthConnect] [Steps] Read ${records?.length || 0} raw records -> Result: ${results.steps} steps`);
+        console.info(`[HealthConnect] [Steps] Read ${rawRecords.length} raw records for today -> Result: ${results.steps} steps`);
       } else {
         console.info(`[HealthConnect] [Steps] OS Aggregate -> Result: ${results.steps} steps`);
       }
