@@ -19,6 +19,7 @@ import { useHealthUnits, WEIGHT_UNITS, WATER_UNITS } from '../hooks/useHealthUni
 import { useHealth } from '../hooks/useHealth';
 import { WALKTHROUGH_STORAGE_PREFIX } from '../constants/walkthroughs';
 import { scheduleDailyReminderNotification } from '../utils/cycleNotifications';
+import { ONBOARDING_KEY } from '../navigation/RootNavigator';
 import { RadialClockTimePickerModal } from '../components/RadialClockTimePickerModal';
 
 let DateTimePicker = null;
@@ -663,6 +664,10 @@ export default function Settings() {
         const keys = await AsyncStorage.getAllKeys();
         const walkthroughKeys = keys.filter((key) => key.startsWith(WALKTHROUGH_STORAGE_PREFIX));
 
+        if (walkthroughKeys.length > 0) {
+          await AsyncStorage.multiRemove(walkthroughKeys);
+        }
+
         await Promise.all([
           setData('health_logs', []),
           setData('habits_list', []),
@@ -671,6 +676,7 @@ export default function Settings() {
           setData('wallet_entries', []),
           setData('wallet_accounts', []),
           AsyncStorage.removeItem('wearable_config'),
+          AsyncStorage.removeItem(ONBOARDING_KEY),
         ]);
 
         try {

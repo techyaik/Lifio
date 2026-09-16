@@ -39,7 +39,7 @@ if (Platform.OS === 'android' && !isNewArch && UIManager.setLayoutAnimationEnabl
 
 const Tab = createBottomTabNavigator();
 const Stack = createStackNavigator();
-const ONBOARDING_KEY = 'lifio_onboarded_v2';
+export const ONBOARDING_KEY = 'lifio_onboarded_v2';
 const LOGO = require('../assets/lifio-logo.png');
 
 const TAB_META = {
@@ -155,7 +155,7 @@ function MainTabs() {
 function NavigatorContent() {
   const [ready, setReady] = useState(false);
   const [onboarded, setOnboarded] = useState(false);
-  const { theme, colors, ready: themeReady, profileName, setProfileName } = useTheme();
+  const { theme, colors, ready: themeReady, profileName, setProfileName, dataVersion } = useTheme();
   const navigationRef = useRef(null);
 
   // ── Notification tap-to-navigate ──────────────────────────────────────────
@@ -214,7 +214,7 @@ function NavigatorContent() {
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [dataVersion]);
 
   const completeOnboarding = async () => {
     setOnboarded(true);
