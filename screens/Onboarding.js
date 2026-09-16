@@ -193,7 +193,7 @@ export default function Onboarding({ onGetStarted }) {
               disabled={index === 0}
               style={[
                 styles.backButton,
-                { backgroundColor: colors.surface, borderColor: colors.borderLight },
+                { backgroundColor: colors.surface, borderColor: colors.border },
                 index === 0 ? styles.backButtonDisabled : null
               ]}
             >
@@ -201,16 +201,15 @@ export default function Onboarding({ onGetStarted }) {
               <Text style={[styles.backText, { color: colors.textPrimary }, index === 0 ? { color: colors.textHint } : null]}>Back</Text>
             </Pressable>
 
-            <Pressable onPress={handleNext} style={styles.nextButton}>
-              <LinearGradient
-                colors={slides[index].gradient}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={styles.nextGradient}
-              >
-                <Text style={[styles.nextText, { color: colors.white }]}>{index === slides.length - 1 ? 'Get Started' : 'Next'}</Text>
-                <Ionicons name={index === slides.length - 1 ? 'sparkles' : 'chevron-forward'} size={18} color={colors.white} />
-              </LinearGradient>
+            <Pressable
+              onPress={handleNext}
+              style={[
+                styles.nextButton,
+                { backgroundColor: colors.surfaceElevated || colors.tealDark || colors.textPrimary }
+              ]}
+            >
+              <Text style={[styles.nextText, { color: colors.white }]}>{index === slides.length - 1 ? 'Get Started' : 'Next'}</Text>
+              <Ionicons name={index === slides.length - 1 ? 'sparkles' : 'chevron-forward'} size={18} color={colors.white} />
             </Pressable>
           </View>
         </View>
@@ -335,15 +334,16 @@ const styles = StyleSheet.create({
   },
   backButtonDisabled: { opacity: 0.55 },
   backText: { fontSize: 14, fontWeight: '700' },
-  nextButton: { borderRadius: RADIUS.md, flex: 1, ...SHADOWS.soft },
-  nextGradient: {
+  nextButton: {
     alignItems: 'center',
     borderRadius: RADIUS.md,
+    flex: 1,
     flexDirection: 'row',
     gap: 8,
     justifyContent: 'center',
     minHeight: 52,
     paddingHorizontal: 16,
+    ...SHADOWS.soft,
   },
   nextText: { fontSize: 15, fontWeight: '800' },
 });
