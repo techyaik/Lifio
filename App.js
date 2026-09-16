@@ -5,6 +5,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import RootNavigator from './navigation/RootNavigator';
 import { COLORS } from './constants/colors';
+import { setupNotificationHandler } from './utils/cycleNotifications';
 import {
   useFonts,
   Inter_300Light,
@@ -18,6 +19,10 @@ import {
 
 // Suppress defaultProps deprecation warnings (not needed anymore but keeping it clean)
 LogBox.ignoreLogs(['Text.defaultProps', 'TextInput.defaultProps']);
+
+// Bootstrap notification handler + Android channels once, before any component mounts.
+// Must be called at module scope so it fires immediately during bundle load.
+setupNotificationHandler();
 
 export default function App() {
   const [fontsLoaded] = useFonts({

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text as RNText, View, Share, Image, StatusBar, Keyboard, LayoutAnimation, Platform, UIManager } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { AppText as Text } from '../components/AppText';
@@ -23,6 +23,14 @@ import PrivacyManagement from '../screens/PrivacyManagement';
 import Help from '../screens/Help';
 import About from '../screens/About';
 import { AppLockOverlay } from '../components/AppLockOverlay';
+
+// Lazy-load expo-notifications to stay safe on web
+let Notifications = null;
+try {
+  Notifications = require('expo-notifications');
+} catch (_e) {}
+
+const NOTIFICATION_TYPE_CYCLE = 'CYCLE_REMINDER';
 
 const isNewArch = Boolean(global.nativeFabricUIManager);
 if (Platform.OS === 'android' && !isNewArch && UIManager.setLayoutAnimationEnabledExperimental) {
@@ -148,6 +156,31 @@ function NavigatorContent() {
   const [ready, setReady] = useState(false);
   const [onboarded, setOnboarded] = useState(false);
   const { theme, colors, ready: themeReady, profileName, setProfileName } = useTheme();
+  const navigationRef = useRef(null);
+
+  // ── Notification tap-to-navigate ──────────────────────────────────────────
+  useEffect(() => {
+    if (!Notifications) return;
+
+    const subscription = Notifications.addNotificationResponseReceivedListener((response) => {
+      const data = response?.notification?.request?.content?.data;
+      if (!data) return;
+
+      if (data.type === NOTIFICATION_TYPE_CYCLE) {
+        // Navigate to HealthDashboard inside the HealthTab stack
+        if (navigationRef.current?.isReady()) {
+          navigationRef.current.navigate('Main', {
+            screen: 'HealthTab',
+            params: {
+              screen: 'HealthDashboard',
+            },
+          });
+        }
+      }
+    });
+
+    return () => subscription.remove();
+  }, []);
 
   const navigationTheme = theme === 'dark' ? {
     ...DarkTheme,
@@ -203,7 +236,7 @@ function NavigatorContent() {
   return (
     <>
       <StatusBar barStyle={theme === 'dark' ? 'light-content' : 'dark-content'} backgroundColor={colors.bg} />
-      <NavigationContainer theme={navigationTheme}>
+      <NavigationContainer theme={navigationTheme} ref={navigationRef}>
         {onboarded ? (
         profileName ? (
           <Stack.Navigator

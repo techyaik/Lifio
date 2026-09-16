@@ -52,6 +52,17 @@
       "expo-font",
       "expo-secure-store",
       "expo-local-authentication",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/lifio-icon.png",
+          "color": "#FF6B8B",
+          "sounds": [],
+          "androidMode": "default",
+          "androidCollapsedTitle": "#{unread_notifications} new notifications",
+          "iosDisplayInForeground": true
+        }
+      ],
       "react-native-health-connect",
       "./plugins/withHealthConnectQueries",
       [

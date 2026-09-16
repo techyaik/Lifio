@@ -4,7 +4,7 @@ import { parseISO } from 'date-fns';
 import { useFocusEffect } from '@react-navigation/native';
 import { useStoredList } from './useStoredList';
 import { todayKey } from '../utils/dates';
-import { fetchHealthConnectData } from '../utils/healthConnect';
+import { fetchHealthConnectData } from '../services/healthConnect';
 import { useTheme } from '../theme/ThemeContext';
 
 const KEY = 'health_logs';

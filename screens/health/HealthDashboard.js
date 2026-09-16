@@ -30,7 +30,7 @@ import { displayDate, todayKey } from '../../utils/dates';
 import { showToast } from '../../utils/feedback';
 import { RADIUS, SHADOWS } from '../../constants/theme';
 import { WALKTHROUGH_STEPS } from '../../constants/walkthroughs';
-import { scheduleCycleReminderNotification } from '../../utils/cycleNotifications';
+import { scheduleCycleReminderNotification, cancelCycleReminders } from '../../utils/cycleNotifications';
 
 const formatSteps = (steps) => (steps || steps === 0 ? Number(steps).toLocaleString() : '—');
 
@@ -737,6 +737,8 @@ export default function HealthDashboard({ navigation }) {
         });
         showToast('Cycle tracking ON ✓');
       } else {
+        // Cancel any scheduled cycle reminders when tracking is turned off
+        await cancelCycleReminders();
         showToast('Cycle tracking OFF');
       }
 
