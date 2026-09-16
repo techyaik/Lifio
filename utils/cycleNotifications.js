@@ -57,6 +57,8 @@ export async function setupNotificationHandler() {
   // Set how notifications are presented when the app is in the foreground
   N.setNotificationHandler({
     handleNotification: async () => ({
+      shouldShowBanner: true,
+      shouldShowList: true,
       shouldShowAlert: true,
       shouldPlaySound: true,
       shouldSetBadge: false,
@@ -336,9 +338,9 @@ export async function scheduleDailyReminderNotification({ enabled, timeStr = '09
         data: { type: NOTIFICATION_TYPE_DAILY, timeStr },
       },
       trigger: {
+        type: 'daily',
         hour: hours,
         minute: minutes,
-        repeats: true,
       },
     });
 
