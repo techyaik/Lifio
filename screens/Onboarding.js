@@ -2,7 +2,7 @@ import React, { useRef, useState } from 'react';
 import { Animated, Image, Pressable, StyleSheet, Text as RNText, useWindowDimensions, View,  } from 'react-native';
 import { AppText as Text } from '../components/AppText';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons } from "../components/LineIcon";
 import { useTheme } from '../theme/ThemeContext';
 import { MOODS } from '../constants/categories';
 import { Screen } from '../components/Screen';

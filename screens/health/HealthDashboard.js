@@ -1,11 +1,14 @@
 import React, { useEffect, useMemo, useRef, useState, useCallback } from 'react';
-import { Pressable, StyleSheet, Text as RNText, View, Modal, Switch, Alert, Platform, AppState, ScrollView, TextInput as RNTextInput, Share } from 'react-native';
+import { Pressable, StyleSheet, Text as RNText, View, Modal, Switch, Alert, Platform, AppState, ScrollView, TextInput as RNTextInput, Share, useWindowDimensions } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppTextInput as TextInput } from '../../components/AppTextInput';
 import { AppText as Text } from '../../components/AppText';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons } from "../../components/LineIcon";
+import { SunsetGlowOrb } from '../../components/SunsetGlowOrb';
+import { WeeklyGoalFullChart } from '../../components/WeeklyGoalBars';
 import {
+  format,
   addDays,
   differenceInCalendarDays,
   isWithinInterval,
@@ -28,11 +31,11 @@ import { useMedicineReminders } from '../../hooks/useMedicineReminders';
 import { useHealthUnits } from '../../hooks/useHealthUnits';
 import { displayDate, todayKey } from '../../utils/dates';
 import { showToast } from '../../utils/feedback';
-import { RADIUS, SHADOWS } from '../../constants/theme';
+import { RADIUS } from '../../constants/theme';
 import { WALKTHROUGH_STEPS } from '../../constants/walkthroughs';
 import { scheduleCycleReminderNotification, cancelCycleReminders } from '../../utils/cycleNotifications';
 
-const formatSteps = (steps) => (steps || steps === 0 ? Number(steps).toLocaleString() : '—');
+const formatSteps = (steps) => (steps || steps === 0 ? Number(steps).toLocaleString() : '0');
 
 const PERMISSION_LABELS = {
   steps: 'Steps',
@@ -293,6 +296,124 @@ export default function HealthDashboard({ navigation }) {
   const today = getTodayLog();
   const upcomingMedicineReminders = useMemo(() => getUpcomingReminders(3), [getUpcomingReminders]);
 
+  const { width } = useWindowDimensions();
+  const cardWidth = Math.floor((Math.min(width, 740) - 32 - 12) / 2);
+  const [activityFilter, setActivityFilter] = useState('All');
+
+  const weekChartData = useMemo(() => {
+    const now = new Date();
+    const weekStart = startOfWeek(now, { weekStartsOn: 1 });
+    const dayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    const byDate = new Map((logs || []).map((l) => [l.date, l]));
+
+    return dayNames.map((dayName, index) => {
+      const dayDate = addDays(weekStart, index);
+      const dateKey = format(dayDate, 'yyyy-MM-dd');
+      const log = byDate.get(dateKey);
+      const steps = Number(log?.steps) || 0;
+      const isToday = differenceInCalendarDays(dayDate, now) === 0;
+
+      let displayVal = '0';
+      if (steps >= 1000) {
+        displayVal = (steps / 1000).toFixed(1) + 'k';
+      } else if (steps > 0) {
+        displayVal = String(steps);
+      }
+
+      return {
+        day: dayName,
+        value: displayVal,
+        raw: steps / 1000,
+        isToday,
+        steps,
+      };
+    });
+  }, [logs]);
+
+  const weekRangeText = useMemo(() => {
+    const now = new Date();
+    const start = startOfWeek(now, { weekStartsOn: 1 });
+    const end = addDays(start, 6);
+    return `${format(start, 'MMM d')} - ${format(end, 'MMM d')}`;
+  }, []);
+
+  const recentActivities = useMemo(() => {
+    const items = [];
+    const sortedLogs = [...logs].sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+
+    for (const log of sortedLogs) {
+      const isLogToday = log.date === todayKey();
+      const dateStr = isLogToday ? 'Today' : displayDate(log.date, 'EEEE, MMM d');
+
+      if (log.steps && Number(log.steps) > 0) {
+        const dist = log.distance ? `${Number(log.distance).toFixed(1)} km` : `${(Number(log.steps) * 0.0008).toFixed(1)} km`;
+        items.push({
+          id: `${log.id}-walk`,
+          logId: log.id,
+          type: 'Steps',
+          category: 'Daily walking',
+          title: `${Number(log.steps).toLocaleString()} steps`,
+          detail: `${dist} · ${log.calories ? `${Math.round(log.calories)} kcal` : `${Math.round(Number(log.steps) * 0.04)} kcal`}`,
+          date: dateStr,
+          icon: 'footsteps',
+          color: colors.primaryOrange,
+        });
+      }
+
+      if (log.sleep && Number(log.sleep) > 0) {
+        const hrs = Math.floor(log.sleep);
+        const mins = Math.round((log.sleep % 1) * 60);
+        items.push({
+          id: `${log.id}-sleep`,
+          logId: log.id,
+          type: 'Sleep',
+          category: 'Sleep session',
+          title: `${hrs}h ${mins > 0 ? `${mins}m ` : ''}restful sleep`,
+          detail: Number(log.sleep) >= 7 ? 'Optimal recovery' : 'Light sleep',
+          date: dateStr,
+          icon: 'moon',
+          color: '#8B5CF6',
+        });
+      }
+
+      if (log.heartRate || log.weight) {
+        const vitalsParts = [];
+        if (log.heartRate) vitalsParts.push(`${log.heartRate} BPM resting`);
+        if (log.weight) vitalsParts.push(`${log.weight} kg`);
+        items.push({
+          id: `${log.id}-vitals`,
+          logId: log.id,
+          type: 'Vitals',
+          category: 'Vitals & body',
+          title: vitalsParts.join(' · ') || 'Vitals recorded',
+          detail: log.mood ? `Mood: ${log.mood}` : 'Daily check-in',
+          date: dateStr,
+          icon: 'heart',
+          color: '#EF4444',
+        });
+      }
+
+      if (log.period) {
+        items.push({
+          id: `${log.id}-cycle`,
+          logId: log.id,
+          type: 'Cycle',
+          category: 'Cycle log',
+          title: log.flowIntensity ? `${log.flowIntensity} flow period` : 'Period entry',
+          detail: log.symptoms?.length ? `${log.symptoms.length} symptoms noted` : 'Cycle tracked',
+          date: dateStr,
+          icon: 'flower',
+          color: '#EC4899',
+        });
+      }
+
+      if (items.length >= 10) break;
+    }
+
+    if (activityFilter === 'All') return items.slice(0, 5);
+    return items.filter((i) => i.type === activityFilter).slice(0, 5);
+  }, [logs, activityFilter, colors]);
+
   const [permissionModalVisible, setPermissionModalVisible] = useState(false);
   const [moreMetricsModalVisible, setMoreMetricsModalVisible] = useState(false);
   const [reportModalVisible, setReportModalVisible] = useState(false);
@@ -370,7 +491,7 @@ export default function HealthDashboard({ navigation }) {
         ? filteredLogs
             .map(
               (l) =>
-                `[${l.date}] Steps: ${l.steps || 0} | Weight: ${l.weight || '--'}kg | Sleep: ${l.sleep || '--'}h | HR: ${l.heartRate || '--'} BPM`
+                `[${l.date}] Steps: ${l.steps || 0} | Weight: ${l.weight ? `${l.weight}kg` : '0 kg'} | Sleep: ${l.sleep ? `${l.sleep}h` : '0h'} | HR: ${l.heartRate ? `${l.heartRate} BPM` : '0 BPM'}`
             )
             .join('\n')
         : 'No health logs available for this period.')
@@ -761,29 +882,41 @@ export default function HealthDashboard({ navigation }) {
 
   return (
     <Screen loading={loading} contentStyle={styles.screenContent} withBottomNav>
-      <AppHeader title="Health" showMenu={false} showSettings={false} />
-
-      <View style={styles.heroRow}>
-        <View style={styles.heroCopy}>
-          <Text style={[styles.kicker, { color: colors.textSecondary }]}>Today - {displayDate(todayKey(), 'MMM d')}</Text>
-          <Text style={[styles.heroTitle, { color: colors.textPrimary }]}>Daily health overview</Text>
+      {/* ── 1. Unified Clean Header ────────────────────────────────────────── */}
+      <View style={styles.headerRow}>
+        <View style={styles.headerTextCol}>
+          <Text style={[styles.screenTitle, { color: colors.textPrimary }]}>
+            Health
+          </Text>
+          <Text style={[styles.headerDate, { color: colors.textSecondary }]}>
+            {format(new Date(), 'EEEE, MMM d')}
+          </Text>
         </View>
+
         <Pressable
-          onPress={openTodayLog}
-          style={[styles.iconButton, { backgroundColor: colors.surface, width: 44, height: 44 }]}
+          onPress={() => openTodayLog(false)}
+          style={({ pressed }) => [
+            styles.addBtn,
+            {
+              backgroundColor: colors.surface,
+              borderColor: colors.borderLight,
+              transform: [{ scale: pressed ? 0.94 : 1 }],
+            },
+          ]}
+          accessibilityLabel="Log health entry"
         >
-          <Ionicons name="add" size={24} color={colors.textPrimary} />
+          <Ionicons name="add" size={22} color={colors.textPrimary} />
         </Pressable>
       </View>
 
-      {/* Smartwatch Integration Status / Sync Banner (Only shown when NOT connected) */}
+      {/* ── 2. Health Connect Sync Status Banner ──────────────────────────── */}
       {(!watchConfig || !watchConfig.connected) && (
         <Pressable
           onPress={requestAndLink}
           style={[styles.syncStatusBar, { backgroundColor: colors.surface, borderColor: colors.borderLight, marginBottom: 16 }]}
         >
           <View style={styles.rowAlign}>
-            <Ionicons name="fitness-outline" size={16} color={colors.textHint} style={{ marginRight: 6 }} />
+            <Ionicons name="fitness-outline" size={16} color={colors.textHint} style={{ marginRight: 8 }} />
             <Text style={[styles.syncStatusText, { color: colors.textSecondary }]}>
               No health data source linked. Tap to connect.
             </Text>
@@ -792,103 +925,281 @@ export default function HealthDashboard({ navigation }) {
         </Pressable>
       )}
 
-      {/* Redesigned Bento Grid Panel matching Reference Image */}
-      
-      {/* 1. Hero Card: Steps Ring + Essential Vertical Metrics */}
-      <BentoCard style={{ padding: 24, marginBottom: 16, backgroundColor: colors.surfaceElevated, borderRadius: RADIUS.xl, borderWidth: 0 }}>
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-            <View style={{ backgroundColor: colors.health, padding: 8, borderRadius: 12 }}>
-              <Ionicons name="footsteps" size={18} color={colors.surfaceElevated} />
-            </View>
-            <Text style={{ fontSize: 16, fontWeight: '700', color: colors.white }}>Daily Progress</Text>
+      {/* ── 3. Bento 2x2 Core Metrics Grid (Activity, Distance, Calories, Sleep) ── */}
+      {/* Row 1: Activity + Distance */}
+      <View style={styles.bentoGridRow}>
+        {/* Activity Card */}
+        <Pressable
+          onPress={() => openTodayLog(false)}
+          style={({ pressed }) => [
+            styles.bentoCardHalf,
+            {
+              backgroundColor: colors.surface,
+              borderColor: colors.borderLight,
+              opacity: pressed ? 0.9 : 1,
+            },
+          ]}
+        >
+          <View style={styles.bentoCardHeader}>
+            <Text style={[styles.bentoCardLabel, { color: colors.textSecondary }]}>Activity</Text>
+            <Pressable
+              onPress={() => setMoreMetricsModalVisible(true)}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <Ionicons name="ellipsis-horizontal" size={18} color={colors.textSecondary} />
+            </Pressable>
           </View>
+          <View>
+            <View style={styles.bentoValueRow}>
+              <Text style={[styles.bentoValueText, { color: colors.textPrimary }]}>
+                {today?.steps ? formatSteps(today.steps) : '0'}
+              </Text>
+              <Text style={[styles.bentoUnitText, { color: colors.textSecondary }]}>steps</Text>
+            </View>
+            <Text style={[styles.bentoSubtext, { color: colors.textHint }]}>
+              Goal: {formatSteps(goals.steps || 10000)}
+            </Text>
+          </View>
+          <View style={styles.orbContainer}>
+            <SunsetGlowOrb width={140} height={46} variant="semi" />
+          </View>
+        </Pressable>
+
+        {/* Distance Card */}
+        <Pressable
+          onPress={() => openTodayLog(false)}
+          style={({ pressed }) => [
+            styles.bentoCardHalf,
+            {
+              backgroundColor: colors.surface,
+              borderColor: colors.borderLight,
+              opacity: pressed ? 0.9 : 1,
+            },
+          ]}
+        >
+          <View style={styles.bentoCardHeader}>
+            <Text style={[styles.bentoCardLabel, { color: colors.textSecondary }]}>Distance</Text>
+            <View style={[styles.bentoIconBadge, { backgroundColor: colors.surfaceTint }]}>
+              <Ionicons name="footsteps" size={14} color="#0EA5E9" />
+            </View>
+          </View>
+          <View>
+            <View style={styles.bentoValueRow}>
+              <Text style={[styles.bentoValueText, { color: colors.textPrimary }]}>
+                {(today?.distance || (Number(today?.steps || 0) * 0.0008)).toFixed(1)}
+              </Text>
+              <Text style={[styles.bentoUnitText, { color: colors.textSecondary }]}>km</Text>
+            </View>
+            <Text style={[styles.bentoSubtext, { color: colors.textHint }]}>
+              {percent(today?.steps || 0, goals.steps || 10000)}% of daily goal
+            </Text>
+          </View>
+        </Pressable>
+      </View>
+
+      {/* Row 2: Calories + Sleep */}
+      <View style={styles.bentoGridRow}>
+        {/* Calories Card */}
+        <Pressable
+          onPress={() => openTodayLog(false)}
+          style={({ pressed }) => [
+            styles.bentoCardHalf,
+            {
+              backgroundColor: colors.surface,
+              borderColor: colors.borderLight,
+              opacity: pressed ? 0.9 : 1,
+            },
+          ]}
+        >
+          <View style={styles.bentoCardHeader}>
+            <Text style={[styles.bentoCardLabel, { color: colors.textSecondary }]}>Calories</Text>
+            <View style={[styles.bentoIconBadge, { backgroundColor: colors.surfaceTint }]}>
+              <Ionicons name="flame" size={14} color="#FF6B35" />
+            </View>
+          </View>
+          <View>
+            <View style={styles.bentoValueRow}>
+              <Text style={[styles.bentoValueText, { color: colors.textPrimary }]}>
+                {Math.round(today?.calories || today?.watchData?.calories || (Number(today?.steps || 0) * 0.04))}
+              </Text>
+              <Text style={[styles.bentoUnitText, { color: colors.textSecondary }]}>kcal</Text>
+            </View>
+            <Text style={[styles.bentoSubtext, { color: colors.textHint }]}>
+              {today?.calories ? 'Tracked burn' : 'Estimated burn'}
+            </Text>
+          </View>
+        </Pressable>
+
+        {/* Sleep Card */}
+        <Pressable
+          onPress={() => openTodayLog(false)}
+          style={({ pressed }) => [
+            styles.bentoCardHalf,
+            {
+              backgroundColor: colors.surface,
+              borderColor: colors.borderLight,
+              opacity: pressed ? 0.9 : 1,
+            },
+          ]}
+        >
+          <View style={styles.bentoCardHeader}>
+            <Text style={[styles.bentoCardLabel, { color: colors.textSecondary }]}>Sleep</Text>
+            <View style={[styles.bentoIconBadge, { backgroundColor: colors.surfaceTint }]}>
+              <Ionicons name="moon" size={14} color="#8B5CF6" />
+            </View>
+          </View>
+          <View>
+            <View style={styles.bentoValueRow}>
+              <Text style={[styles.bentoValueText, { color: colors.textPrimary }]}>
+                {today?.sleep ? `${Number(today.sleep).toFixed(1)}` : '0'}
+              </Text>
+              <Text style={[styles.bentoUnitText, { color: colors.textSecondary }]}>hrs</Text>
+            </View>
+            <Text style={[styles.bentoSubtext, { color: colors.textHint }]} numberOfLines={1}>
+              {today?.heartRate || today?.watchData?.heartRate ? `${today?.heartRate || today?.watchData?.heartRate} BPM resting` : 'Rest & recovery'}
+            </Text>
+          </View>
+        </Pressable>
+      </View>
+
+      {/* ── 4. Weekly Goal Full 7-Day Chart (Capsules Mon–Sun) ─────────────── */}
+      <WeeklyGoalFullChart
+        data={weekChartData}
+        dateRange={weekRangeText}
+        onPressRange={() => setReportModalVisible(true)}
+        style={{ marginBottom: 16 }}
+      />
+
+      {/* ── 5. Quick Tools Strip (Add Log, Water, Meds, History) ──────────── */}
+      <View style={styles.quickToolsRow}>
+        <Pressable
+          onPress={() => openTodayLog(false)}
+          style={({ pressed }) => [
+            styles.quickToolBtn,
+            { backgroundColor: colors.surface, borderColor: colors.borderLight, opacity: pressed ? 0.8 : 1 },
+          ]}
+        >
+          <Ionicons name="create" size={16} color="#F59E0B" />
+          <Text style={[styles.quickToolText, { color: colors.textPrimary }]}>Add Log</Text>
+        </Pressable>
+        <Pressable
+          onPress={() => navigation.navigate('WaterReminders')}
+          style={({ pressed }) => [
+            styles.quickToolBtn,
+            { backgroundColor: colors.surface, borderColor: colors.borderLight, opacity: pressed ? 0.8 : 1 },
+          ]}
+        >
+          <Ionicons name="water" size={16} color="#0EA5E9" />
+          <Text style={[styles.quickToolText, { color: colors.textPrimary }]}>Water</Text>
+        </Pressable>
+        <Pressable
+          onPress={() => navigation.navigate('MedicineReminders')}
+          style={({ pressed }) => [
+            styles.quickToolBtn,
+            { backgroundColor: colors.surface, borderColor: colors.borderLight, opacity: pressed ? 0.8 : 1 },
+          ]}
+        >
+          <Ionicons name="medkit" size={16} color="#10B981" />
+          <Text style={[styles.quickToolText, { color: colors.textPrimary }]}>Meds</Text>
+        </Pressable>
+        <Pressable
+          onPress={() => navigation.navigate('HealthHistory')}
+          style={({ pressed }) => [
+            styles.quickToolBtn,
+            { backgroundColor: colors.surface, borderColor: colors.borderLight, opacity: pressed ? 0.8 : 1 },
+          ]}
+        >
+          <Ionicons name="time" size={16} color="#8B5CF6" />
+          <Text style={[styles.quickToolText, { color: colors.textPrimary }]}>History</Text>
+        </Pressable>
+      </View>
+
+      {/* ── 6. Recent Activities Section ─────────────────────────────────── */}
+      <View style={[styles.recentActivitiesCard, { backgroundColor: colors.surface, borderColor: colors.borderLight }]}>
+        <View style={styles.recentHeaderRow}>
+          <Text style={[styles.recentTitle, { color: colors.textPrimary }]}>Recent activities</Text>
           <Pressable
-            onPress={() => setMoreMetricsModalVisible(true)}
-            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-            style={({ pressed }) => [{ opacity: pressed ? 0.6 : 1, padding: 4 }]}
-            accessibilityLabel="View all health metrics"
+            onPress={() => navigation.navigate('HealthHistory')}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             accessibilityRole="button"
           >
-            <Ionicons name="ellipsis-horizontal" size={24} color={colors.textSecondary} />
+            <Text style={[styles.seeAllText, { color: colors.textSecondary }]}>See all</Text>
           </Pressable>
         </View>
-        
-        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-          <View style={{ flex: 1, alignItems: 'center' }}>
-            <HalfRingChart 
-              size={160} 
-              strokeWidth={24} 
-              percent={percent(today?.steps || 0, goals.steps || 10000)}
-              color={colors.pillHealth.text} 
-              trackColor={colors.surfaceTint} 
-            />
-            <View style={{ position: 'absolute', bottom: 10, alignItems: 'center' }}>
-              <Text style={{ fontSize: 28, fontWeight: '800', color: colors.white, letterSpacing: -0.5 }}>{today?.steps ? formatSteps(today.steps) : '0'}</Text>
-              <Text style={{ fontSize: 12, fontWeight: '600', color: colors.textHint }}>Total Steps</Text>
-            </View>
-          </View>
-          
-          <View style={{ flex: 1, paddingLeft: 16, gap: 10 }}>
-            {/* Metric 1: Body Measurements (Weight & Height) */}
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-              <View style={{ backgroundColor: colors.surfaceTint, padding: 7, borderRadius: 10 }}>
-                <Ionicons name="body-outline" size={14} color={colors.pillHealth.text} />
-              </View>
-              <View>
-                <Text style={{ fontSize: 13, fontWeight: '700', color: colors.white }}>
-                  {today?.weight ? (formatWeight(today.weight) || today.weight) : '--'}
-                  {today?.weight && !formatWeight(today.weight) && <Text style={{ fontSize: 10 }}> {weightUnit}</Text>}
-                  <Text style={{ fontSize: 11, color: colors.textHint }}> · </Text>
-                  {(today?.height || today?.watchData?.height) ? `${Math.round(today?.height || today?.watchData?.height)} cm` : '--'}
-                </Text>
-                <Text style={{ fontSize: 10, color: colors.textHint }}>Body (Weight & Height)</Text>
-              </View>
-            </View>
 
-            {/* Metric 2: Calories (Replaces Water in Daily Progress) */}
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-              <View style={{ backgroundColor: colors.surfaceTint, padding: 7, borderRadius: 10 }}>
-                <Ionicons name="flame" size={14} color="#FF6B35" />
-              </View>
-              <View>
-                <Text style={{ fontSize: 13, fontWeight: '700', color: colors.white }}>
-                  {(today?.calories || today?.watchData?.calories) ? `${Math.round(today?.calories || today?.watchData?.calories)} kcal` : '--'}
+        {/* Filter Pills */}
+        <View style={styles.filterPillsRow}>
+          {['All', 'Steps', 'Sleep', 'Vitals'].map((filter) => {
+            const active = activityFilter === filter;
+            return (
+              <Pressable
+                key={filter}
+                onPress={() => setActivityFilter(filter)}
+                style={[
+                  styles.filterPill,
+                  {
+                    backgroundColor: active ? colors.textPrimary : colors.surfaceTint,
+                    borderColor: active ? colors.textPrimary : colors.borderLight,
+                  },
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.filterPillText,
+                    { color: active ? colors.surface : colors.textSecondary },
+                  ]}
+                >
+                  {filter}
                 </Text>
-                <Text style={{ fontSize: 10, color: colors.textHint }}>Calories</Text>
-              </View>
-            </View>
-
-            {/* Metric 3: Sleep */}
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-              <View style={{ backgroundColor: colors.surfaceTint, padding: 7, borderRadius: 10 }}>
-                <Ionicons name="moon" size={14} color={colors.pillLearning.text} />
-              </View>
-              <View>
-                <Text style={{ fontSize: 13, fontWeight: '700', color: colors.white }}>
-                  {today?.sleep ? `${Math.floor(today.sleep)}h ${Math.round((today.sleep % 1) * 60)}m` : '--'}
-                </Text>
-                <Text style={{ fontSize: 10, color: colors.textHint }}>Sleep</Text>
-              </View>
-            </View>
-
-            {/* Metric 4: Heart Rate */}
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-              <View style={{ backgroundColor: colors.surfaceTint, padding: 7, borderRadius: 10 }}>
-                <Ionicons name="heart" size={14} color="#FF4B4B" />
-              </View>
-              <View>
-                <Text style={{ fontSize: 13, fontWeight: '700', color: colors.white }}>
-                  {(today?.heartRate || today?.watchData?.heartRate) ? `${today?.heartRate || today?.watchData?.heartRate} BPM` : '--'}
-                </Text>
-                <Text style={{ fontSize: 10, color: colors.textHint }}>Heart Rate</Text>
-              </View>
-            </View>
-          </View>
+              </Pressable>
+            );
+          })}
         </View>
-      </BentoCard>
 
-      {/* 2. Cycle Tracking & Reminders Bento Card */}
+        {/* Activity Items */}
+        {recentActivities.length === 0 ? (
+          <View style={{ paddingVertical: 18, alignItems: 'center' }}>
+            <Text style={{ fontSize: 13, color: colors.textSecondary }}>No recent activities logged yet.</Text>
+          </View>
+        ) : (
+          recentActivities.map((act, index) => {
+            const isLast = index === recentActivities.length - 1;
+            return (
+              <Pressable
+                key={act.id}
+                onPress={() => {
+                  const targetLog = logs.find((l) => l.id === act.logId);
+                  if (targetLog) {
+                    navigation.navigate('HealthLogEntry', { entryId: act.logId, entry: targetLog });
+                  }
+                }}
+                style={({ pressed }) => [
+                  styles.activityItemRow,
+                  {
+                    borderBottomColor: colors.borderLight,
+                    borderBottomWidth: isLast ? 0 : 1,
+                    opacity: pressed ? 0.8 : 1,
+                  },
+                ]}
+              >
+                <View style={styles.activityItemLeft}>
+                  <View style={[styles.activityIconBox, { backgroundColor: `${act.color}15` }]}>
+                    <Ionicons name={act.icon} size={18} color={act.color} />
+                  </View>
+                  <View style={styles.activityTextCol}>
+                    <Text style={[styles.activityCategory, { color: colors.textPrimary }]}>{act.category}</Text>
+                    <Text style={[styles.activityItemTitle, { color: colors.textSecondary }]}>{act.title}</Text>
+                    <Text style={[styles.activityDate, { color: colors.textHint }]}>{act.date}</Text>
+                  </View>
+                </View>
+                <Ionicons name="pulse" size={18} color={act.color || colors.primaryOrange} />
+              </Pressable>
+            );
+          })
+        )}
+      </View>
+
+      {/* ── 7. Cycle Tracking Card ───────────────────────────────────────── */}
       <Pressable 
         onPress={() => openTodayLog(true)}
         style={({ pressed }) => [
@@ -898,14 +1209,13 @@ export default function HealthDashboard({ navigation }) {
             backgroundColor: colors.surface,
             borderColor: isCycleTrackingOn ? '#FF6B8B' : colors.borderLight,
             borderRadius: RADIUS.xl,
-            borderWidth: 1.5,
+            borderWidth: 1,
             flexDirection: 'row',
             alignItems: 'center',
             justifyContent: 'space-between',
             gap: 12,
             opacity: pressed ? 0.9 : 1,
           },
-          SHADOWS.soft,
         ]}
       >
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 }}>
@@ -914,7 +1224,7 @@ export default function HealthDashboard({ navigation }) {
           </View>
           <View style={{ flex: 1, gap: 2 }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-              <Text style={{ fontSize: 15, fontWeight: '800', color: colors.textPrimary }}>Cycle Tracking</Text>
+              <Text style={{ fontSize: 15, fontWeight: '700', color: colors.textPrimary }}>Cycle Tracking</Text>
               <View style={{ backgroundColor: isCycleTrackingOn ? 'rgba(255, 107, 139, 0.2)' : colors.surfaceTint, paddingHorizontal: 8, paddingVertical: 2, borderRadius: 8 }}>
                 <Text style={{ fontSize: 10, fontWeight: '800', color: isCycleTrackingOn ? '#D81B60' : colors.textSecondary }}>
                   {isCycleTrackingOn ? (summary.cycle?.nextDate ? `Expected ${summary.cycle.nextDate}` : 'Active') : 'Inactive'}
@@ -947,109 +1257,51 @@ export default function HealthDashboard({ navigation }) {
         </Pressable>
       </Pressable>
 
-      {/* 2. Middle Quick Actions */}
-      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 16 }}>
-        <Pressable onPress={() => navigation.navigate('HealthHistory')} style={[{ flex: 1, minWidth: 70 }, styles.actionSquare, { backgroundColor: colors.surface }]}>
-          <View style={[styles.actionIconBg, { backgroundColor: '#2D6A4F' }]}>
-            <Ionicons name="time" size={20} color="#FFFFFF" />
-          </View>
-          <Text style={[styles.actionText, { color: colors.textPrimary }]}>History &{"\n"}Logs</Text>
-        </Pressable>
-
-        <Pressable onPress={() => navigation.navigate('WaterReminders')} style={[{ flex: 1, minWidth: 70 }, styles.actionSquare, { backgroundColor: colors.surface }]}>
-          <View style={[styles.actionIconBg, { backgroundColor: '#0EA5E9' }]}>
-            <Ionicons name="water" size={20} color="#FFFFFF" />
-          </View>
-          <Text style={[styles.actionText, { color: colors.textPrimary }]}>Water{"\n"}Reminders</Text>
-        </Pressable>
-
-        <Pressable onPress={() => navigation.navigate('MedicineReminders')} style={[{ flex: 1, minWidth: 70 }, styles.actionSquare, { backgroundColor: colors.surface }]}>
-          <View style={[styles.actionIconBg, { backgroundColor: '#10B981' }]}>
-            <Ionicons name="medkit" size={20} color="#FFFFFF" />
-          </View>
-          <Text style={[styles.actionText, { color: colors.textPrimary }]}>Medicine{"\n"}Reminders</Text>
-        </Pressable>
-
-        <Pressable onPress={openTodayLog} style={[{ flex: 1, minWidth: 70 }, styles.actionSquare, { backgroundColor: colors.surface }]}>
-          <View style={[styles.actionIconBg, { backgroundColor: '#F59E0B' }]}>
-            <Ionicons name="create" size={20} color="#FFFFFF" />
-          </View>
-          <Text style={[styles.actionText, { color: colors.textPrimary }]}>Add{"\n"}Log</Text>
-        </Pressable>
-      </View>
-
-      {/* 3. Bottom Analytics (Bar Chart section) */}
-      <BentoCard style={{ padding: 24, borderRadius: RADIUS.xl, backgroundColor: colors.surface, borderWidth: 0 }}>
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24 }}>
-          <View>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-              <View style={[styles.tipDot, { backgroundColor: colors.health }]} />
-              <Text style={{ fontSize: 15, fontWeight: '700', color: colors.textPrimary }}>Weekly Activity</Text>
+      {/* ── 8. Upcoming Medication Reminders (When Scheduled) ─────────────── */}
+      {upcomingMedicineReminders.length > 0 && (
+        <View style={{ backgroundColor: colors.surface, borderColor: colors.borderLight, borderWidth: 1, borderRadius: RADIUS.xl, padding: 16, marginBottom: 16 }}>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <View style={{ backgroundColor: colors.accentLight.health, padding: 6, borderRadius: 10 }}>
+                <Ionicons name="medkit" size={16} color={colors.pillHealth.text} />
+              </View>
+              <Text style={{ fontSize: 15, fontWeight: '700', color: colors.textPrimary }}>Today's Medications</Text>
             </View>
-            <Text style={{ fontSize: 13, color: colors.textSecondary }}>Steps · Last 7 Days</Text>
+            <Pressable onPress={() => navigation.navigate('MedicineReminders')}>
+              <Text style={{ fontSize: 12, fontWeight: '700', color: colors.pillHealth.text }}>Manage</Text>
+            </Pressable>
           </View>
-          <Pressable
-            onPress={() => setReportModalVisible(true)}
-            style={({ pressed }) => [{
-              backgroundColor: colors.accentLight.health,
-              borderColor: colors.health,
-              borderWidth: 1,
-              borderRadius: RADIUS.pill,
-              paddingHorizontal: 12,
-              paddingVertical: 6,
-              flexDirection: 'row',
-              alignItems: 'center',
-              gap: 4,
-              opacity: pressed ? 0.75 : 1,
-            }]}
-            accessibilityLabel="Extract health data report"
-            accessibilityRole="button"
-          >
-            <Ionicons name="document-text-outline" size={13} color={colors.pillHealth.text} />
-            <Text style={{ fontSize: 12, fontWeight: '800', color: colors.pillHealth.text }}>Get Report ▾</Text>
-          </Pressable>
-        </View>
-        
-        <View style={{ flexDirection: 'row', alignItems: 'flex-end', height: 160, gap: 20, marginTop: 10 }}>
-          <View style={{ flex: 1, height: '100%', justifyContent: 'flex-end' }}>
-            <Text style={{ fontSize: 36, fontWeight: '800', color: colors.textPrimary, letterSpacing: -1 }}>
-               {summary.weekLogs.length > 0 
-                  ? Math.round(summary.weekLogs.reduce((sum, log) => sum + (Number(log.steps) || 0), 0) / summary.weekLogs.length).toLocaleString()
-                  : '0'}
-            </Text>
-            <Text style={{ fontSize: 13, color: colors.textHint, marginTop: 4 }}>Avg Steps / day{"\n"}This week</Text>
-            
-            <View style={{ flexDirection: 'row', gap: 12, marginTop: 24, flexWrap: 'wrap' }}>
-               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                 <View style={{ width: 8, height: 8, borderRadius: 2, backgroundColor: colors.primary }} />
-                 <Text style={{ fontSize: 10, color: colors.textPrimary, fontWeight: '600' }}>Actual</Text>
-               </View>
-               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                 <View style={{ width: 8, height: 8, borderRadius: 2, backgroundColor: colors.health }} />
-                 <Text style={{ fontSize: 10, color: colors.textPrimary, fontWeight: '600' }}>Goal</Text>
-               </View>
-            </View>
-          </View>
-          
-          <View style={{ flex: 1.5, height: '100%' }}>
-             <LargeBars logs={summary.weekLogs} field="steps" goal={goals.steps || 10000} colors={colors} />
+          <View style={{ gap: 8 }}>
+            {upcomingMedicineReminders.map((rem) => (
+              <View key={rem.id} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: colors.borderLight }}>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontSize: 14, fontWeight: '700', color: colors.textPrimary }}>{rem.name}</Text>
+                  <Text style={{ fontSize: 11, color: colors.textSecondary }}>{rem.dosage ? `${rem.dosage} · ` : ''}{rem.time}</Text>
+                </View>
+                <Pressable
+                  onPress={() => handleMedicineTaken(rem)}
+                  style={({ pressed }) => [{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: 4,
+                    paddingHorizontal: 12,
+                    paddingVertical: 6,
+                    borderRadius: RADIUS.pill,
+                    borderWidth: 1,
+                    borderColor: colors.health,
+                    backgroundColor: colors.accentLight.health,
+                    opacity: pressed ? 0.75 : 1,
+                  }]}
+                >
+                  <Ionicons name="checkmark" size={14} color={colors.pillHealth.text} />
+                  <Text style={{ fontSize: 11, fontWeight: '800', color: colors.pillHealth.text }}>Take</Text>
+                </Pressable>
+              </View>
+            ))}
           </View>
         </View>
-      </BentoCard>
+      )}
 
-      {/* Daily Tip (Moved to bottom as additional feature) */}
-      <BentoCard style={[styles.tipCard, { marginTop: 16 }]}>
-        <View style={styles.tipEyebrowRow}>
-          <View style={[styles.tipDot, { backgroundColor: colors.info }]} />
-          <Text style={[styles.tipEyebrowText, { color: colors.textSecondary }]}>Daily Tips</Text>
-        </View>
-        <View style={styles.tipContentRow}>
-          <Ionicons name="sparkles" size={24} color={colors.info} style={styles.tipIcon} />
-          <Text style={[styles.tipText, { color: colors.textPrimary }]}>
-            "{getDailyTip()}"
-          </Text>
-        </View>
-      </BentoCard>
       <FeatureWalkthrough screenKey="health" steps={WALKTHROUGH_STEPS.health} />
 
       {permissionModalVisible && (
@@ -1206,21 +1458,21 @@ export default function HealthDashboard({ navigation }) {
         >
           <View style={styles.modalOverlay}>
             <Pressable style={styles.modalBackdropPress} onPress={() => setMoreMetricsModalVisible(false)} />
-            <View style={[styles.bottomSheetContainer, { backgroundColor: colors.surfaceElevated, borderColor: colors.borderLight, paddingBottom: Math.max(insets.bottom + 20, Platform.OS === 'android' ? 60 : 36) }]}>
+            <View style={[styles.bottomSheetContainer, { backgroundColor: colors.surface, borderColor: colors.borderLight, paddingBottom: Math.max(insets.bottom + 20, Platform.OS === 'android' ? 60 : 36) }]}>
               {/* Handlebar */}
-              <View style={styles.sheetHandleBar} />
+              <View style={[styles.sheetHandleBar, { backgroundColor: colors.border }]} />
 
               <View style={styles.sheetHeader}>
                 <View style={{ flex: 1 }}>
-                  <Text style={[styles.sheetTitle, { color: colors.white }]}>Secondary Health Metrics</Text>
-                  <Text style={[styles.sheetSubtitle, { color: colors.textHint }]}>Additional metrics tracked via Google Health Connect & manual logs</Text>
+                  <Text style={[styles.sheetTitle, { color: colors.textPrimary }]}>Secondary Health Metrics</Text>
+                  <Text style={[styles.sheetSubtitle, { color: colors.textSecondary }]}>Additional metrics tracked via Google Health Connect & manual logs</Text>
                 </View>
                 <Pressable
                   onPress={() => setMoreMetricsModalVisible(false)}
                   style={[styles.closeIconBtn, { backgroundColor: colors.surfaceTint }]}
                   hitSlop={8}
                 >
-                  <Ionicons name="close" size={20} color={colors.white} />
+                  <Ionicons name="close" size={20} color={colors.textPrimary} />
                 </Pressable>
               </View>
 
@@ -1234,9 +1486,9 @@ export default function HealthDashboard({ navigation }) {
                       <Ionicons name="water" size={18} color={colors.tealLight} />
                     </View>
                     <View style={{ flex: 1 }}>
-                      <Text style={[styles.secMetricLabel, { color: colors.textHint }]}>Water / Hydration</Text>
-                      <Text style={[styles.secMetricValue, { color: colors.white }]}>
-                        {today?.water ? `${((today.water) * 0.25).toFixed(1)} L (${today.water} glasses)` : 'Not recorded'}
+                      <Text style={[styles.secMetricLabel, { color: colors.textSecondary }]}>Water / Hydration</Text>
+                      <Text style={[styles.secMetricValue, { color: colors.textPrimary }]}>
+                        {today?.water ? `${((today.water) * 0.25).toFixed(1)} L (${today.water} glasses)` : '0 L (0 glasses)'}
                       </Text>
                     </View>
                   </View>
@@ -1247,9 +1499,9 @@ export default function HealthDashboard({ navigation }) {
                       <Ionicons name="navigate" size={18} color="#4ECDC4" />
                     </View>
                     <View style={{ flex: 1 }}>
-                      <Text style={[styles.secMetricLabel, { color: colors.textHint }]}>Distance</Text>
-                      <Text style={[styles.secMetricValue, { color: colors.white }]}>
-                        {(today?.distance || today?.watchData?.distance) ? `${Number(today?.distance || today?.watchData?.distance).toFixed(2)} km` : 'Not recorded'}
+                      <Text style={[styles.secMetricLabel, { color: colors.textSecondary }]}>Distance</Text>
+                      <Text style={[styles.secMetricValue, { color: colors.textPrimary }]}>
+                        {(today?.distance || today?.watchData?.distance) ? `${Number(today?.distance || today?.watchData?.distance).toFixed(2)} km` : '0 km'}
                       </Text>
                     </View>
                   </View>
@@ -1260,9 +1512,9 @@ export default function HealthDashboard({ navigation }) {
                       <Ionicons name="stopwatch" size={18} color="#FFD166" />
                     </View>
                     <View style={{ flex: 1 }}>
-                      <Text style={[styles.secMetricLabel, { color: colors.textHint }]}>Active Minutes</Text>
-                      <Text style={[styles.secMetricValue, { color: colors.white }]}>
-                        {(today?.activeMinutes || today?.watchData?.activeMinutes) ? `${Math.round(today?.activeMinutes || today?.watchData?.activeMinutes)} mins` : 'Not recorded'}
+                      <Text style={[styles.secMetricLabel, { color: colors.textSecondary }]}>Active Minutes</Text>
+                      <Text style={[styles.secMetricValue, { color: colors.textPrimary }]}>
+                        {(today?.activeMinutes || today?.watchData?.activeMinutes) ? `${Math.round(today?.activeMinutes || today?.watchData?.activeMinutes)} mins` : '0 mins'}
                       </Text>
                     </View>
                   </View>
@@ -1273,9 +1525,9 @@ export default function HealthDashboard({ navigation }) {
                       <Ionicons name="pulse" size={18} color="#06D6A0" />
                     </View>
                     <View style={{ flex: 1 }}>
-                      <Text style={[styles.secMetricLabel, { color: colors.textHint }]}>Blood Oxygen (SpO2)</Text>
-                      <Text style={[styles.secMetricValue, { color: colors.white }]}>
-                        {(today?.bloodOxygen || today?.watchData?.bloodOxygen) ? `${Math.round(today?.bloodOxygen || today?.watchData?.bloodOxygen)} %` : 'Not recorded'}
+                      <Text style={[styles.secMetricLabel, { color: colors.textSecondary }]}>Blood Oxygen (SpO2)</Text>
+                      <Text style={[styles.secMetricValue, { color: colors.textPrimary }]}>
+                        {(today?.bloodOxygen || today?.watchData?.bloodOxygen) ? `${Math.round(today?.bloodOxygen || today?.watchData?.bloodOxygen)} %` : '0 %'}
                       </Text>
                     </View>
                   </View>
@@ -1286,9 +1538,9 @@ export default function HealthDashboard({ navigation }) {
                       <Ionicons name="pie-chart" size={18} color="#A566FF" />
                     </View>
                     <View style={{ flex: 1 }}>
-                      <Text style={[styles.secMetricLabel, { color: colors.textHint }]}>Body Fat</Text>
-                      <Text style={[styles.secMetricValue, { color: colors.white }]}>
-                        {(today?.bodyFat || today?.watchData?.bodyFat) ? `${Number(today?.bodyFat || today?.watchData?.bodyFat).toFixed(1)} %` : 'Not recorded'}
+                      <Text style={[styles.secMetricLabel, { color: colors.textSecondary }]}>Body Fat</Text>
+                      <Text style={[styles.secMetricValue, { color: colors.textPrimary }]}>
+                        {(today?.bodyFat || today?.watchData?.bodyFat) ? `${Number(today?.bodyFat || today?.watchData?.bodyFat).toFixed(1)} %` : '0 %'}
                       </Text>
                     </View>
                   </View>
@@ -1299,9 +1551,9 @@ export default function HealthDashboard({ navigation }) {
                       <Ionicons name="barbell" size={18} color="#118AB2" />
                     </View>
                     <View style={{ flex: 1 }}>
-                      <Text style={[styles.secMetricLabel, { color: colors.textHint }]}>Workout / Exercise</Text>
-                      <Text style={[styles.secMetricValue, { color: colors.white }]}>
-                        {(today?.workout || today?.watchData?.workout) ? `${today?.workout || today?.watchData?.workout} mins` : 'Not recorded'}
+                      <Text style={[styles.secMetricLabel, { color: colors.textSecondary }]}>Workout / Exercise</Text>
+                      <Text style={[styles.secMetricValue, { color: colors.textPrimary }]}>
+                        {(today?.workout || today?.watchData?.workout) ? `${today?.workout || today?.watchData?.workout} mins` : '0 mins'}
                       </Text>
                     </View>
                   </View>
@@ -1312,9 +1564,9 @@ export default function HealthDashboard({ navigation }) {
                       <Ionicons name="resize" size={18} color="#9C88FF" />
                     </View>
                     <View style={{ flex: 1 }}>
-                      <Text style={[styles.secMetricLabel, { color: colors.textHint }]}>Height</Text>
-                      <Text style={[styles.secMetricValue, { color: colors.white }]}>
-                        {(today?.height || today?.watchData?.height) ? `${Math.round(today?.height || today?.watchData?.height)} cm` : 'Not recorded'}
+                      <Text style={[styles.secMetricLabel, { color: colors.textSecondary }]}>Height</Text>
+                      <Text style={[styles.secMetricValue, { color: colors.textPrimary }]}>
+                        {(today?.height || today?.watchData?.height) ? `${Math.round(today?.height || today?.watchData?.height)} cm` : '0 cm'}
                       </Text>
                     </View>
                   </View>
@@ -1330,8 +1582,8 @@ export default function HealthDashboard({ navigation }) {
                     }}
                     style={[styles.sheetActionBtn, { backgroundColor: colors.health }]}
                   >
-                    <Ionicons name="sync" size={16} color={colors.surfaceElevated} />
-                    <Text style={[styles.sheetActionBtnText, { color: colors.surfaceElevated }]}>Sync Health Connect</Text>
+                    <Ionicons name="sync" size={16} color={colors.onAccent} />
+                    <Text style={[styles.sheetActionBtnText, { color: colors.onAccent }]}>Sync Health Connect</Text>
                   </Pressable>
 
                   <Pressable
@@ -1341,8 +1593,8 @@ export default function HealthDashboard({ navigation }) {
                     }}
                     style={[styles.sheetActionBtn, { backgroundColor: colors.surfaceTint }]}
                   >
-                    <Ionicons name="add-circle-outline" size={16} color={colors.white} />
-                    <Text style={[styles.sheetActionBtnText, { color: colors.white }]}>Log Manual Data</Text>
+                    <Ionicons name="add-circle-outline" size={16} color={colors.textPrimary} />
+                    <Text style={[styles.sheetActionBtnText, { color: colors.textPrimary }]}>Log Manual Data</Text>
                   </Pressable>
                 </View>
               </ScrollView>
@@ -1361,27 +1613,27 @@ export default function HealthDashboard({ navigation }) {
         >
           <View style={styles.modalOverlay}>
             <Pressable style={styles.modalBackdropPress} onPress={() => setReportModalVisible(false)} />
-            <View style={[styles.bottomSheetContainer, { backgroundColor: colors.surfaceElevated, borderColor: colors.borderLight, paddingBottom: Math.max(insets.bottom + 20, Platform.OS === 'android' ? 60 : 36) }]}>
-              <View style={styles.sheetHandleBar} />
+            <View style={[styles.bottomSheetContainer, { backgroundColor: colors.surface, borderColor: colors.borderLight, paddingBottom: Math.max(insets.bottom + 20, Platform.OS === 'android' ? 60 : 36) }]}>
+              <View style={[styles.sheetHandleBar, { backgroundColor: colors.border }]} />
 
               <View style={styles.sheetHeader}>
                 <View style={{ flex: 1 }}>
-                  <Text style={[styles.sheetTitle, { color: colors.white }]}>Extract Health Data Report</Text>
-                  <Text style={[styles.sheetSubtitle, { color: colors.textHint }]}>Export analytics, daily logs, and synced metrics</Text>
+                  <Text style={[styles.sheetTitle, { color: colors.textPrimary }]}>Extract Health Data Report</Text>
+                  <Text style={[styles.sheetSubtitle, { color: colors.textSecondary }]}>Export analytics, daily logs, and synced metrics</Text>
                 </View>
                 <Pressable
                   onPress={() => setReportModalVisible(false)}
                   style={[styles.closeIconBtn, { backgroundColor: colors.surfaceTint }]}
                   hitSlop={8}
                 >
-                  <Ionicons name="close" size={20} color={colors.white} />
+                  <Ionicons name="close" size={20} color={colors.textPrimary} />
                 </Pressable>
               </View>
 
               <ScrollView showsVerticalScrollIndicator={false} style={{ maxHeight: 320 }} contentContainerStyle={{ paddingVertical: 8, gap: 12 }}>
                 {/* 1. Range Selection */}
                 <View>
-                  <Text style={[styles.sectionLabel, { color: colors.textHint, marginTop: 0 }]}>Select Time Period</Text>
+                  <Text style={[styles.sectionLabel, { color: colors.textSecondary, marginTop: 0 }]}>Select Time Period</Text>
                   <View style={{ flexDirection: 'row', gap: 8, marginTop: 6 }}>
                     {[
                       { key: '7', label: 'Last 7 Days' },
@@ -1402,7 +1654,7 @@ export default function HealthDashboard({ navigation }) {
                         <Text
                           style={[
                             styles.reportChipText,
-                            { color: reportRange === item.key ? colors.surfaceElevated : colors.white },
+                            { color: reportRange === item.key ? colors.onAccent : colors.textPrimary },
                           ]}
                         >
                           {item.label}
@@ -1414,7 +1666,7 @@ export default function HealthDashboard({ navigation }) {
 
                 {/* 2. Format Selection */}
                 <View>
-                  <Text style={[styles.sectionLabel, { color: colors.textHint, marginTop: 0 }]}>Export Format</Text>
+                  <Text style={[styles.sectionLabel, { color: colors.textSecondary, marginTop: 0 }]}>Export Format</Text>
                   <View style={{ flexDirection: 'row', gap: 8, marginTop: 6 }}>
                     {[
                       { key: 'summary', label: 'Summary Text', icon: 'document-text' },
@@ -1433,11 +1685,11 @@ export default function HealthDashboard({ navigation }) {
                           },
                         ]}
                       >
-                        <Ionicons name={item.icon} size={14} color={reportFormat === item.key ? colors.white : colors.textHint} />
+                        <Ionicons name={item.icon} size={14} color={reportFormat === item.key ? colors.onAccent : colors.textSecondary} />
                         <Text
                           style={[
                             styles.reportChipText,
-                            { color: reportFormat === item.key ? colors.white : colors.white },
+                            { color: reportFormat === item.key ? colors.onAccent : colors.textPrimary },
                           ]}
                         >
                           {item.label}
@@ -1451,7 +1703,7 @@ export default function HealthDashboard({ navigation }) {
                 <View style={[styles.reportPreviewCard, { backgroundColor: colors.surfaceTint, borderColor: colors.borderLight }]}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
                     <Text style={{ fontSize: 11, fontWeight: '800', color: colors.pillHealth.text }}>REPORT PREVIEW</Text>
-                    <Text style={{ fontSize: 11, color: colors.textHint }}>
+                    <Text style={{ fontSize: 11, color: colors.textSecondary }}>
                       {reportRange === 'all' ? 'Full History' : `Last ${reportRange} days`}
                     </Text>
                   </View>
@@ -1464,7 +1716,7 @@ export default function HealthDashboard({ navigation }) {
                       style={{
                         fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
                         fontSize: 11,
-                        color: colors.white,
+                        color: colors.textPrimary,
                         lineHeight: 16,
                       }}
                     />
@@ -1476,8 +1728,8 @@ export default function HealthDashboard({ navigation }) {
                   onPress={handleExportReport}
                   style={[styles.exportPrimaryBtn, { backgroundColor: colors.health }]}
                 >
-                  <Ionicons name="share-outline" size={18} color={colors.surfaceElevated} />
-                  <Text style={[styles.exportPrimaryBtnText, { color: colors.surfaceElevated }]}>Export & Share Health Report</Text>
+                  <Ionicons name="share-outline" size={18} color={colors.onAccent} />
+                  <Text style={[styles.exportPrimaryBtnText, { color: colors.onAccent }]}>Export & Share Health Report</Text>
                 </Pressable>
               </ScrollView>
             </View>
@@ -1490,44 +1742,65 @@ export default function HealthDashboard({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  heroRow: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 },
-  heroCopy: { flex: 1, gap: 4 },
-  kicker: { fontSize: 12, fontWeight: '600', letterSpacing: 0.8, textTransform: 'uppercase' },
-  heroTitle: { fontSize: 24, fontWeight: '800' },
-  iconButton: { alignItems: 'center', borderRadius: RADIUS.pill, height: 44, justifyContent: 'center', width: 44 },
+  headerRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+    paddingTop: 8,
+  },
+  headerTextCol: {
+    gap: 3,
+  },
+  screenTitle: {
+    fontSize: 28,
+    fontWeight: '800',
+    letterSpacing: -0.8,
+  },
+  headerDate: {
+    fontSize: 13,
+    fontWeight: '500',
+    letterSpacing: -0.1,
+  },
+  addBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   screenContent: { maxWidth: 740, width: '100%', alignSelf: 'center' },
   metricGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   actionSquare: {
     alignItems: 'center',
     borderRadius: RADIUS.xl,
+    borderWidth: 1,
     flex: 1,
     gap: 10,
     paddingVertical: 18,
-    paddingHorizontal: 8,
-    ...SHADOWS.soft,
+    paddingHorizontal: 6,
   },
   actionIconBg: {
     alignItems: 'center',
-    borderRadius: RADIUS.lg,
-    height: 48,
+    borderRadius: 12,
+    height: 44,
     justifyContent: 'center',
-    width: 48,
+    width: 44,
   },
   actionText: {
     fontSize: 12,
     fontWeight: '700',
     textAlign: 'center',
-    lineHeight: 17,
+    lineHeight: 16,
   },
   bentoGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 16 },
   bentoCard: {
     borderRadius: RADIUS.xl,
-    flexBasis: '47%',
-    flexGrow: 1,
+    borderWidth: 1,
     gap: 10,
     minHeight: 140,
     padding: 20,
-    ...SHADOWS.soft,
   },
   wideCard: { flexBasis: '100%' },
   summaryCard: {
@@ -1653,7 +1926,6 @@ const styles = StyleSheet.create({
     borderRadius: RADIUS.lg,
     borderWidth: 1,
     padding: 14,
-    ...SHADOWS.subtle,
   },
   halfCard: {
     flex: 1,
@@ -1662,7 +1934,6 @@ const styles = StyleSheet.create({
     borderRadius: RADIUS.lg,
     borderWidth: 1,
     padding: 14,
-    ...SHADOWS.subtle,
   },
   compactColumn: {
     flex: 1,
@@ -1679,7 +1950,6 @@ const styles = StyleSheet.create({
     position: 'relative',
     overflow: 'hidden',
     justifyContent: 'space-between',
-    ...SHADOWS.subtle,
   },
   cardHeaderTitleRow: {
     flexDirection: 'row',
@@ -1936,7 +2206,6 @@ const styles = StyleSheet.create({
     padding: 20,
     maxWidth: 380,
     width: '100%',
-    ...SHADOWS.soft,
   },
   modalHeader: {
     flexDirection: 'row',
@@ -2216,7 +2485,6 @@ const styles = StyleSheet.create({
     maxWidth: 740,
     width: '100%',
     alignSelf: 'center',
-    ...SHADOWS.soft,
   },
   sheetHandleBar: {
     width: 36,
@@ -2317,10 +2585,164 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     borderRadius: RADIUS.xl,
     marginTop: 4,
-    ...SHADOWS.soft,
   },
   exportPrimaryBtnText: {
     fontSize: 14,
     fontWeight: '800',
+  },
+  // Bento 2x2 Grid
+  bentoGridRow: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 12,
+  },
+  bentoCardHalf: {
+    flex: 1,
+    borderRadius: RADIUS.xl,
+    borderWidth: 1,
+    padding: 16,
+    overflow: 'hidden',
+    justifyContent: 'space-between',
+    minHeight: 140,
+  },
+  bentoCardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
+  bentoCardLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    lineHeight: 18,
+  },
+  bentoIconBadge: {
+    width: 28,
+    height: 28,
+    borderRadius: 9,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  bentoValueRow: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    gap: 4,
+    marginTop: 4,
+  },
+  bentoValueText: {
+    fontSize: 26,
+    fontWeight: '800',
+    letterSpacing: -0.5,
+  },
+  bentoUnitText: {
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  bentoSubtext: {
+    fontSize: 11,
+    fontWeight: '500',
+    marginTop: 4,
+  },
+  orbContainer: {
+    position: 'absolute',
+    bottom: -10,
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+    pointerEvents: 'none',
+  },
+
+  // Quick Tools Strip
+  quickToolsRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginBottom: 16,
+  },
+  quickToolBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 12,
+    paddingHorizontal: 8,
+    borderRadius: RADIUS.lg,
+    borderWidth: 1,
+  },
+  quickToolText: {
+    fontSize: 12,
+    fontWeight: '700',
+  },
+
+  // Recent Activities Card
+  recentActivitiesCard: {
+    borderRadius: RADIUS.xl,
+    borderWidth: 1,
+    padding: 18,
+    marginBottom: 16,
+  },
+  recentHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 14,
+  },
+  recentTitle: {
+    fontSize: 17,
+    fontWeight: '800',
+  },
+  seeAllText: {
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  filterPillsRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 14,
+  },
+  filterPill: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: RADIUS.pill,
+    borderWidth: 1,
+  },
+  filterPillText: {
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  activityItemRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 12,
+  },
+  activityItemLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    flex: 1,
+  },
+  activityIconBox: {
+    width: 38,
+    height: 38,
+    borderRadius: RADIUS.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  activityTextCol: {
+    flex: 1,
+    gap: 2,
+  },
+  activityCategory: {
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  activityItemTitle: {
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  activityDate: {
+    fontSize: 10,
+    fontWeight: '500',
   },
 });

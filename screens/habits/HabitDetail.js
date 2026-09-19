@@ -10,7 +10,7 @@ import { SectionHeader } from '../../components/SectionHeader';
 import { useHabits } from '../../hooks/useHabits';
 import { displayDate, isFutureDate, monthGridDays, todayKey } from '../../utils/dates';
 import { RADIUS, SHADOWS } from '../../constants/theme';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons } from "../../components/LineIcon";
 
 export default function HabitDetail({ navigation, route }) {
   const { habits, isDone, getStreak, getBestStreak, getDayCompletionPercent } = useHabits();

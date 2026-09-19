@@ -1,7 +1,7 @@
 import { addDays, differenceInCalendarDays, parseISO } from 'date-fns';
 import { displayDate, todayKey } from '../../utils/dates';
 
-export const formatSteps = (steps) => (steps || steps === 0 ? Number(steps).toLocaleString() : '—');
+export const formatSteps = (steps) => (steps || steps === 0 ? Number(steps).toLocaleString() : '0');
 
 export const PERMISSION_LABELS = {
   steps: 'Steps',

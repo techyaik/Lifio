@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import { Pressable, StyleSheet, Text as RNText, View, useWindowDimensions } from 'react-native';
 import { AppText as Text } from '../components/AppText';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons } from "../components/LineIcon";
 import Svg, { Polyline } from 'react-native-svg';
 import {
   differenceInCalendarDays,

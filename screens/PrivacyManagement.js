@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Alert, StyleSheet, Text as RNText, View, Switch, Share, Platform } from 'react-native';
 import { AppText as Text } from '../components/AppText';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons } from "../components/LineIcon";
 import * as LocalAuthentication from 'expo-local-authentication';
 import { useTheme } from '../theme/ThemeContext';
 import { AppHeader } from '../components/AppHeader';

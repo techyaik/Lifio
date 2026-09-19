@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { Alert, FlatList, Pressable, StyleSheet, Text as RNText, View } from 'react-native';
 import { AppText as Text } from '../../components/AppText';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons } from "../../components/LineIcon";
 import { addMonths, format, isToday, isYesterday, parseISO } from 'date-fns';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../../theme/ThemeContext';

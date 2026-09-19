@@ -1,7 +1,7 @@
 import React from 'react';
 import { Pressable, StyleSheet, Text as RNText, View } from 'react-native';
 import { AppText as Text } from './AppText';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons } from "./LineIcon";
 import { Swipeable } from 'react-native-gesture-handler';
 import { useTheme } from '../theme/ThemeContext';
 import { RADIUS, SHADOWS } from '../constants/theme';

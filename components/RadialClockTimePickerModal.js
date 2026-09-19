@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Modal, View, StyleSheet, Pressable, Platform } from 'react-native';
 import { AppText as Text } from './AppText';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons } from "./LineIcon";
 import { InputField } from './InputField';
 
 export function RadialClockTimePickerModal({ visible, initialTime = '09:00', onConfirm, onCancel, colors }) {

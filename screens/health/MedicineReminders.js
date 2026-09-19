@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { Alert, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Switch, Text as RNText, View,  } from 'react-native';
 import { AppText as Text } from '../../components/AppText';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons } from "../../components/LineIcon";
 import { useTheme } from '../../theme/ThemeContext';
 import { AppHeader } from '../../components/AppHeader';
 import { EmptyState } from '../../components/EmptyState';
@@ -18,7 +18,7 @@ import {
   useMedicineReminders,
 } from '../../hooks/useMedicineReminders';
 import { todayKey } from '../../utils/dates';
-import { RADIUS, SHADOWS } from '../../constants/theme';
+import { RADIUS } from '../../constants/theme';
 import { showToast } from '../../utils/feedback';
 
 const emptyForm = {
@@ -322,7 +322,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     gap: 12,
     padding: 14,
-    ...SHADOWS.subtle,
   },
   cardTopRow: {
     alignItems: 'flex-start',
@@ -375,7 +374,6 @@ const styles = StyleSheet.create({
     maxHeight: '86%',
     flexShrink: 1,
     padding: 18,
-    ...SHADOWS.soft,
   },
   modalHeader: {
     alignItems: 'center',

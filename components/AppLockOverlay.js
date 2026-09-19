@@ -2,7 +2,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { View, Text as RNText, StyleSheet, AppState, Pressable, ActivityIndicator, Modal } from 'react-native';
 import { AppText as Text } from './AppText';
 import * as LocalAuthentication from 'expo-local-authentication';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons } from "./LineIcon";
 import { useTheme } from '../theme/ThemeContext';
 import { RADIUS } from '../constants/theme';
 

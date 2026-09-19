@@ -1,590 +1,863 @@
-import React, { useMemo } from 'react';
-import { Pressable, StyleSheet, Text as RNText, useWindowDimensions, View, ScrollView } from 'react-native';
+import React, { useState, useMemo, useEffect } from 'react';
+import {
+  View,
+  StyleSheet,
+  Pressable,
+  Image,
+  useWindowDimensions,
+} from 'react-native';
 import { AppText as Text } from '../components/AppText';
-import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
-import { useTheme } from '../theme/ThemeContext';
 import { Screen } from '../components/Screen';
-import { useHabits } from '../hooks/useHabits';
+import { Ionicons, MaterialCommunityIcons, Feather, LineIcon } from '../components/LineIcon';
+import { useTheme } from '../theme/ThemeContext';
 import { useHealth } from '../hooks/useHealth';
+import { useHabits } from '../hooks/useHabits';
 import { useWallet } from '../hooks/useWallet';
 import { useNotes } from '../hooks/useNotes';
+import { SunsetGlowOrb } from '../components/SunsetGlowOrb';
 import { getData, setData } from '../storage/storage';
 import { todayKey, shouldCountForGoal } from '../utils/dates';
-import { RADIUS, SHADOWS } from '../constants/theme';
 import { showToast } from '../utils/feedback';
 import { format } from 'date-fns';
+import * as Haptics from 'expo-haptics';
 
 export default function Home({ navigation }) {
-  const { colors, profileName } = useTheme();
+  const { colors, profileName, theme } = useTheme();
+  const isDark = theme === 'dark';
   const { width } = useWindowDimensions();
 
-  const { habits, getStreak, isDone } = useHabits();
+  // Lifio Real Hooks
+  const { habits, isDone, getStreak } = useHabits();
   const { getTodayLog } = useHealth();
   const { wallets, formatMoney } = useWallet();
   const { notes } = useNotes();
 
-  const [todayMood, setTodayMood] = React.useState(null);
-  const [walletBalanceVisible, setWalletBalanceVisible] = React.useState(false);
+  const [todayMood, setTodayMood] = useState(null);
+  const [walletBalanceVisible, setWalletBalanceVisible] = useState(false);
 
-  React.useEffect(() => {
+  // Load saved mood for today
+  useEffect(() => {
     const loadMood = async () => {
-      const moods = await getData('mood_logs');
-      const todayEntry = moods.find((m) => m.date === todayKey());
-      if (todayEntry) setTodayMood(todayEntry.mood);
+      try {
+        const moods = await getData('mood_logs');
+        if (Array.isArray(moods)) {
+          const todayEntry = moods.find((m) => m.date === todayKey());
+          if (todayEntry) setTodayMood(todayEntry.mood);
+        }
+      } catch (e) {
+        console.error('Error loading mood logs:', e);
+      }
     };
     loadMood();
   }, []);
 
-  const today = getTodayLog();
-  const activeHabits = habits.filter((h) => shouldCountForGoal(todayKey(), h.goal));
-  const completedHabitsCount = activeHabits.filter((h) => isDone(h.id, todayKey())).length;
-  const streak = activeHabits.length > 0 ? Math.max(...activeHabits.map(h => getStreak(h)), 0) : 0;
-
-  const currentNote = notes[0];
-  const firstName = profileName ? profileName.split(/\s+/)[0] : '';
-  const totalWalletBalance = useMemo(
-    () => wallets.reduce((sum, wallet) => sum + (wallet.balance ?? 0), 0),
-    [wallets]
-  );
-
   const handleQuickMood = async (moodKey) => {
     try {
-      const moods = await getData('mood_logs');
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      const moods = (await getData('mood_logs')) || [];
       const filtered = moods.filter((m) => m.date !== todayKey());
       const newMoods = [...filtered, { date: todayKey(), mood: moodKey }];
       await setData('mood_logs', newMoods);
       setTodayMood(moodKey);
-      showToast('Mood logged successfully!');
+      const label = moodKey.charAt(0).toUpperCase() + moodKey.slice(1);
+      showToast(`Mood logged: ${label} ✓`);
     } catch (e) {
       console.error('Error logging quick mood:', e);
     }
   };
 
-  const currentDate = format(new Date(), 'EEEE, MMMM d');
+  const today = getTodayLog();
+  const firstName = profileName ? profileName.trim().split(/\s+/)[0] : 'User';
+  const currentDateFormatted = format(new Date(), 'EEEE, MMMM d');
+
+  // Total wallet balance
+  const totalWalletBalance = useMemo(
+    () => wallets.reduce((sum, wallet) => sum + (wallet.balance ?? 0), 0),
+    [wallets]
+  );
+
+  // Active habits for today
+  const activeHabits = useMemo(
+    () => habits.filter((h) => shouldCountForGoal(todayKey(), h.goal)),
+    [habits]
+  );
+
+  const completedHabitsCount = useMemo(
+    () => activeHabits.filter((h) => isDone(h.id, todayKey())).length,
+    [activeHabits, isDone]
+  );
+
+  const habitsPercentage = activeHabits.length > 0
+    ? Math.round((completedHabitsCount / activeHabits.length) * 100)
+    : 0;
+
+  const maxStreak = useMemo(() => {
+    if (!habits || habits.length === 0) return 0;
+    const streaks = habits.map((h) => (getStreak ? getStreak(h) : 0));
+    return Math.max(...streaks, 0);
+  }, [habits, getStreak]);
+
+  // Card dimensions for 2-column grid
+  const cardWidth = (width - 40 - 12) / 2;
+
+  // Real step count display
+  const stepsDisplay = useMemo(() => {
+    const s = today?.steps || today?.watchData?.steps;
+    if (s && Number(s) > 0) {
+      const num = Number(s);
+      return num >= 1000 ? `${(num / 1000).toFixed(1)}k steps` : `${num} steps`;
+    }
+    return '0 steps';
+  }, [today]);
+
+  // Real distance display
+  const distanceDisplay = useMemo(() => {
+    const d = today?.distance || today?.watchData?.distance;
+    if (d && Number(d) > 0) {
+      return `${d} km`;
+    }
+    return '0 km';
+  }, [today]);
+
+  // Real calories display
+  const caloriesDisplay = useMemo(() => {
+    const c = today?.calories || today?.watchData?.calories;
+    if (c && Number(c) > 0) {
+      return `${c} kcal`;
+    }
+    return '0 kcal';
+  }, [today]);
+
+  // Check if any vitals have been logged today
+  const hasVitalsData = useMemo(() => {
+    return Boolean(
+      (today?.heartRate && Number(today.heartRate) > 0) ||
+      (today?.watchData?.heartRate && Number(today.watchData.heartRate) > 0) ||
+      (today?.calories && Number(today.calories) > 0) ||
+      (today?.watchData?.calories && Number(today.watchData.calories) > 0) ||
+      (today?.sleep && Number(today.sleep) > 0) ||
+      (today?.water && Number(today.water) > 0)
+    );
+  }, [today]);
+
+  const currentNote = notes && notes.length > 0 ? notes[0] : null;
+
   const moodEmojis = [
-    { key: 'happy', emoji: '😊' },
-    { key: 'neutral', emoji: '😐' },
-    { key: 'sad', emoji: '😔' },
-    { key: 'stressed', emoji: '😤' },
-    { key: 'excited', emoji: '🤩' },
+    { key: 'happy', emoji: '😊', label: 'Happy' },
+    { key: 'neutral', emoji: '😐', label: 'Neutral' },
+    { key: 'sad', emoji: '😔', label: 'Sad' },
+    { key: 'stressed', emoji: '😤', label: 'Stressed' },
+    { key: 'excited', emoji: '🤩', label: 'Excited' },
   ];
 
   return (
-    <Screen contentStyle={{ paddingHorizontal: 24 }} withBottomNav>
-      <View>
-        {/* 1. Top Header */}
-        <View style={styles.headerSection}>
-          {/* Logo */}
-          <View style={styles.logoRow}>
-            <Text style={[styles.logoText, { color: colors.textPrimary }]}>lifio.</Text>
-          </View>
-
-          {/* Greeting */}
-          <View style={styles.greetingBlock}>
-            <Text style={[styles.greetingHi, { color: colors.textPrimary }]}>
-              Hi {firstName ? `${firstName},` : 'User,'}
-            </Text>
-            <Text style={[styles.greetingTitle, { color: colors.textPrimary }]}>
-              Welcome Back!
-            </Text>
-            <Text style={[styles.greetingSubtitle, { color: colors.textSecondary }]}>
-              Ready to track your progress today?
-            </Text>
-          </View>
+    <Screen contentStyle={styles.screenContent} withBottomNav>
+      {/* ── 1. Top Header ────────────────────────────────────────── */}
+      <View style={styles.headerRow}>
+        <View style={styles.headerTextGroup}>
+          <Text style={[styles.greetingText, { color: colors.textPrimary }]}>
+            Hi, {firstName}
+          </Text>
+          <Text style={[styles.headerDate, { color: colors.textSecondary }]}>
+            {currentDateFormatted}
+          </Text>
         </View>
 
-        {/* 2. Row 1: Mood & Habits */}
-        <View style={styles.row1}>
-          {/* Daily Mood */}
-          <View style={[styles.moodCard, { backgroundColor: colors.surface, borderColor: colors.borderLight }]}>
-            <Text style={[styles.kicker, { color: colors.textSecondary }]}>Daily Mood</Text>
-            <Text style={[styles.moodQuestion, { color: colors.textPrimary }]}>How are you feeling today?</Text>
-            <View style={styles.emojiRow}>
-              {moodEmojis.map((m) => (
-                <Pressable key={m.key} onPress={() => handleQuickMood(m.key)} style={{ opacity: todayMood && todayMood !== m.key ? 0.4 : 1 }}>
-                  <Text style={styles.emojiText}>{m.emoji}</Text>
-                </Pressable>
-              ))}
-            </View>
-          </View>
-
-          {/* Habits Today */}
-          <Pressable onPress={() => navigation.navigate('HabitsTab')} style={[styles.habitsCard, { backgroundColor: colors.surface, borderColor: colors.borderLight }]}>
-            <View style={styles.habitsHeader}>
-              <Text style={[styles.kicker, { flex: 1, color: colors.textSecondary }]}>Habits Today</Text>
-              <View style={[styles.streakBadge, { backgroundColor: colors.habits }]}>
-                <Ionicons name="flame" size={10} color={colors.white} />
-                <Text style={[styles.streakText, { color: colors.white }]}>{streak}d</Text>
-              </View>
-            </View>
-            <View>
-              <Text style={[styles.habitsCount, { color: colors.textPrimary }]}>{completedHabitsCount}/{activeHabits.length}</Text>
-              <Text style={[styles.habitsSubtext, { color: colors.textSecondary }]}>completed</Text>
-              {/* Progress bar */}
-              <View style={[styles.progressTrack, { backgroundColor: colors.borderLight }]}>
-                <View style={[styles.progressFill, { backgroundColor: colors.habits, width: `${activeHabits.length > 0 ? (completedHabitsCount / activeHabits.length) * 100 : 0}%` }]} />
-              </View>
-            </View>
-          </Pressable>
-        </View>
-
-        {/* 3. Row 2: Health Metrics */}
-        <Pressable onPress={() => navigation.navigate('HealthTab')} style={[styles.healthCard, { backgroundColor: colors.surface, borderColor: colors.borderLight }]}>
-          <View style={styles.healthCardHeader}>
-            <Text style={[styles.kicker, { color: colors.textSecondary }]}>Today's Health Metrics</Text>
-            <Text style={[styles.dashboardLink, { color: colors.pillHealth.text }]}>Full Dashboard →</Text>
-          </View>
-
-          {/* Grid Row 1: Primary Daily Activity */}
-          <View style={styles.metricsRow}>
-            {/* Steps */}
-            <View style={styles.metricCell}>
-              <Ionicons name="walk" size={22} color={colors.pillHealth.text} />
-              <Text style={[styles.metricValue, { color: colors.textPrimary }]} numberOfLines={1}>
-                {today?.steps ? Number(today.steps).toLocaleString() : '—'}
-              </Text>
-              <Text style={[styles.metricLabel, { color: colors.textSecondary }]}>Steps</Text>
-            </View>
-
-            {/* Heart Rate */}
-            <View style={styles.metricCell}>
-              <Ionicons name="heart" size={22} color="#FF4B4B" />
-              <Text style={[styles.metricValue, { color: colors.textPrimary }]} numberOfLines={1}>
-                {(today?.heartRate || today?.watchData?.heartRate) ? `${today?.heartRate || today?.watchData?.heartRate}` : '—'}
-              </Text>
-              <Text style={[styles.metricLabel, { color: colors.textSecondary }]}>Heart Rate</Text>
-            </View>
-
-            {/* Calories */}
-            <View style={styles.metricCell}>
-              <Ionicons name="flame" size={22} color="#FF9500" />
-              <Text style={[styles.metricValue, { color: colors.textPrimary }]} numberOfLines={1}>
-                {(today?.calories || today?.watchData?.calories) ? `${today?.calories || today?.watchData?.calories}` : '—'}
-              </Text>
-              <Text style={[styles.metricLabel, { color: colors.textSecondary }]}>Calories</Text>
-            </View>
-
-            {/* Sleep */}
-            <View style={styles.metricCell}>
-              <Ionicons name="bed" size={22} color={colors.pillLearning.text} />
-              <Text style={[styles.metricValue, { color: colors.textPrimary }]} numberOfLines={1}>
-                {today?.sleep ? `${today.sleep}h` : '—'}
-              </Text>
-              <Text style={[styles.metricLabel, { color: colors.textSecondary }]}>Sleep</Text>
-            </View>
-          </View>
-
-          {/* Grid Row 2: Secondary Health Essentials */}
-          <View style={[styles.metricsRow, styles.metricsRowSecondary, { borderTopColor: colors.borderLight }]}>
-            {/* Height */}
-            <View style={styles.metricCell}>
-              <Ionicons name="resize-outline" size={20} color={colors.primary} />
-              <Text style={[styles.metricValueSm, { color: colors.textPrimary }]} numberOfLines={1}>
-                {(today?.height || today?.watchData?.height) ? `${Math.round(today?.height || today?.watchData?.height)}cm` : '—'}
-              </Text>
-              <Text style={[styles.metricLabelSm, { color: colors.textSecondary }]}>Height</Text>
-            </View>
-
-            {/* Weight */}
-            <View style={styles.metricCell}>
-              <MaterialCommunityIcons name="scale-bathroom" size={20} color={colors.pillHealth.text} />
-              <Text style={[styles.metricValueSm, { color: colors.textPrimary }]} numberOfLines={1}>
-                {today?.weight ? `${today.weight}kg` : '—'}
-              </Text>
-              <Text style={[styles.metricLabelSm, { color: colors.textSecondary }]}>Weight</Text>
-            </View>
-
-            {/* Distance */}
-            <View style={styles.metricCell}>
-              <Ionicons name="navigate-outline" size={20} color={colors.primary} />
-              <Text style={[styles.metricValueSm, { color: colors.textPrimary }]} numberOfLines={1}>
-                {(today?.distance || today?.watchData?.distance) ? `${today?.distance || today?.watchData?.distance}km` : '—'}
-              </Text>
-              <Text style={[styles.metricLabelSm, { color: colors.textSecondary }]}>Distance</Text>
-            </View>
-
-            {/* Active Minutes */}
-            <View style={styles.metricCell}>
-              <Ionicons name="fitness-outline" size={20} color={colors.warning} />
-              <Text style={[styles.metricValueSm, { color: colors.textPrimary }]} numberOfLines={1}>
-                {(today?.activeMinutes || today?.watchData?.activeMinutes) ? `${today?.activeMinutes || today?.watchData?.activeMinutes}m` : '—'}
-              </Text>
-              <Text style={[styles.metricLabelSm, { color: colors.textSecondary }]}>Active</Text>
-            </View>
-          </View>
+        <Pressable
+          onPress={() => navigation.navigate('SettingsTab')}
+          style={({ pressed }) => [
+            styles.avatarBtn,
+            { borderColor: colors.borderLight, transform: [{ scale: pressed ? 0.94 : 1 }] },
+          ]}
+        >
+          <Image
+            source={{
+              uri: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80',
+            }}
+            style={styles.avatarImage}
+          />
         </Pressable>
+      </View>
 
-        {/* 4. Row 3: Notes & Wallet */}
-        <View style={styles.row3}>
-          {/* Notes */}
-          <Pressable onPress={() => navigation.navigate('NotesTab')} style={[styles.notesCard, { backgroundColor: colors.surface, borderColor: colors.borderLight }]}>
-            <View style={styles.notesHeader}>
-              <Text style={[styles.kicker, { color: colors.textSecondary }]}>Notes Summary</Text>
-              <Ionicons name="arrow-forward" size={16} color={colors.pillFitness.text} />
+      {/* ── 2. 2x2 Bento Metric Grid (Reference Aesthetic) ─────────── */}
+      <View style={styles.bentoGrid}>
+        {/* Row 1 */}
+        <View style={styles.bentoRow}>
+          {/* Card 1: Activity / Steps with Signature Rising Sunset Glow Orb */}
+          <Pressable
+            onPress={() => navigation.navigate('HealthTab')}
+            style={({ pressed }) => [
+              styles.bentoCard,
+              styles.activityCard,
+              {
+                width: cardWidth,
+                backgroundColor: colors.surface,
+                borderColor: colors.borderLight,
+                transform: [{ scale: pressed ? 0.98 : 1 }],
+              },
+            ]}
+          >
+            <View style={styles.cardHeader}>
+              <Text style={[styles.cardTitle, { color: colors.textPrimary }]}>
+                Activity
+              </Text>
+              <Ionicons name="chevron-forward" size={15} color={colors.textPrimary} />
             </View>
-            <Text style={[styles.notesPreview, { color: colors.textHint }]}>
-              {currentNote ? currentNote.title || 'Note written today.' : 'No notes written yet.'}
+
+            <Text style={[styles.activityValue, { color: colors.textPrimary }]}>
+              {stepsDisplay}
+            </Text>
+
+            {/* Glowing Sunset Orb Rising from Bottom */}
+            <View style={styles.glowWrapper}>
+              <SunsetGlowOrb width={cardWidth} height={68} variant="semi" />
+            </View>
+          </Pressable>
+
+          {/* Card 2: Wallet / Finances */}
+          <Pressable
+            onPress={() => navigation.navigate('JournalTab')}
+            style={({ pressed }) => [
+              styles.bentoCard,
+              styles.statCard,
+              {
+                width: cardWidth,
+                backgroundColor: colors.surface,
+                borderColor: colors.borderLight,
+                transform: [{ scale: pressed ? 0.98 : 1 }],
+              },
+            ]}
+          >
+            <View style={styles.cardHeader}>
+              <Text style={[styles.cardTitle, { color: colors.textPrimary }]}>
+                Wallet
+              </Text>
+              <Pressable hitSlop={10} onPress={() => setWalletBalanceVisible((v) => !v)}>
+                <Ionicons
+                  name={walletBalanceVisible ? 'eye-outline' : 'eye-off-outline'}
+                  size={16}
+                  color={colors.textSecondary}
+                />
+              </Pressable>
+            </View>
+
+            <Text
+              style={[
+                styles.largeMetric,
+                { color: colors.textPrimary, fontSize: walletBalanceVisible ? 20 : 28 },
+              ]}
+              numberOfLines={1}
+            >
+              {walletBalanceVisible ? formatMoney(totalWalletBalance) : '••••'}
+            </Text>
+
+            <Text style={[styles.goalSubText, { color: colors.textSecondary }]}>
+              {wallets.length} active {wallets.length === 1 ? 'wallet' : 'wallets'}
+            </Text>
+          </Pressable>
+        </View>
+
+        {/* Row 2 */}
+        <View style={styles.bentoRow}>
+          {/* Card 3: Notes & Reflections */}
+          <Pressable
+            onPress={() => navigation.navigate('NotesTab')}
+            style={({ pressed }) => [
+              styles.bentoCard,
+              styles.statCard,
+              {
+                width: cardWidth,
+                backgroundColor: colors.surface,
+                borderColor: colors.borderLight,
+                transform: [{ scale: pressed ? 0.98 : 1 }],
+              },
+            ]}
+          >
+            <View style={styles.cardHeader}>
+              <Text style={[styles.cardTitle, { color: colors.textPrimary }]}>
+                Notes
+              </Text>
+              <Ionicons name="chevron-forward" size={15} color={colors.textPrimary} />
+            </View>
+
+            <Text
+              style={[
+                styles.noteBentoPreview,
+                { color: currentNote ? colors.textPrimary : colors.textHint },
+              ]}
+              numberOfLines={2}
+            >
+              {currentNote ? (currentNote.title || currentNote.content || 'Note written today.') : 'Capture a thought...'}
+            </Text>
+
+            <Text style={[styles.goalSubText, { color: colors.primaryOrange }]}>
+              {notes.length} {notes.length === 1 ? 'note' : 'notes'} saved →
             </Text>
           </Pressable>
 
-          {/* Wallet */}
-          <Pressable onPress={() => navigation.navigate('JournalTab')} style={[styles.walletCard, { backgroundColor: colors.surface, borderColor: colors.borderLight }]}>
-            <View style={styles.walletHeader}>
-              <View style={styles.walletHeaderLeft}>
-                <Ionicons name="wallet-outline" size={16} color={colors.wallet} />
-                <Text style={[styles.kicker, { flex: 1, color: colors.textSecondary }]} numberOfLines={1}>Wallet</Text>
-              </View>
-              <View style={styles.walletHeaderRight}>
-                <Pressable onPress={() => setWalletBalanceVisible(!walletBalanceVisible)}>
-                  <Ionicons name={walletBalanceVisible ? "eye-outline" : "eye-off-outline"} size={16} color={colors.textHint} />
-                </Pressable>
-                <Ionicons name="arrow-forward" size={16} color={colors.wallet} />
-              </View>
-            </View>
-
-            <View style={styles.walletBalanceSection}>
-              <Text style={[styles.walletBalanceKicker, { color: colors.textSecondary }]}>Total Balance</Text>
-              <Text style={[styles.walletBalanceSubtext, { color: colors.textSecondary }]}>Private by default</Text>
-              <Text
-                style={[
-                  styles.walletBalanceValue,
-                  { color: colors.textPrimary, fontSize: walletBalanceVisible ? 24 : 32, letterSpacing: walletBalanceVisible ? -0.5 : 2 }
-                ]}
-                adjustsFontSizeToFit
-                numberOfLines={1}
-              >
-                {walletBalanceVisible ? formatMoney(totalWalletBalance) : '••••'}
+          {/* Card 4: Daily Habits Goal */}
+          <Pressable
+            onPress={() => navigation.navigate('HabitsTab')}
+            style={({ pressed }) => [
+              styles.bentoCard,
+              styles.goalCard,
+              {
+                width: cardWidth,
+                backgroundColor: colors.surface,
+                borderColor: colors.borderLight,
+                transform: [{ scale: pressed ? 0.98 : 1 }],
+              },
+            ]}
+          >
+            <View style={styles.cardHeader}>
+              <Text style={[styles.cardTitle, { color: colors.textPrimary }]}>
+                Weekly goal
               </Text>
+              <Ionicons name="chevron-forward" size={15} color={colors.textPrimary} />
             </View>
 
-            <View style={styles.walletPills}>
-              <View style={[styles.walletPill, { backgroundColor: colors.surfaceElevated }]}>
-                <Ionicons name="eye-off" size={14} color={colors.textHint} />
-                <Text style={[styles.walletPillText, { color: colors.textHint }]} numberOfLines={1}>Hidden for privacy</Text>
-              </View>
-              <View style={[styles.walletPill, { backgroundColor: colors.surfaceElevated }]}>
-                <Text style={[styles.walletPillText, { color: colors.white }]} numberOfLines={1}>Open wallet</Text>
-                <Ionicons name="arrow-forward" size={14} color={colors.white} />
+            <Text style={[styles.largeMetric, { color: colors.textPrimary }]}>
+              {habitsPercentage}%
+            </Text>
+
+            <View style={styles.goalFooterRow}>
+              <Text style={[styles.goalSubText, { color: colors.textSecondary }]}>
+                {completedHabitsCount} of {activeHabits.length || 0}{'\n'}habits done
+              </Text>
+
+              <View
+                style={[
+                  styles.habitStreakBadge,
+                  {
+                    backgroundColor: isDark ? 'rgba(255, 87, 34, 0.12)' : '#FFF0EB',
+                    borderColor: isDark ? 'rgba(255, 87, 34, 0.25)' : '#FFD9CC',
+                  },
+                ]}
+              >
+                <Text style={styles.habitStreakFire}>🔥</Text>
+                <Text style={[styles.habitStreakText, { color: colors.primaryOrange }]}>
+                  {maxStreak > 0 ? `${maxStreak}d` : '0d'}
+                </Text>
               </View>
             </View>
           </Pressable>
         </View>
+      </View>
 
-        {/* 5. Row 4: Quick Actions */}
-        <View style={styles.quickActionsSection}>
-          <Text style={[styles.kicker, { color: colors.textSecondary, marginBottom: 10 }]}>Quick Actions</Text>
-          <View style={styles.quickActionsGrid}>
-            <Pressable onPress={() => navigation.navigate('HealthTab')} style={[styles.quickActionBtn, { backgroundColor: colors.surface, borderColor: colors.borderLight }]}>
-              <View style={[styles.quickActionIcon, { backgroundColor: colors.health }]}>
-                <Ionicons name="heart" size={14} color={colors.white} />
-              </View>
-              <Text style={[styles.quickActionText, { color: colors.textPrimary }]} numberOfLines={1}>Log Health</Text>
-            </Pressable>
-            <Pressable onPress={() => navigation.navigate('HabitsTab')} style={[styles.quickActionBtn, { backgroundColor: colors.surface, borderColor: colors.borderLight }]}>
-              <View style={[styles.quickActionIcon, { backgroundColor: colors.habits }]}>
-                <Ionicons name="checkmark-done" size={14} color={colors.white} />
-              </View>
-              <Text style={[styles.quickActionText, { color: colors.textPrimary }]} numberOfLines={1}>Add Habit</Text>
-            </Pressable>
-            <Pressable onPress={() => navigation.navigate('NotesTab')} style={[styles.quickActionBtn, { backgroundColor: colors.surface, borderColor: colors.borderLight }]}>
-              <View style={[styles.quickActionIcon, { backgroundColor: colors.notes }]}>
-                <Ionicons name="document-text" size={14} color={colors.white} />
-              </View>
-              <Text style={[styles.quickActionText, { color: colors.textPrimary }]} numberOfLines={1}>New Note</Text>
-            </Pressable>
-            <Pressable onPress={() => navigation.navigate('JournalTab')} style={[styles.quickActionBtn, { backgroundColor: colors.surface, borderColor: colors.borderLight }]}>
-              <View style={[styles.quickActionIcon, { backgroundColor: colors.wallet }]}>
-                <Ionicons name="wallet" size={14} color={colors.white} />
-              </View>
-              <Text style={[styles.quickActionText, { color: colors.textPrimary }]} numberOfLines={1}>Transaction</Text>
-            </Pressable>
+      {/* ── 3. Vitals Overview (Single-layer, clean overview) ───────── */}
+      <Pressable
+        onPress={() => navigation.navigate('HealthTab')}
+        style={({ pressed }) => [
+          styles.vitalsCard,
+          {
+            backgroundColor: colors.surface,
+            borderColor: colors.borderLight,
+            transform: [{ scale: pressed ? 0.99 : 1 }],
+          },
+        ]}
+      >
+        <View style={styles.vitalsHeader}>
+          <View style={styles.vitalsTitleBlock}>
+            <View style={[styles.vitalsBadge, { backgroundColor: 'rgba(255, 75, 75, 0.08)' }]}>
+              <LineIcon name="heart" size={15} color="#FF4B4B" strokeWidth={1.8} />
+            </View>
+            <Text style={[styles.vitalsTitle, { color: colors.textPrimary }]}>
+              Today's Vitals
+            </Text>
+          </View>
+          <View style={styles.dashboardLinkRow}>
+            <Text style={[styles.dashboardLink, { color: colors.primaryOrange }]}>
+              Dashboard
+            </Text>
+            <LineIcon name="chevron-forward" size={12} color={colors.primaryOrange} strokeWidth={2} />
           </View>
         </View>
 
+        {hasVitalsData ? (
+          /* Flat single-layer stats row: concise, no nested cards */
+          <View style={styles.vitalsStatsRow}>
+            <View style={styles.vitalStatCol}>
+              <Text style={[styles.vitalStatVal, { color: colors.textPrimary }]} numberOfLines={1}>
+                {(today?.heartRate || today?.watchData?.heartRate) ? `${today?.heartRate || today?.watchData?.heartRate}` : '0'}
+              </Text>
+              <Text style={[styles.vitalStatUnit, { color: colors.textSecondary }]}>bpm</Text>
+              <Text style={[styles.vitalStatLabel, { color: colors.textSecondary }]}>Heart</Text>
+            </View>
+
+            <View style={[styles.vitalDivider, { backgroundColor: colors.borderLight }]} />
+
+            <View style={styles.vitalStatCol}>
+              <Text style={[styles.vitalStatVal, { color: colors.textPrimary }]} numberOfLines={1}>
+                {(today?.calories || today?.watchData?.calories) ? `${today?.calories || today?.watchData?.calories}` : '0'}
+              </Text>
+              <Text style={[styles.vitalStatUnit, { color: colors.textSecondary }]}>kcal</Text>
+              <Text style={[styles.vitalStatLabel, { color: colors.textSecondary }]}>Calories</Text>
+            </View>
+
+            <View style={[styles.vitalDivider, { backgroundColor: colors.borderLight }]} />
+
+            <View style={styles.vitalStatCol}>
+              <Text style={[styles.vitalStatVal, { color: colors.textPrimary }]} numberOfLines={1}>
+                {today?.sleep ? `${today.sleep}` : '0'}
+              </Text>
+              <Text style={[styles.vitalStatUnit, { color: colors.textSecondary }]}>hrs</Text>
+              <Text style={[styles.vitalStatLabel, { color: colors.textSecondary }]}>Sleep</Text>
+            </View>
+
+            <View style={[styles.vitalDivider, { backgroundColor: colors.borderLight }]} />
+
+            <View style={styles.vitalStatCol}>
+              <Text style={[styles.vitalStatVal, { color: colors.textPrimary }]} numberOfLines={1}>
+                {today?.water ? `${today.water}` : '0'}
+              </Text>
+              <Text style={[styles.vitalStatUnit, { color: colors.textSecondary }]}>ml</Text>
+              <Text style={[styles.vitalStatLabel, { color: colors.textSecondary }]}>Water</Text>
+            </View>
+          </View>
+        ) : (
+          /* Clean empty state when no vitals have been logged today */
+          <View style={styles.emptyVitalsRow}>
+            <View style={styles.emptyVitalsTextCol}>
+              <Text style={[styles.emptyVitalsTitle, { color: colors.textPrimary }]}>
+                No vitals logged today
+              </Text>
+              <Text style={[styles.emptyVitalsSubtitle, { color: colors.textSecondary }]}>
+                Track heart rate, calories, sleep & water
+              </Text>
+            </View>
+            <Pressable
+              onPress={() => navigation.navigate('HealthTab', { screen: 'HealthLogEntry' })}
+              style={({ pressed }) => [
+                styles.logVitalsBtn,
+                { backgroundColor: colors.primaryOrange, transform: [{ scale: pressed ? 0.95 : 1 }] },
+              ]}
+            >
+              <LineIcon name="add" size={14} color="#FFFFFF" strokeWidth={2.4} />
+              <Text style={styles.logVitalsBtnText}>Log</Text>
+            </Pressable>
+          </View>
+        )}
+      </Pressable>
+
+      {/* ── 4. Daily Mood Logging ───────────────────────────────── */}
+      <View
+        style={[
+          styles.moodCard,
+          {
+            backgroundColor: colors.surface,
+            borderColor: colors.borderLight,
+          },
+        ]}
+      >
+        <View style={styles.moodHeader}>
+          <Text style={[styles.moodTitle, { color: colors.textPrimary }]}>
+            How are you feeling today?
+          </Text>
+        </View>
+
+        <View style={styles.emojiRow}>
+          {moodEmojis.map((m) => {
+            const isSelected = todayMood === m.key;
+            return (
+              <Pressable
+                key={m.key}
+                onPress={() => handleQuickMood(m.key)}
+                style={({ pressed }) => [
+                  styles.emojiBtn,
+                  isSelected && [
+                    styles.emojiBtnSelected,
+                    {
+                      backgroundColor: colors.surfaceIce,
+                      borderColor: colors.borderIce,
+                    },
+                  ],
+                  { transform: [{ scale: pressed ? 0.92 : 1 }] },
+                ]}
+              >
+                <Text style={styles.emojiText}>{m.emoji}</Text>
+                <Text
+                  style={[
+                    styles.emojiLabel,
+                    {
+                      color: isSelected ? colors.primaryOrange : colors.textSecondary,
+                      fontWeight: isSelected ? '600' : '400',
+                    },
+                  ]}
+                  numberOfLines={1}
+                >
+                  {m.label}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </View>
+      </View>
+
+      {/* ── 5. Quick Actions Grid ─────────────────────────────────── */}
+      <View style={styles.quickActionsSection}>
+        <Text style={[styles.quickActionsTitle, { color: colors.textSecondary }]}>
+          Quick Actions
+        </Text>
+        <View style={styles.quickActionsGrid}>
+          <Pressable
+            onPress={() => navigation.navigate('HealthTab')}
+            style={({ pressed }) => [
+              styles.quickActionBtn,
+              { backgroundColor: colors.surface, borderColor: colors.borderLight },
+              { transform: [{ scale: pressed ? 0.97 : 1 }] },
+            ]}
+          >
+            <View style={[styles.quickActionIcon, { backgroundColor: colors.primaryOrange }]}>
+              <Ionicons name="heart" size={14} color="#FFFFFF" />
+            </View>
+            <Text style={[styles.quickActionText, { color: colors.textPrimary }]} numberOfLines={1}>
+              Log Health
+            </Text>
+          </Pressable>
+
+          <Pressable
+            onPress={() => navigation.navigate('HabitsTab')}
+            style={({ pressed }) => [
+              styles.quickActionBtn,
+              { backgroundColor: colors.surface, borderColor: colors.borderLight },
+              { transform: [{ scale: pressed ? 0.97 : 1 }] },
+            ]}
+          >
+            <View style={[styles.quickActionIcon, { backgroundColor: '#3B82F6' }]}>
+              <Ionicons name="checkmark-done" size={14} color="#FFFFFF" />
+            </View>
+            <Text style={[styles.quickActionText, { color: colors.textPrimary }]} numberOfLines={1}>
+              Add Habit
+            </Text>
+          </Pressable>
+
+          <Pressable
+            onPress={() => navigation.navigate('NotesTab')}
+            style={({ pressed }) => [
+              styles.quickActionBtn,
+              { backgroundColor: colors.surface, borderColor: colors.borderLight },
+              { transform: [{ scale: pressed ? 0.97 : 1 }] },
+            ]}
+          >
+            <View style={[styles.quickActionIcon, { backgroundColor: '#8B5CF6' }]}>
+              <Ionicons name="document-text" size={14} color="#FFFFFF" />
+            </View>
+            <Text style={[styles.quickActionText, { color: colors.textPrimary }]} numberOfLines={1}>
+              New Note
+            </Text>
+          </Pressable>
+
+          <Pressable
+            onPress={() => navigation.navigate('JournalTab')}
+            style={({ pressed }) => [
+              styles.quickActionBtn,
+              { backgroundColor: colors.surface, borderColor: colors.borderLight },
+              { transform: [{ scale: pressed ? 0.97 : 1 }] },
+            ]}
+          >
+            <View style={[styles.quickActionIcon, { backgroundColor: '#10B981' }]}>
+              <Ionicons name="wallet" size={14} color="#FFFFFF" />
+            </View>
+            <Text style={[styles.quickActionText, { color: colors.textPrimary }]} numberOfLines={1}>
+              Transaction
+            </Text>
+          </Pressable>
+        </View>
       </View>
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  // ── Header ──────────────────────────────────────────────────────────────
-  headerSection: {
-    marginBottom: 28,
+  screenContent: {
+    paddingHorizontal: 20,
+    gap: 16,
   },
-  logoRow: {
+
+  // ── 1. Header ──────────────────────────────────────────────
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingTop: 4,
+    marginBottom: 4,
+  },
+  headerTextGroup: {
+    gap: 2,
+  },
+  greetingText: {
+    fontSize: 28,
+    fontWeight: '600',
+    letterSpacing: -0.5,
+  },
+  headerDate: {
+    fontSize: 13,
+    fontWeight: '400',
+  },
+  avatarBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    overflow: 'hidden',
+    borderWidth: 1,
+  },
+  avatarImage: {
+    width: '100%',
+    height: '100%',
+  },
+
+  // ── 2. Bento Grid ───────────────────────────────────────────
+  bentoGrid: {
+    gap: 12,
+  },
+  bentoRow: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  bentoCard: {
+    borderRadius: 24,
+    padding: 16,
+    borderWidth: 1,
+    minHeight: 142,
+    justifyContent: 'space-between',
+  },
+  activityCard: {
+    overflow: 'hidden',
+    position: 'relative',
+    paddingBottom: 0,
+  },
+  statCard: {
+    justifyContent: 'space-between',
+  },
+  goalCard: {
+    justifyContent: 'space-between',
+  },
+  cardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  cardTitle: {
+    fontSize: 15,
+    fontWeight: '500',
+  },
+  activityValue: {
+    fontSize: 18,
+    fontWeight: '600',
+    marginTop: 6,
+    zIndex: 2,
+  },
+  glowWrapper: {
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    width: '100%',
+    marginTop: -8,
+  },
+  largeMetric: {
+    fontSize: 24,
+    fontWeight: '600',
+    letterSpacing: -0.4,
+    marginTop: 10,
+  },
+  goalFooterRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    justifyContent: 'space-between',
+    marginTop: 10,
+  },
+  goalSubText: {
+    fontSize: 11,
+    fontWeight: '400',
+    lineHeight: 15,
+  },
+  habitStreakBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 999,
+    borderWidth: 1,
+  },
+  habitStreakFire: {
+    fontSize: 11,
+  },
+  habitStreakText: {
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: -0.1,
+  },
+  noteBentoPreview: {
+    fontSize: 13,
+    lineHeight: 18,
+    marginTop: 8,
+    marginBottom: 6,
+  },
+
+  // ── 3. Vitals Overview ──────────────────────────────────────
+  vitalsCard: {
+    borderRadius: 24,
+    padding: 18,
+    borderWidth: 1,
+    gap: 14,
+  },
+  vitalsHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 24,
   },
-  logoText: {
-    fontSize: 34,
-    fontWeight: '400',
-    letterSpacing: -0.8,
-  },
-  greetingBlock: {
-    gap: 2,
-  },
-  greetingHi: {
-    fontSize: 15,
-    fontWeight: '800',
-    marginBottom: 4,
-  },
-  greetingTitle: {
-    fontSize: 40,
-    fontWeight: '800',
-    letterSpacing: -0.8,
-    marginBottom: 6,
-  },
-  greetingSubtitle: {
-    fontSize: 14,
-    fontWeight: '400',
-  },
-
-  // ── Shared ──────────────────────────────────────────────────────────────
-  kicker: {
-    fontSize: 12,
-    fontWeight: '700',
-    textTransform: 'uppercase',
-    letterSpacing: 0.9,
-  },
-
-  // ── Row 1: Mood + Habits ────────────────────────────────────────────────
-  row1: {
+  vitalsTitleBlock: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 12,
-    marginBottom: 12,
-  },
-  moodCard: {
-    flex: 1,
-    minWidth: 150,
-    borderWidth: 1,
-    borderRadius: RADIUS.xl,
-    padding: 16,
-    justifyContent: 'space-between',
-    gap: 10,
-  },
-  moodQuestion: {
-    fontSize: 14,
-    fontWeight: '700',
-    lineHeight: 20,
-  },
-  emojiRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    flexWrap: 'wrap',
-    gap: 6,
-  },
-  emojiText: {
-    fontSize: 24,
-  },
-  habitsCard: {
-    flex: 1,
-    minWidth: 150,
-    borderWidth: 1,
-    borderRadius: RADIUS.xl,
-    padding: 16,
-    justifyContent: 'space-between',
-    gap: 10,
-  },
-  habitsHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     gap: 8,
   },
-  streakBadge: {
-    opacity: 0.85,
-    paddingHorizontal: 7,
-    paddingVertical: 3,
-    borderRadius: 8,
+  vitalsBadge: {
+    width: 28,
+    height: 28,
+    borderRadius: 9,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  vitalsTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    letterSpacing: -0.2,
+  },
+  dashboardLinkRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 3,
   },
-  streakText: {
-    fontSize: 11,
-    fontWeight: '800',
-  },
-  habitsCount: {
-    fontSize: 32,
-    fontWeight: '800',
-    letterSpacing: -1,
-  },
-  habitsSubtext: {
-    fontSize: 13,
-    fontWeight: '500',
-    marginBottom: 10,
-    marginTop: 1,
-  },
-  progressTrack: {
-    height: 7,
-    borderRadius: 4,
-    width: '100%',
-    overflow: 'hidden',
-  },
-  progressFill: {
-    height: '100%',
-    borderRadius: 4,
-  },
-
-  // ── Row 2: Health ───────────────────────────────────────────────────────
-  healthCard: {
-    borderWidth: 1,
-    borderRadius: RADIUS.xl,
-    padding: 20,
-    marginBottom: 12,
-    gap: 16,
-  },
-  healthCardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
   dashboardLink: {
     fontSize: 13,
-    fontWeight: '700',
-  },
-  metricsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    flexWrap: 'wrap',
-    gap: 12,
-  },
-  metricsRowSecondary: {
-    paddingTop: 14,
-    borderTopWidth: 1,
-  },
-  metricCell: {
-    alignItems: 'center',
-    flexBasis: '22%',
-    flexGrow: 1,
-    gap: 6,
-  },
-  metricValue: {
-    fontSize: 15,
-    fontWeight: '800',
-  },
-  metricLabel: {
-    fontSize: 12,
     fontWeight: '600',
   },
-  metricValueSm: {
-    fontSize: 14,
-    fontWeight: '800',
-  },
-  metricLabelSm: {
-    fontSize: 11,
-    fontWeight: '600',
-  },
-
-  // ── Row 3: Notes + Wallet ───────────────────────────────────────────────
-  row3: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 12,
-    marginBottom: 20,
-  },
-  notesCard: {
-    flex: 1,
-    minWidth: 150,
-    borderWidth: 1,
-    borderRadius: RADIUS.xl,
-    padding: 16,
-    minHeight: 220,
-    justifyContent: 'space-between',
-  },
-  notesHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  notesPreview: {
-    fontSize: 13,
-    fontStyle: 'italic',
-    marginTop: 'auto',
-    lineHeight: 19,
-  },
-  walletCard: {
-    flex: 1,
-    minWidth: 150,
-    borderWidth: 1,
-    borderRadius: RADIUS.xl,
-    padding: 16,
-    minHeight: 220,
-    justifyContent: 'space-between',
-  },
-  walletHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  walletHeaderLeft: {
+  vitalsStatsRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    justifyContent: 'space-between',
+  },
+  vitalStatCol: {
     flex: 1,
+    alignItems: 'center',
   },
-  walletHeaderRight: {
-    flexDirection: 'row',
-    gap: 8,
-    paddingLeft: 4,
-  },
-  walletBalanceSection: {
-    marginTop: 20,
-    marginBottom: 14,
-  },
-  walletBalanceKicker: {
-    fontSize: 11,
+  vitalStatVal: {
+    fontSize: 19,
     fontWeight: '700',
+    letterSpacing: -0.3,
+  },
+  vitalStatUnit: {
+    fontSize: 11,
+    fontWeight: '500',
+    marginTop: 1,
+  },
+  vitalStatLabel: {
+    fontSize: 10,
+    fontWeight: '500',
     textTransform: 'uppercase',
-    letterSpacing: 0.9,
+    letterSpacing: 0.5,
+    marginTop: 3,
+  },
+  vitalDivider: {
+    width: 1,
+    height: 32,
+  },
+  emptyVitalsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 4,
+  },
+  emptyVitalsTextCol: {
+    flex: 1,
+    paddingRight: 12,
+  },
+  emptyVitalsTitle: {
+    fontSize: 14,
+    fontWeight: '600',
     marginBottom: 2,
   },
-  walletBalanceSubtext: {
+  emptyVitalsSubtitle: {
     fontSize: 12,
-    fontWeight: '500',
-    marginBottom: 10,
+    lineHeight: 16,
   },
-  walletBalanceValue: {
-    fontWeight: '800',
-  },
-  walletPills: {
-    gap: 8,
-  },
-  walletPill: {
-    borderRadius: RADIUS.pill,
-    paddingVertical: 9,
-    paddingHorizontal: 12,
-    alignItems: 'center',
+  logVitalsBtn: {
     flexDirection: 'row',
-    justifyContent: 'center',
-    gap: 6,
+    alignItems: 'center',
+    gap: 4,
+    paddingVertical: 7,
+    paddingHorizontal: 14,
+    borderRadius: 999,
   },
-  walletPillText: {
-    flex: 1,
+  logVitalsBtnText: {
+    color: '#FFFFFF',
     fontSize: 12,
     fontWeight: '700',
-    textAlign: 'center',
   },
 
-  // ── Row 4: Quick Actions ────────────────────────────────────────────────
+  // ── 4. Mood Card ────────────────────────────────────────────
+  moodCard: {
+    borderRadius: 24,
+    padding: 18,
+    borderWidth: 1,
+    gap: 14,
+  },
+  moodHeader: {
+    paddingHorizontal: 2,
+  },
+  moodTitle: {
+    fontSize: 15,
+    fontWeight: '600',
+    letterSpacing: -0.2,
+  },
+  emojiRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: 6,
+  },
+  emojiBtn: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 4,
+    borderRadius: 16,
+  },
+  emojiBtnSelected: {
+    borderWidth: 1,
+  },
+  emojiText: {
+    fontSize: 24,
+    marginBottom: 4,
+  },
+  emojiLabel: {
+    fontSize: 11,
+  },
+
+  // ── 5. Quick Actions Grid ───────────────────────────────────
   quickActionsSection: {
-    marginBottom: 24,
+    marginBottom: 12,
+  },
+  quickActionsTitle: {
+    fontSize: 12,
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+    marginBottom: 10,
   },
   quickActionsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 12,
+    gap: 10,
   },
   quickActionBtn: {
     flexBasis: '47%',
     flexGrow: 1,
     borderWidth: 1,
-    borderRadius: RADIUS.lg,
-    paddingVertical: 14,
-    paddingHorizontal: 16,
+    borderRadius: 18,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
@@ -592,13 +865,13 @@ const styles = StyleSheet.create({
   quickActionIcon: {
     width: 28,
     height: 28,
-    borderRadius: 14,
+    borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
   },
   quickActionText: {
     flex: 1,
-    fontSize: 14,
-    fontWeight: '700',
+    fontSize: 13,
+    fontWeight: '600',
   },
 });

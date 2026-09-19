@@ -1,6 +1,6 @@
 import React from 'react';
 import { Pressable, StyleSheet } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons } from "./LineIcon";
 import { useTheme } from '../theme/ThemeContext';
 import { SHADOWS } from '../constants/theme';
 

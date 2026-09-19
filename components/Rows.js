@@ -1,7 +1,7 @@
 import React from 'react';
 import { Pressable, StyleSheet, Text as RNText, View } from 'react-native';
 import { AppText as Text } from './AppText';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons } from "./LineIcon";
 import { useTheme } from '../theme/ThemeContext';
 import { TYPOGRAPHY } from '../constants/typography';
 import { RADIUS, SHADOWS } from '../constants/theme';
@@ -71,12 +71,11 @@ const styles = StyleSheet.create({
   row: {
     alignItems: 'center',
     borderRadius: RADIUS.xl,
-    borderWidth: 0,
+    borderWidth: 1,
     flexDirection: 'row',
     gap: 12,
     minHeight: 64,
     padding: 16,
-    ...SHADOWS.soft,
   },
   rowText: { flex: 1, gap: 5 },
   rowTitle: { fontSize: 15, fontWeight: '700' },

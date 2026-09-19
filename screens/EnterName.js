@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { Image, KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text as RNText, View,  } from 'react-native';
 import { AppText as Text } from '../components/AppText';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons } from "../components/LineIcon";
 import { useTheme } from '../theme/ThemeContext';
 import { Screen } from '../components/Screen';
 import { InputField } from '../components/InputField';

@@ -1,21 +1,34 @@
 import { COLORS } from './colors';
 
 export const RADIUS = {
+  xs: 8,
   sm: 12,
   md: 18,
-  lg: 24,
-  xl: 36,     // Venzer massive rounded corners
-  pill: 999,
+  lg: 22,
+  card: 24,       // Standard bento card corner radius
+  container: 28,  // Recent activities / Friends container corner radius
+  xl: 32,
+  pill: 999,      // Filter chips, dock, pill buttons
 };
 
 export const SPACING = {
-  screen: 24, // More generous padding
-  card: 20,
-  gap: 16,
-  section: 24,
+  xs: 4,
+  sm: 8,
+  md: 12,
+  card: 16,
+  gap: 12,
+  screen: 20,
+  section: 20,
 };
 
 export const SHADOWS = {
+  none: {
+    shadowColor: 'transparent',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0,
+    shadowRadius: 0,
+    elevation: 0,
+  },
   soft: {
     shadowColor: 'transparent',
     shadowOffset: { width: 0, height: 0 },
@@ -24,6 +37,27 @@ export const SHADOWS = {
     elevation: 0,
   },
   subtle: {
+    shadowColor: 'transparent',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0,
+    shadowRadius: 0,
+    elevation: 0,
+  },
+  medium: {
+    shadowColor: 'transparent',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0,
+    shadowRadius: 0,
+    elevation: 0,
+  },
+  card: {
+    shadowColor: 'transparent',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0,
+    shadowRadius: 0,
+    elevation: 0,
+  },
+  dock: {
     shadowColor: 'transparent',
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0,

@@ -3,7 +3,7 @@ import AsyncStorage from '../storage/safeAsyncStorage';
 import { AccessibilityInfo, Alert, Animated, Easing, Modal, Pressable, ScrollView, StyleSheet, Switch, Text as RNText, View, useWindowDimensions, } from 'react-native';
 import { AppText as Text } from '../components/AppText';
 import { addDays, format, subDays } from 'date-fns';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons } from "../components/LineIcon";
 import { useNavigation } from '@react-navigation/native';
 import { useTheme } from '../theme/ThemeContext';
 import { RADIUS, SHADOWS } from '../constants/theme';
@@ -19,7 +19,7 @@ import { useHealthUnits, WEIGHT_UNITS, WATER_UNITS } from '../hooks/useHealthUni
 import { useHealth } from '../hooks/useHealth';
 import { WALKTHROUGH_STORAGE_PREFIX } from '../constants/walkthroughs';
 import { scheduleDailyReminderNotification } from '../utils/cycleNotifications';
-import { ONBOARDING_KEY } from '../navigation/RootNavigator';
+import { ONBOARDING_KEY } from '../constants/storageKeys';
 import { RadialClockTimePickerModal } from '../components/RadialClockTimePickerModal';
 
 let DateTimePicker = null;

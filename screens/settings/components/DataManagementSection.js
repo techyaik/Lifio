@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, StyleSheet, Pressable } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons } from "../../../components/LineIcon";
 import { AppText as Text } from '../../../components/AppText';
 import { SectionHeader } from '../../../components/SectionHeader';
 import { useTheme } from '../../../theme/ThemeContext';

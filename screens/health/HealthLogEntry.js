@@ -3,7 +3,7 @@ import { Alert, KeyboardAvoidingView, Platform, StyleSheet, Switch, TouchableOpa
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppText as Text } from '../../components/AppText';
 import { parseISO, subDays, format as formatDate } from 'date-fns';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons } from "../../components/LineIcon";
 import { useTheme } from '../../theme/ThemeContext';
 import { AppHeader } from '../../components/AppHeader';
 import { InputField } from '../../components/InputField';
@@ -13,7 +13,7 @@ import { FLOW_LEVELS, ENERGY_LEVELS, HEALTH_MOODS, SYMPTOMS, useHealth } from '.
 import { useHealthUnits } from '../../hooks/useHealthUnits';
 import { displayDate, todayKey } from '../../utils/dates';
 import { showToast, safeConfirm } from '../../utils/feedback';
-import { RADIUS, SHADOWS } from '../../constants/theme';
+import { RADIUS } from '../../constants/theme';
 import { scheduleCycleReminderNotification } from '../../utils/cycleNotifications';
 
 const DEFAULTS = {
@@ -745,10 +745,9 @@ const styles = StyleSheet.create({
   },
   card: {
     borderRadius: RADIUS.lg,
-    borderWidth: 1.5,
+    borderWidth: 1,
     padding: 18,
     gap: 16,
-    ...SHADOWS.subtle,
   },
   twoCol: { flexDirection: 'row', gap: 10 },
   threeCol: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
@@ -787,9 +786,8 @@ const styles = StyleSheet.create({
     width: '48%',
     padding: 14,
     borderRadius: RADIUS.md,
-    borderWidth: 1.5,
+    borderWidth: 1,
     gap: 6,
-    ...SHADOWS.subtle,
   },
   optionIconCircle: {
     width: 38,
@@ -834,8 +832,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 16,
     borderRadius: RADIUS.md,
-    borderWidth: 1.5,
-    ...SHADOWS.subtle,
+    borderWidth: 1,
   },
   symptomsGrid: {
     flexDirection: 'row',
@@ -851,8 +848,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 14,
     borderRadius: RADIUS.md,
-    borderWidth: 1.5,
-    ...SHADOWS.subtle,
+    borderWidth: 1,
   },
   bigSaveButton: {
     backgroundColor: '#FF6B8B',
@@ -863,7 +859,6 @@ const styles = StyleSheet.create({
     height: 52,
     borderRadius: RADIUS.md,
     marginTop: 12,
-    ...SHADOWS.subtle,
   },
   bigSaveText: {
     fontSize: 16,
@@ -881,11 +876,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     height: 54,
     borderRadius: RADIUS.lg,
-    borderWidth: 1.5,
+    borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
-    ...SHADOWS.subtle,
   },
   navButtonPrimary: {
     flex: 2,
@@ -895,7 +889,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
-    ...SHADOWS.subtle,
   },
   navButtonTextPrimary: {
     fontSize: 16,

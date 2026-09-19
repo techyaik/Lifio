@@ -8,7 +8,7 @@ export function Screen({ children, scroll = true, loading = false, style, conten
   const { colors } = useTheme();
 
   const insets = useSafeAreaInsets();
-  const minBottomPadding = withBottomNav ? 160 : SPACING.screen;
+  const minBottomPadding = withBottomNav ? 90 : SPACING.screen;
 
   const flattenedContentStyle = StyleSheet.flatten(contentStyle) || {};
   const customPaddingBottom = typeof flattenedContentStyle.paddingBottom === 'number'

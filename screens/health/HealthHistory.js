@@ -11,14 +11,17 @@ import { Screen } from '../../components/Screen';
 import { useHealth } from '../../hooks/useHealth';
 import { displayDate } from '../../utils/dates';
 
-const formatSteps = (steps) => (steps || steps === 0 ? Number(steps).toLocaleString() : '—');
+const formatSteps = (steps) => (steps || steps === 0 ? Number(steps).toLocaleString() : '0');
 const historySummary = (log) => {
-  const parts = [`${log.weight || '—'} kg`, `${log.sleep || '—'} hrs`, `${formatSteps(log.steps)} steps`];
+  const parts = [];
+  if (log.weight) parts.push(`${log.weight} kg`);
+  if (log.sleep) parts.push(`${log.sleep} hrs`);
+  if (log.steps) parts.push(`${formatSteps(log.steps)} steps`);
   if (log.heartRate) parts.push(`${log.heartRate} BPM`);
   if (log.mood) parts.push(log.mood);
   if (log.symptoms?.length) parts.push(`${log.symptoms.length} symptom${log.symptoms.length === 1 ? '' : 's'}`);
   if (log.period) parts.push('Period');
-  return parts.join(' · ');
+  return parts.length ? parts.join(' · ') : 'No metrics recorded';
 };
 
 export default function HealthHistory({ navigation }) {

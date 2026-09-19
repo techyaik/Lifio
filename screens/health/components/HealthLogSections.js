@@ -1,11 +1,11 @@
 import React from 'react';
 import { View, StyleSheet, TouchableOpacity } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons } from "../../../components/LineIcon";
 import { AppText as Text } from '../../../components/AppText';
 import { InputField } from '../../../components/InputField';
 import { Pill } from '../../../components/Pill';
 import { useTheme } from '../../../theme/ThemeContext';
-import { RADIUS, SHADOWS } from '../../../constants/theme';
+import { RADIUS } from '../../../constants/theme';
 import { FLOW_LEVELS, ENERGY_LEVELS, HEALTH_MOODS, SYMPTOMS } from '../../../hooks/useHealth';
 
 export function StepProgressBar({ currentStep, totalSteps, activeColor }) {
@@ -82,7 +82,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     height: 52,
     borderRadius: RADIUS.md,
-    borderWidth: 1.5,
+    borderWidth: 1,
     gap: 6,
   },
   navButtonPrimary: {
@@ -93,7 +93,6 @@ const styles = StyleSheet.create({
     height: 52,
     borderRadius: RADIUS.md,
     gap: 6,
-    ...SHADOWS.subtle,
   },
   navButtonTextSecondary: {
     fontSize: 15,

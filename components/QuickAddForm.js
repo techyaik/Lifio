@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Alert, Pressable, StyleSheet, Text as RNText, View } from 'react-native';
 import { AppText as Text } from './AppText';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons } from "./LineIcon";
 import { useTheme } from '../theme/ThemeContext';
 import { InputField } from './InputField';
 import { Pill } from './Pill';

@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Modal, Pressable, StyleSheet, Text as RNText, View } from 'react-native';
 import { AppText as Text } from './AppText';
 import AsyncStorage from '../storage/safeAsyncStorage';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons } from "./LineIcon";
 import { useTheme } from '../theme/ThemeContext';
 import { RADIUS, SHADOWS } from '../constants/theme';
 import { WALKTHROUGH_STORAGE_PREFIX } from '../constants/walkthroughs';

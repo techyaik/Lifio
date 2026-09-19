@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Pressable, StyleSheet, Switch, View, ScrollView } from 'react-native';
 import { AppText as Text } from '../../components/AppText';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons } from "../../components/LineIcon";
 import { useTheme } from '../../theme/ThemeContext';
 import { AppHeader } from '../../components/AppHeader';
 import { Screen } from '../../components/Screen';
@@ -15,7 +15,7 @@ import {
   GOAL_OPTIONS,
 } from '../../hooks/useWaterReminders';
 import { showToast } from '../../utils/feedback';
-import { RADIUS, SHADOWS } from '../../constants/theme';
+import { RADIUS } from '../../constants/theme';
 
 export default function WaterReminders({ navigation }) {
   const { colors } = useTheme();

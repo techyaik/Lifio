@@ -1,133 +1,160 @@
 export const LIGHT_COLORS = {
-  // Venzer Premium Fintech Palette
-  health: '#BCE47D', // Venzer Lime Green
-  habits: '#A4C3A2', // Soft Sage
-  notes: '#D2D8C6',  // Warm Silver/Sage
-  wallet: '#0A1913', // Deep Forest Green
+  // Modern Wellness & Fitness Palette (Reference Design)
+  primary: '#FF5722',       // Vibrant Sunset Orange
+  primaryOrange: '#FF5722',
+  orangeAura: '#FF7A45',
+  purpleAura: '#B8A4FF',    // Dreamy Lavender Glow
+  purpleAuraSoft: '#DDD6FE',
 
-  gradientHealthStart: '#A8D366',
-  gradientHabitsStart: '#92B591',
-  gradientNotesStart: '#BFC6B2',
-  gradientWalletStart: '#142A20',
-  gradientDangerStart: '#E87D7D',
+  // App domain accents
+  health: '#FF5722',        // Sunset Orange
+  habits: '#3B82F6',        // Ocean Blue
+  notes: '#8B5CF6',         // Violet
+  wallet: '#10B981',        // Emerald
+
+  gradientHealthStart: '#FF7A45',
+  gradientHabitsStart: '#60A5FA',
+  gradientNotesStart: '#A78BFA',
+  gradientWalletStart: '#34D399',
+  gradientDangerStart: '#F87171',
   
-  warning: '#E2B86B',
-  success: '#BCE47D',
-  info: '#11291E',
-
-  tealDark: '#0A1913',
-  tealLight: '#EAF1E7',
-  tealMid: '#163327',
+  warning: '#F59E0B',
+  success: '#10B981',
+  info: '#3B82F6',
 
   // Backgrounds
-  bg: '#EAF1E7',      // Soft mint/grey background from reference
-  bgWarm: '#F1F7EE',  // Lighter tint for gradients
+  bg: '#F4F6F8',            // Soft mist grey/off-white from reference
+  bgWarm: '#FAFBFD',
   
   // Surfaces
-  surface: '#FFFFFF',         // Crisp white for secondary cards
-  surfaceElevated: '#0A1913', // Deep forest green (almost black) for primary cards
-  surfaceTint: '#11291E',     // Slightly lighter forest green for nested elements inside primary cards
+  surface: '#FFFFFF',         // Crisp pure white for cards and floating dock
+  surfaceElevated: '#FFFFFF', // Elevated white card
+  surfaceIce: '#E6EFF8',      // Soft periwinkle/ice blue container (Recent activities, Friends)
+  surfaceTint: '#EDF3FA',
+  surfaceOrange: '#FF5722',   // Weather card solid orange
   
   white: '#FFFFFF',
-  border: '#D8E2D5',
-  borderLight: '#E3EBE0',
+  border: '#E8ECF2',
+  borderLight: '#F0F3F7',
+  borderIce: '#D6E3F2',
+
+  // Dock / Navigation
+  dockBg: '#FFFFFF',
+  dockActiveBg: '#111315',
+  dockActiveText: '#111315',
+  dockInactiveIcon: '#8E98A8',
 
   // Text
-  textPrimary: '#0A1913',     // Dark forest green for text on light
-  textSecondary: '#6A7D73',   // Muted green-grey
-  textHint: '#9CAD9F',
-  onAccent: '#0A1913',        // Dark text on the lime green accent
+  textPrimary: '#111315',     // Deep charcoal / near black
+  textSecondary: '#758090',   // Slate grey
+  textHint: '#A0A8B5',
+  onAccent: '#FFFFFF',        // White text on orange accent
   
-  danger: '#D95D5D',
-  dangerBg: '#FCECEC',
-  warningBg: '#FDF7E6',
-  infoBg: '#E9F1EC',
-  infoBorder: '#C1D8CD',
-  overlay: 'rgba(10, 25, 19, 0.4)',
+  danger: '#EF4444',
+  dangerBg: '#FEE2E2',
+  warningBg: '#FEF3C7',
+  infoBg: '#DBEAFE',
+  infoBorder: '#BFDBFE',
+  overlay: 'rgba(17, 19, 21, 0.4)',
   
-  chartSleepDeep: '#11291E',
-  chartSleepAwake: '#2E503F',
-  chartRingMove: '#BCE47D',
-  chartRingStand: '#E5C97D',
+  chartBar: '#FF5722',
+  chartBarMuted: '#FFD4C4',
+  chartSleepDeep: '#1E293B',
+  chartSleepAwake: '#64748B',
+  chartRingMove: '#FF5722',
+  chartRingStand: '#3B82F6',
 
   accentLight: {
-    health: '#E1F1CF',
-    habits: '#DFEAE2',
-    notes: '#F0F3EC',
-    wallet: '#C5D6CD',
+    health: '#FFEFEA',
+    habits: '#EFF6FF',
+    notes: '#F5F3FF',
+    wallet: '#ECFDF5',
   },
 
-  pillHealth: { bg: '#E1F1CF', text: '#3E5C1C' },
-  pillLearning: { bg: '#DFEAE2', text: '#2B4A34' },
-  pillFitness: { bg: '#F0F3EC', text: '#4A5541' },
-  pillMindful: { bg: '#E9F1EC', text: '#11291E' },
-  pillOther: { bg: '#FFFFFF', text: '#6A7D73' },
+  pillHealth: { bg: '#FFEFEA', text: '#FF5722' },
+  pillLearning: { bg: '#EFF6FF', text: '#2563EB' },
+  pillFitness: { bg: '#F5F3FF', text: '#7C3AED' },
+  pillMindful: { bg: '#ECFDF5', text: '#059669' },
+  pillOther: { bg: '#F4F6F8', text: '#758090' },
 };
 
 export const DARK_COLORS = {
-  // Venzer Dark Mode (Inverted logic)
-  health: '#BCE47D',
-  habits: '#83A582',
-  notes: '#A5AE99',
-  wallet: '#FFFFFF', 
+  // Dark Mode
+  primary: '#FF6E3D',
+  primaryOrange: '#FF6E3D',
+  orangeAura: '#FF8859',
+  purpleAura: '#A78BFA',
+  purpleAuraSoft: '#8B5CF6',
 
-  gradientHealthStart: '#A8D366',
-  gradientHabitsStart: '#739572',
-  gradientNotesStart: '#909A84',
-  gradientWalletStart: '#E0E0E0',
-  gradientDangerStart: '#C25D5D',
+  health: '#FF6E3D',
+  habits: '#60A5FA',
+  notes: '#A78BFA',
+  wallet: '#34D399', 
+
+  gradientHealthStart: '#FF8859',
+  gradientHabitsStart: '#93C5FD',
+  gradientNotesStart: '#C4B5FD',
+  gradientWalletStart: '#6EE7B7',
+  gradientDangerStart: '#F87171',
   
-  warning: '#D4A853',
-  success: '#BCE47D',
-  info: '#FFFFFF',
-
-  tealDark: '#0A1913',
-  tealLight: '#182C23',
-  tealMid: '#2B4A3A',
+  warning: '#FBBF24',
+  success: '#34D399',
+  info: '#60A5FA',
 
   // Backgrounds
-  bg: '#050D0A',      // True deep dark green/black
-  bgWarm: '#0A140F',
+  bg: '#0F1114',            // Deep obsidian
+  bgWarm: '#15181D',
   
   // Surfaces
-  surface: '#11291E',         // Dark forest for secondary cards
-  surfaceElevated: '#183628', // Lighter forest for primary cards
-  surfaceTint: '#214232',     
+  surface: '#1A1D23',       // Dark surface
+  surfaceElevated: '#22262E',
+  surfaceIce: '#1B2433',    // Darkened ice blue slate
+  surfaceTint: '#242D3D',     
+  surfaceOrange: '#FF6E3D',
   
   white: '#FFFFFF',
-  border: '#234131',
-  borderLight: '#1A3325',
+  border: '#282D37',
+  borderLight: '#20242D',
+  borderIce: '#273447',
+
+  // Dock / Navigation
+  dockBg: '#1A1D23',
+  dockActiveBg: '#FFFFFF',
+  dockActiveText: '#FFFFFF',
+  dockInactiveIcon: '#6B7688',
 
   // Text
-  textPrimary: '#EAF1E7',     
-  textSecondary: '#9CAD9F',   
-  textHint: '#6A7D73',
-  onAccent: '#0A1913',        
+  textPrimary: '#F4F6F8',     
+  textSecondary: '#9AA4B2',   
+  textHint: '#6B7688',
+  onAccent: '#FFFFFF',        
   
-  danger: '#E87D7D',
-  dangerBg: '#3A1E1E',
-  warningBg: '#3D311B',
-  infoBg: '#1A2922',
-  infoBorder: '#2B4A3A',
-  overlay: 'rgba(5, 13, 10, 0.8)',
+  danger: '#F87171',
+  dangerBg: '#451A1A',
+  warningBg: '#453518',
+  infoBg: '#1E293B',
+  infoBorder: '#334155',
+  overlay: 'rgba(5, 7, 9, 0.8)',
   
-  chartSleepDeep: '#4A695A',
-  chartSleepAwake: '#709483',
-  chartRingMove: '#BCE47D',
-  chartRingStand: '#E5C97D',
+  chartBar: '#FF6E3D',
+  chartBarMuted: '#4D291D',
+  chartSleepDeep: '#64748B',
+  chartSleepAwake: '#94A3B8',
+  chartRingMove: '#FF6E3D',
+  chartRingStand: '#60A5FA',
 
   accentLight: {
-    health: '#1F3D27',
-    habits: '#1A3626',
-    notes: '#27382B',
-    wallet: '#11291E',
+    health: '#3D1D15',
+    habits: '#172554',
+    notes: '#2E1065',
+    wallet: '#064E3B',
   },
 
-  pillHealth: { bg: '#1F3D27', text: '#BCE47D' },
-  pillLearning: { bg: '#1A3626', text: '#83A582' },
-  pillFitness: { bg: '#27382B', text: '#A5AE99' },
-  pillMindful: { bg: '#11291E', text: '#EAF1E7' },
-  pillOther: { bg: '#14251C', text: '#9CAD9F' },
+  pillHealth: { bg: '#3D1D15', text: '#FF6E3D' },
+  pillLearning: { bg: '#172554', text: '#60A5FA' },
+  pillFitness: { bg: '#2E1065', text: '#A78BFA' },
+  pillMindful: { bg: '#064E3B', text: '#34D399' },
+  pillOther: { bg: '#1E232B', text: '#9AA4B2' },
 };
 
 export const COLORS = LIGHT_COLORS;

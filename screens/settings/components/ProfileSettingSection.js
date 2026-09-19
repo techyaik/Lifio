@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, StyleSheet, Pressable, ActivityIndicator } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons } from "../../../components/LineIcon";
 import { AppText as Text } from '../../../components/AppText';
 import { InputField } from '../../../components/InputField';
 import { SectionHeader } from '../../../components/SectionHeader';

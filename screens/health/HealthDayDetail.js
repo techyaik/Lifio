@@ -2,7 +2,7 @@ import React, { useMemo } from 'react';
 import { Alert, StyleSheet, Text as RNText, useWindowDimensions, View, Platform } from 'react-native';
 import { AppText as Text } from '../../components/AppText';
 import { BarChart } from 'react-native-chart-kit';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons } from "../../components/LineIcon";
 import { addDays, differenceInCalendarDays, parseISO } from 'date-fns';
 import { useTheme } from '../../theme/ThemeContext';
 import { AppHeader } from '../../components/AppHeader';
@@ -13,7 +13,7 @@ import { SectionHeader } from '../../components/SectionHeader';
 import { useHealth } from '../../hooks/useHealth';
 import { useHealthUnits } from '../../hooks/useHealthUnits';
 import { displayDate, lastSevenDaysEnding } from '../../utils/dates';
-import { RADIUS, SHADOWS } from '../../constants/theme';
+import { RADIUS } from '../../constants/theme';
 import { showToast, safeConfirm } from '../../utils/feedback';
 
 export default function HealthDayDetail({ navigation, route }) {
@@ -77,13 +77,13 @@ export default function HealthDayDetail({ navigation, route }) {
       />
       <View style={styles.grid}>
         <MetricCard
-          value={entry.weight != null ? (formatWeight(entry.weight) || `${entry.weight} kg`) : '—'}
+          value={entry.weight != null ? (formatWeight(entry.weight) || `${entry.weight} kg`) : '0'}
           label={`Weight ${weightUnit}`}
           accent={colors.health}
           icon={<Ionicons name="scale-outline" size={16} color={colors.pillHealth.text} />}
         />
         <MetricCard
-          value={entry.sleep ?? '—'}
+          value={entry.sleep ?? '0'}
           label="Sleep hrs"
           accent={colors.health}
           icon={<Ionicons name="bed-outline" size={16} color={colors.pillHealth.text} />}
@@ -91,13 +91,13 @@ export default function HealthDayDetail({ navigation, route }) {
       </View>
       <View style={styles.grid}>
         <MetricCard
-          value={entry.steps?.toLocaleString?.() ?? '—'}
+          value={entry.steps?.toLocaleString?.() ?? '0'}
           label="Steps"
           accent={colors.health}
           icon={<Ionicons name="walk-outline" size={16} color={colors.pillHealth.text} />}
         />
         <MetricCard
-          value={entry.water != null ? (formatWater(entry.water) || `${entry.water} glasses`) : '—'}
+          value={entry.water != null ? (formatWater(entry.water) || `${entry.water} glasses`) : '0'}
           label={`Water ${waterUnit}`}
           accent={colors.health}
           icon={<Ionicons name="water-outline" size={16} color={colors.pillHealth.text} />}
@@ -105,13 +105,13 @@ export default function HealthDayDetail({ navigation, route }) {
       </View>
       <View style={styles.grid}>
         <MetricCard
-          value={entry.heartRate != null ? `${entry.heartRate} BPM` : '—'}
+          value={entry.heartRate != null ? `${entry.heartRate} BPM` : '0 BPM'}
           label="Heart Rate"
           accent="#FF4B4B"
           icon={<Ionicons name="heart" size={16} color="#FF4B4B" />}
         />
         <MetricCard
-          value={entry.activeMinutes != null ? `${entry.activeMinutes} mins` : '—'}
+          value={entry.activeMinutes != null ? `${entry.activeMinutes} mins` : '0 mins'}
           label="Active Minutes"
           accent={colors.primary}
           icon={<Ionicons name="fitness-outline" size={16} color={colors.primary} />}
@@ -129,13 +129,13 @@ export default function HealthDayDetail({ navigation, route }) {
         <SectionHeader>Wellbeing</SectionHeader>
         <View style={styles.grid}>
           <MetricCard
-            value={entry.mood || '—'}
+            value={entry.mood || 'Not logged'}
             label="Mood"
             accent={colors.health}
             icon={<Ionicons name="happy-outline" size={16} color={colors.pillHealth.text} />}
           />
           <MetricCard
-            value={entry.energy || '—'}
+            value={entry.energy || 'Not logged'}
             label="Energy"
             accent={colors.health}
             icon={<Ionicons name="flash-outline" size={16} color={colors.pillHealth.text} />}
@@ -203,21 +203,19 @@ export default function HealthDayDetail({ navigation, route }) {
 const styles = StyleSheet.create({
   grid: { flexDirection: 'row', gap: 8 },
   section: { gap: 8 },
-  chart: { borderRadius: RADIUS.lg, ...SHADOWS.subtle },
+  chart: { borderRadius: RADIUS.lg, borderWidth: 1 },
   notes: {
     borderRadius: RADIUS.md,
     borderWidth: 1,
     fontSize: 14,
     lineHeight: 20,
     padding: 14,
-    ...SHADOWS.subtle,
   },
   infoCard: {
     borderRadius: RADIUS.md,
     borderWidth: 1,
     gap: 4,
     padding: 14,
-    ...SHADOWS.subtle,
   },
   infoTitle: {
     fontSize: 14,

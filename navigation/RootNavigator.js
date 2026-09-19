@@ -7,7 +7,7 @@ import { NavigationContainer, DefaultTheme, DarkTheme } from '@react-navigation/
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createStackNavigator } from '@react-navigation/stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons } from '../components/LineIcon';
 import { useTheme, ThemeProvider } from '../theme/ThemeContext';
 import { RADIUS, SHADOWS } from '../constants/theme';
 import { HealthStack } from './HealthStack';
@@ -23,6 +23,8 @@ import PrivacyManagement from '../screens/PrivacyManagement';
 import Help from '../screens/Help';
 import About from '../screens/About';
 import { AppLockOverlay } from '../components/AppLockOverlay';
+import { ONBOARDING_KEY } from '../constants/storageKeys';
+export { ONBOARDING_KEY };
 
 // Lazy-load expo-notifications to stay safe on web
 let Notifications = null;
@@ -39,14 +41,13 @@ if (Platform.OS === 'android' && !isNewArch && UIManager.setLayoutAnimationEnabl
 
 const Tab = createBottomTabNavigator();
 const Stack = createStackNavigator();
-export const ONBOARDING_KEY = 'lifio_onboarded_v2';
 const LOGO = require('../assets/lifio-logo.png');
 
 const TAB_META = {
-  HomeTab: { icon: 'grid-outline', activeIcon: 'grid', label: 'Home' },
-  JournalTab: { icon: 'wallet-outline', activeIcon: 'wallet', label: 'Wallet' },
+  HomeTab: { icon: 'home-outline', activeIcon: 'home', label: 'Home' },
   HealthTab: { icon: 'heart-outline', activeIcon: 'heart', label: 'Health' }, 
   SettingsTab: { icon: 'settings-outline', activeIcon: 'settings', label: 'Settings' }, 
+  JournalTab: { icon: 'wallet-outline', activeIcon: 'wallet', label: 'Wallet' },
   HabitsTab: { icon: 'checkmark-circle-outline', activeIcon: 'checkmark-circle', label: 'Habits' },
   NotesTab: { icon: 'document-text-outline', activeIcon: 'document-text', label: 'Notes' },
 };
@@ -54,7 +55,8 @@ const TAB_META = {
 function CustomTabBar({ state, descriptors, navigation }) {
   const insets = useSafeAreaInsets();
   const [keyboardVisible, setKeyboardVisible] = useState(false);
-  const { colors } = useTheme();
+  const [moreVisible, setMoreVisible] = useState(false);
+  const { colors, theme } = useTheme();
 
   useEffect(() => {
     const showSub = Keyboard.addListener('keyboardDidShow', () => setKeyboardVisible(true));
@@ -67,21 +69,26 @@ function CustomTabBar({ state, descriptors, navigation }) {
 
   if (keyboardVisible) return null;
 
+  // Render order: Home, Habits, Health, Wallet, Settings
+  const visibleRouteNames = ['HomeTab', 'HabitsTab', 'HealthTab', 'JournalTab', 'SettingsTab'];
+
   return (
     <View style={[
       styles.navBar,
       {
-        bottom: insets.bottom > 0 ? insets.bottom + 8 : 24,
-        backgroundColor: colors.surfaceElevated,
-        borderColor: colors.borderLight,
+        backgroundColor: colors.surface,
+        borderTopColor: colors.borderLight,
+        paddingBottom: insets.bottom > 0 ? insets.bottom : 8,
+        height: 56 + (insets.bottom > 0 ? insets.bottom : 8),
       },
-      SHADOWS.medium,
     ]}>
-      {state.routes.map((route, index) => {
-        if (route.name === 'HabitsTab' || route.name === 'NotesTab') return null;
+      {visibleRouteNames.map((routeName) => {
+        const route = state.routes.find((r) => r.name === routeName);
+        if (!route) return null;
 
-        const isFocused = state.index === index;
-        const meta = TAB_META[route.name] || { icon: 'ellipse-outline', activeIcon: 'ellipse', label: route.name };
+        const routeIndex = state.routes.findIndex((r) => r.name === routeName);
+        const isFocused = state.index === routeIndex;
+        const meta = TAB_META[routeName] || { icon: 'ellipse-outline', activeIcon: 'ellipse', label: routeName };
 
         const onPress = () => {
           try {
@@ -95,39 +102,37 @@ function CustomTabBar({ state, descriptors, navigation }) {
           });
 
           if (!isFocused && !event.defaultPrevented) {
-            LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
             navigation.navigate(route.name);
           }
         };
 
-        const activeBg = colors.white;
-        const activeContentColor = colors.onAccent || colors.textPrimary;
-        const inactiveContentColor = colors.textSecondary;
+        const activeColor = colors.primaryOrange || '#FF5722';
+        const inactiveColor = colors.textSecondary || '#8E98A8';
 
         return (
           <Pressable
             key={route.key}
             onPress={onPress}
-            hitSlop={{ top: 12, bottom: 12, left: 8, right: 8 }}
-            style={({ pressed }) => [
-              styles.tabItem,
-              {
-                paddingHorizontal: isFocused ? 20 : 12,
-                backgroundColor: isFocused ? activeBg : 'transparent',
-                transform: [{ scale: pressed ? 0.94 : 1 }],
-              },
-            ]}
+            hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}
+            style={styles.tabItem}
           >
             <Ionicons
               name={isFocused ? meta.activeIcon : meta.icon}
-              size={24}
-              color={isFocused ? activeContentColor : inactiveContentColor}
+              size={22}
+              color={isFocused ? activeColor : inactiveColor}
+              strokeWidth={isFocused ? 2 : 1.6}
             />
-            {isFocused && (
-              <Text style={[styles.tabLabel, { color: activeContentColor }]}>
-                {meta.label}
-              </Text>
-            )}
+            <Text
+              style={[
+                styles.tabLabel,
+                {
+                  color: isFocused ? activeColor : inactiveColor,
+                  fontWeight: isFocused ? '600' : '500',
+                },
+              ]}
+            >
+              {meta.label}
+            </Text>
           </Pressable>
         );
       })}
@@ -277,26 +282,25 @@ const styles = StyleSheet.create({
   // ── Bottom Tab Bar ────────────────────────────────────────────────────
   navBar: {
     position: 'absolute',
-    alignSelf: 'center',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    width: '100%',
     flexDirection: 'row',
-    borderRadius: 40,
-    height: 72,
+    justifyContent: 'space-around',
     alignItems: 'center',
-    paddingHorizontal: 10,
-    gap: 4,
-    borderWidth: 1,
+    borderTopWidth: 1,
   },
   tabItem: {
-    flexDirection: 'row',
+    flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    height: 54,
-    borderRadius: 28,
+    paddingVertical: 6,
+    gap: 3,
   },
   tabLabel: {
-    fontSize: 14,
-    fontWeight: '700',
-    marginLeft: 8,
+    fontSize: 11,
+    letterSpacing: -0.1,
   },
 
   // ── Drawer (legacy / unused, kept for reference) ──────────────────────

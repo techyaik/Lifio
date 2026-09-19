@@ -1,7 +1,7 @@
 import React from 'react';
 import { ScrollView, Pressable, StyleSheet, Text as RNText, View } from 'react-native';
 import { AppText as Text } from './AppText';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons } from "./LineIcon";
 import { useTheme } from '../theme/ThemeContext';
 import { RADIUS, SHADOWS } from '../constants/theme';
 

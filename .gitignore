@@ -9,3 +9,7 @@ android/
 ios/
 web-build/
 dist/
+
+
+.chrome-tmp/
+.artifacts/

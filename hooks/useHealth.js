@@ -95,6 +95,7 @@ export function useHealth() {
   };
   const getTodayLog = () => logs.find((log) => log.date === todayKey());
   const getLogsByDate = (date) => logs.filter((log) => log.date === date);
+  const getLogForDate = (date) => logs.find((log) => log.date === date);
 
   const connectWatch = async (permissions, provider = 'default', accessToken = null, clientId = null, deviceName = null, deviceId = null, status = null) => {
     const config = {
@@ -359,6 +360,7 @@ export function useHealth() {
     deleteLog,
     getTodayLog,
     getLogsByDate,
+    getLogForDate,
     watchConfig,
     connectWatch,
     updateWatchConfig,

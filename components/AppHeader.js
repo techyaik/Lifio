@@ -1,7 +1,7 @@
 import React from 'react';
 import { Pressable, StyleSheet, Text as RNText, View } from 'react-native';
 import { AppText as Text } from './AppText';
-import { Ionicons, MaterialIcons } from '@expo/vector-icons';
+import { Ionicons, MaterialIcons } from "./LineIcon";
 import { useNavigation, DrawerActions } from '@react-navigation/native';
 import { useTheme } from '../theme/ThemeContext';
 import { RADIUS, SHADOWS } from '../constants/theme';
