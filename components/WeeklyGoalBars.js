@@ -107,14 +107,18 @@ export function WeeklyGoalFullChart({
               </View>
 
               {/* Day Label */}
-              <View style={[styles.dayContainer, item.isToday && { backgroundColor: colors.surfaceTint, borderRadius: 8, paddingHorizontal: 6, paddingVertical: 2 }]}>
+              <View
+                style={[
+                  styles.dayContainer,
+                  item.isToday && [styles.todayDayContainer, { backgroundColor: colors.surfaceTint }],
+                ]}
+              >
                 <Text
                   style={[
                     styles.barDayText,
                     {
-                      color: item.isToday ? (colors.primaryOrange || '#FF5722') : colors.textPrimary,
+                      color: item.isToday ? (colors.primaryOrange || '#FF5722') : colors.textSecondary,
                       fontWeight: item.isToday ? '800' : '500',
-                      marginTop: item.isToday ? 0 : 8,
                     },
                   ]}
                 >
@@ -141,18 +145,18 @@ const styles = StyleSheet.create({
   },
   fullCard: {
     borderRadius: 24,
-    padding: 20,
+    padding: 18,
     borderWidth: 1,
   },
   chartHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 20,
+    marginBottom: 16,
   },
   chartTitle: {
-    fontSize: 22,
-    fontWeight: '600',
+    fontSize: 18,
+    fontWeight: '800',
     letterSpacing: -0.3,
   },
   dateSelector: {
@@ -161,8 +165,8 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   dateRangeText: {
-    fontSize: 13,
-    fontWeight: '500',
+    fontSize: 12,
+    fontWeight: '600',
   },
   barsRow: {
     flexDirection: 'row',
@@ -190,12 +194,17 @@ const styles = StyleSheet.create({
   },
   barDayText: {
     fontSize: 12,
-    fontWeight: '500',
+    fontWeight: '600',
   },
   dayContainer: {
+    height: 24,
+    minWidth: 32,
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 6,
+    marginTop: 8,
+  },
+  todayDayContainer: {
+    borderRadius: 8,
   },
 });
 
